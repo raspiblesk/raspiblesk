@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
 #########################################################################
-# Build your SD card image based on: 2024-03-15-raspios-bookworm-arm64.img.xz
-# https://downloads.raspberrypi.org/raspios_arm64/images/raspios_arm64-2025-05-13/
-# SHA256: 1162c2a47c2ebda34c7ebeafc4afb71910a05b368d0721ae3736928e60ba5047
+# Build your SD card image based on: 2026-04-21-raspios-trixie-arm64.img.xz
+# https://downloads.raspberrypi.com/raspios_arm64/images/raspios_arm64-2026-04-21/
+# SHA256: 2b016db1eafc3f642eacfe5a1d9bf9e49be8b8caa0360c293901bf7b88bdebca
 # also change in: raspiblesk/ci/arm64-rpi/build.arm64-rpi.pkr.hcl
 # PGP fingerprint: 8738CD6B956F460C - to check signature:
 # curl -O https://www.raspberrypi.org/raspberrypi_downloads.gpg.key && gpg --import ./raspberrypi_downloads.gpg.key && gpg --verify *.sig
@@ -12,9 +12,9 @@
 
 # debian sources
 REQUIRED_SOURCES=(
-  "deb http://deb.debian.org/debian bookworm main contrib non-free non-free-firmware"
-  "deb http://security.debian.org/debian-security bookworm-security main contrib non-free non-free-firmware"
-  "deb http://deb.debian.org/debian bookworm-updates main contrib non-free non-free-firmware"
+  "deb http://deb.debian.org/debian trixie main contrib non-free non-free-firmware"
+  "deb http://security.debian.org/debian-security trixie-security main contrib non-free non-free-firmware"
+  "deb http://deb.debian.org/debian trixie-updates main contrib non-free non-free-firmware"
 )
 
 # set locale to en_US.UTF-8 on system & activate for this script
@@ -408,8 +408,8 @@ echo -e "\n*** SOFTWARE UPDATE ***"
 # fdisk -> create partitions
 # lsb-release -> needed to know which distro version we're running to add APT sources
 general_utils="sudo htop git curl bash-completion vim jq dphys-swapfile bsdmainutils autossh telnet vnstat parted dosfstools fbi sysbench build-essential dialog bc python3-dialog unzip whois fdisk lsb-release smartmontools rsyslog qrencode dnsutils"
-# add btrfs-progs if not bookworm on aarch64
-[ "${architecture}" = "aarch64" ] && ! grep "12 (bookworm)" < /etc/os-release && general_utils="${general_utils} btrfs-progs"
+# add btrfs-progs if not trixie on aarch64
+[ "${architecture}" = "aarch64" ] && ! grep "13 (trixie)" < /etc/os-release && general_utils="${general_utils} btrfs-progs"
 # python3-mako --> https://github.com/rootzoll/raspiblesk/issues/3441
 python_dependencies="python3-venv python3-dev python3-wheel python3-jinja2 python3-pip python3-mako"
 server_utils="rsync net-tools xxd netcat-openbsd openssh-client openssh-sftp-server sshpass psmisc ufw sqlite3"

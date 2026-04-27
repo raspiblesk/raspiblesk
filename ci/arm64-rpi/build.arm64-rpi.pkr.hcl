@@ -1,8 +1,8 @@
 variable "pack" { default = "lean" }
 variable "github_user" { default = "raspiblesk" }
 variable "branch" { default = "dev" }
-variable "image_link" { default = "https://downloads.raspberrypi.org/raspios_arm64/images/raspios_arm64-2025-05-13/2025-05-13-raspios-bookworm-arm64.img.xz" }
-variable "image_checksum" { default = "1162c2a47c2ebda34c7ebeafc4afb71910a05b368d0721ae3736928e60ba5047" }
+variable "image_link" { default = "https://downloads.raspberrypi.com/raspios_arm64/images/raspios_arm64-2026-04-21/2026-04-21-raspios-trixie-arm64.img.xz" }
+variable "image_checksum" { default = "2b016db1eafc3f642eacfe5a1d9bf9e49be8b8caa0360c293901bf7b88bdebca" }
 variable "image_size" { default = "24G" }
 
 source "arm" "raspiblesk-arm64-rpi" {
