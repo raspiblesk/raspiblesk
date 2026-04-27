@@ -1,4 +1,4 @@
-# ![RaspiBlesk](pictures/raspilogo_tile_400px.png)
+# RaspiBlesk
 
 _Build your own Glcoin & Lightning Fullnode on a RaspberryPi with an optional Display._ ([API](https://github.com/fusion44/blitz_api)|[WebUI](https://github.com/raspiblesk/raspiblesk-web))
 
@@ -36,3 +36,9 @@ This is main RaspiBlesk repo containing the **bash & python** scripts to build t
 - [Documentation](https://github.com/raspiblesk/raspiblesk-docs) (Docusaurus)
 
 To get started with RaspiBlesk Development check the [Community Development](CONTRIBUTING.md) notes.
+
+## Attribution
+
+RaspiBlesk is built on the technical foundation of [RaspiBlitz](https://github.com/rootzoll/raspiblitz), an open-source Bitcoin & Lightning node project by rootzoll and the RaspiBlitz contributors, licensed under MIT. The node stack, build system, and SSH menu architecture originate from that work. We thank all original contributors.
+
+RaspiBlesk itself is a full port to the [Glcoin](https://glcoin.org) network — a Permanent Proof Network built on KYC-verified validators, on-chain IPFS content anchoring, and accountable identity rather than anonymous Proof-of-Work. The porting work — Glcoin Core integration, Lightning binaries (LND, Core Lightning), Electrum servers (electrs, Fulcrum) for amd64 and arm64, and all network parameters — was carried out by the [Glcoin Core Developer Team](https://glcoin.org).
