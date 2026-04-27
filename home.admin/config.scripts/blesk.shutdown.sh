@@ -52,7 +52,7 @@ done
 
 # stop heavy load apps (if installed)
 systemctl stop mempool.service 2>/dev/null
-systemctl stop publicpool.service 2>/dev/null
+systemctl stop glcoin-miner.service 2>/dev/null
 systemctl stop btcpayserver.service 2>/dev/null
 systemctl stop nbxplorer.service 2>/dev/null
 

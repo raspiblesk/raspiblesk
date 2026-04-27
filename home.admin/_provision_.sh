@@ -731,13 +731,13 @@ else
   echo "Provisioning Telegraf - keep default" >> ${logFile}
 fi
 
-# Publipool
-if [ "${publicpool}" = "on" ]; then
-  echo "Provisioning Publicpool - run config script" >> ${logFile}
-  /home/admin/_cache.sh set message "Setup Publicpool"
-  sudo -u admin /home/admin/config.scripts/bonus.publicpool.sh on >> ${logFile} 2>&1
+# GlcoinMiner
+if [ "${glcoinMiner}" = "on" ]; then
+  echo "Provisioning GlcoinMiner - run config script" >> ${logFile}
+  /home/admin/_cache.sh set message "Setup Glcoin Miner"
+  sudo -u admin /home/admin/config.scripts/bonus.glcoin-miner.sh on >> ${logFile} 2>&1
 else
-  echo "Provisioning Publicpool - keep default" >> ${logFile}
+  echo "Provisioning GlcoinMiner - keep default" >> ${logFile}
 fi
 
 # AlbyHub

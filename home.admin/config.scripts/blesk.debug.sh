@@ -435,13 +435,13 @@ else
   echo "- FINTS is OFF by config"
 fi
 
-if [ "${publicpool}" == "on" ]; then  
+if [ "${glcoinMiner}" == "on" ]; then
   echo
-  echo "*** LAST 20 PUBLIPOOL LOGS ***"
-  echo "sudo journalctl -u publicpool -b --no-pager -n20"
-  sudo journalctl -u publicpool -b --no-pager -n20
+  echo "*** LAST 20 GLCOIN MINER LOGS ***"
+  echo "sudo journalctl -u glcoin-miner -b --no-pager -n20"
+  sudo journalctl -u glcoin-miner -b --no-pager -n20
 else
-  echo "- PUBLICPOOL is OFF by config"
+  echo "- GLCOIN MINER is OFF by config"
 fi
 
 echo

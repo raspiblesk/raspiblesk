@@ -171,8 +171,8 @@ fi
 if [ "${labelbase}" == "on" ]; then
   OPTIONS+=(LABELBASE "Labelbase (UTXO labeling)")
 fi
-if [ "${publicpool}" == "on" ]; then
-  OPTIONS+=(PUBLICPOOL "Public Pool (Glcoin Solo Mining)")
+if [ "${glcoinMiner}" == "on" ]; then
+  OPTIONS+=(GLCOINMINER "Glcoin Miner (CPU Mining)")
 fi
 if [ "${tailscale}" == "on" ]; then
   OPTIONS+=(TAILSCALE "Tailscale VPN")
@@ -346,8 +346,8 @@ case $CHOICE in
         LABELBASE)
             sudo /home/admin/config.scripts/bonus.labelbase.sh menu
             ;;
-        PUBLICPOOL)
-            /home/admin/config.scripts/bonus.publicpool.sh menu
+        GLCOINMINER)
+            /home/admin/config.scripts/bonus.glcoin-miner.sh menu
             ;;
         TAILSCALE)
             sudo /home/admin/config.scripts/internet.tailscale.sh menu

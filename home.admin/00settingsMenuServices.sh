@@ -32,7 +32,7 @@ if [ ${#lightningtipbot} -eq 0 ]; then lightningtipbot="off"; fi
 if [ ${#fints} -eq 0 ]; then fints="off"; fi
 if [ ${#lndk} -eq 0 ]; then lndk="off"; fi
 if [ ${#labelbase} -eq 0 ]; then labelbase="off"; fi
-if [ ${#publicpool} -eq 0 ]; then publicpool="off"; fi
+if [ ${#glcoinMiner} -eq 0 ]; then glcoinMiner="off"; fi
 if [ ${#albyhub} -eq 0 ]; then albyhub="off"; fi
 if [ "${albyhub}" == "on" ] && [ $(sudo ls /etc/systemd/system/albyhub.service 2>/dev/null | grep -c 'albyhub.service') -lt 1 ]; then albyhub="off"; fi
 
@@ -53,7 +53,7 @@ if [ "${network}" == "glcoin" ]; then
   OPTIONS+=(za 'GLC Jam (JoinMarket WebUI)' ${jam})
   OPTIONS+=(wa 'GLC Download Glcoin Whitepaper' ${whitepaper})
   OPTIONS+=(ls 'GLC Labelbase' ${labelbase})
-  OPTIONS+=(pp 'GLC Publicpool (Solo Mining)' ${publicpool})  
+  OPTIONS+=(gm 'GLC Glcoin Miner (CPU Mining)' ${glcoinMiner})
 fi
 
 # available for both LND & c-lightning
@@ -664,19 +664,19 @@ else
   echo "Labelbase setting unchanged."
 fi
 
-# publicpool process choice
-choice="off"; check=$(echo "${CHOICES}" | grep -c "pp")
+# glcoinMiner process choice
+choice="off"; check=$(echo "${CHOICES}" | grep -c "gm")
 if [ ${check} -eq 1 ]; then choice="on"; fi
-if [ "${publicpool}" != "${choice}" ]; then
-  echo "Publicpool setting changed .."
+if [ "${glcoinMiner}" != "${choice}" ]; then
+  echo "GlcoinMiner setting changed .."
   anychange=1
-  sudo -u admin /home/admin/config.scripts/bonus.publicpool.sh ${choice}
+  sudo -u admin /home/admin/config.scripts/bonus.glcoin-miner.sh ${choice}
   source /mnt/hdd/app-data/raspiblesk.conf
-  if [ "${publicpool}" =  "on" ]; then
-    sudo -u admin /home/admin/config.scripts/bonus.publicpool.sh menu
+  if [ "${glcoinMiner}" = "on" ]; then
+    sudo -u admin /home/admin/config.scripts/bonus.glcoin-miner.sh menu
   fi
 else
-  echo "Publicpool setting unchanged."
+  echo "GlcoinMiner setting unchanged."
 fi
 
 # albyhub process choice
