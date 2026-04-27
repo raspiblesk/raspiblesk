@@ -3,9 +3,9 @@
 # command info
 if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
   echo "# Switch charge-lnd on or off (experimental feature)"
-  echo "# needs to be switched on manually after every RaspiBlitz update/recovery for now"
+  echo "# needs to be switched on manually after every RaspiBlesk update/recovery for now"
   echo "# config is stored in /mnt/hdd/app-data/charge-lnd/charge.config"
-  echo "# feedback: https://github.com/raspiblitz/raspiblitz/discussions/3955"
+  echo "# feedback: https://github.com/raspiblesk/raspiblesk/discussions/3955"
   echo "# bonus.charge-lnd.sh [on|off]"
   exit 1
 fi
@@ -22,12 +22,12 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
 
   # install charge-lnd
   echo "# Installing charge-lnd ..."
-  cd /home/bitcoin
-  sudo -u bitcoin git clone https://github.com/accumulator/charge-lnd.git
+  cd /home/glcoin
+  sudo -u glcoin git clone https://github.com/accumulator/charge-lnd.git
   cd charge-lnd || exit 1
-  export CHARGE_LND_ENV=/home/bitcoin/charge-lnd
-  sudo -u bitcoin python3 -m venv ${CHARGE_LND_ENV}
-  sudo -u bitcoin ${CHARGE_LND_ENV}/bin/pip3 install -r requirements.txt .
+  export CHARGE_LND_ENV=/home/glcoin/charge-lnd
+  sudo -u glcoin python3 -m venv ${CHARGE_LND_ENV}
+  sudo -u glcoin ${CHARGE_LND_ENV}/bin/pip3 install -r requirements.txt .
 
   # check if already a charge-lnd config exists
   if [ -f /mnt/hdd/app-data/charge-lnd/charge.config ]; then
@@ -64,7 +64,7 @@ base_fee_msat = 2000
   fi
 
   sudo chmod 770 -R /mnt/hdd/app-data/charge-lnd
-  sudo chown bitcoin:bitcoin -R /mnt/hdd/app-data/charge-lnd
+  sudo chown glcoin:glcoin -R /mnt/hdd/app-data/charge-lnd
 
   # setting up systemd service
   echo "# Setting up charge-lnd systemd service ..."
@@ -74,9 +74,9 @@ Description=charge-lnd
 After=lnd.service
 
 [Service]
-ExecStart=bash -c '. /home/bitcoin/charge-lnd/bin/activate; /home/bitcoin/charge-lnd/bin/charge-lnd -c /mnt/hdd/app-data/charge-lnd/charge.config'
-User=bitcoin
-Group=bitcoin
+ExecStart=bash -c '. /home/glcoin/charge-lnd/bin/activate; /home/glcoin/charge-lnd/bin/charge-lnd -c /mnt/hdd/app-data/charge-lnd/charge.config'
+User=glcoin
+Group=glcoin
 Type=simple
 KillMode=process
 TimeoutSec=60
@@ -106,7 +106,7 @@ WantedBy=timers.target
   echo "# To check logs use: sudo journalctl -u charge-lnd"
   echo "# To edit config: sudo nano /mnt/hdd/app-data/charge-lnd/charge.config"
   echo "# Check options: https://github.com/accumulator/charge-lnd/blob/master/README.md"
-  echo "# feedback: https://github.com/raspiblitz/raspiblitz/discussions/3955"
+  echo "# feedback: https://github.com/raspiblesk/raspiblesk/discussions/3955"
 
   echo "# charge-lnd installation done."
   exit 0
@@ -127,7 +127,7 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   sudo systemctl disable charge-lnd.timer
   sudo rm /etc/systemd/system/charge-lnd.service
   sudo rm /etc/systemd/system/charge-lnd.timer
-  sudo rm -rf /home/bitcoin/charge-lnd
+  sudo rm -rf /home/glcoin/charge-lnd
   sudo rm -rf /mnt/hdd/app-data/charge-lnd
 
   echo "# charge-lnd removal done."

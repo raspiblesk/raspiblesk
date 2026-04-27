@@ -3,6 +3,8 @@
 
 # https://github.com/ElementsProject/lightning/releases
 CLVERSION="v25.12.1"
+GLCOIN_RELEASE="v1.0.0"
+GITHUB_RELEASE_BASE="https://github.com/raspiblesk/raspiblesk/releases/download/${GLCOIN_RELEASE}"
 
 # https://github.com/ElementsProject/lightning/tree/master/contrib/keys
 # rustyrussell D9200E6CD1ADB8F1
@@ -54,7 +56,7 @@ function installDependencies() {
   fi
   sudo chown -R root:rust /opt/rust
   sudo chmod -R g+w /opt/rust
-  sudo usermod -a -G rust bitcoin
+  sudo usermod -a -G rust glcoin
   echo "# Set the default Rust toolchain"
   sudo RUSTUP_HOME=/opt/rust CARGO_HOME=/opt/rust /opt/rust/bin/rustup default stable
   # Ensure permissions are correct after rustup operations
@@ -79,8 +81,8 @@ function installDependencies() {
   fi
 
   # Sync Python dependencies with uv
-  cd /home/bitcoin/lightning || exit 1
-  sudo -u bitcoin RUSTUP_HOME=/opt/rust CARGO_HOME=/opt/rust uv sync --all-extras --all-groups --frozen
+  cd /home/glcoin/lightning || exit 1
+  sudo -u glcoin RUSTUP_HOME=/opt/rust CARGO_HOME=/opt/rust uv sync --all-extras --all-groups --frozen
 
   sudo apt-get install -y protobuf-compiler
 
@@ -94,7 +96,7 @@ function buildAndInstallCLbinaries() {
   # Optional parameter: version to pass to make (for zip builds without git)
   local buildVersion="$1"
 
-  cd /home/bitcoin/lightning || exit 1
+  cd /home/glcoin/lightning || exit 1
 
   # Ensure /opt/rust has correct permissions before building
   echo "# Ensuring /opt/rust permissions for rust group"
@@ -103,14 +105,14 @@ function buildAndInstallCLbinaries() {
 
   echo
   echo "########## configure"
-  sudo -u bitcoin RUSTUP_HOME=/opt/rust CARGO_HOME=/opt/rust ./configure || exit 1
+  sudo -u glcoin RUSTUP_HOME=/opt/rust CARGO_HOME=/opt/rust ./configure || exit 1
   echo
   echo "########## make (using uv run)"
   # Pass VERSION to make if provided (needed for zip builds without git history)
   if [ -n "${buildVersion}" ]; then
-    sudo -u bitcoin RUSTUP_HOME=/opt/rust CARGO_HOME=/opt/rust VERSION="${buildVersion}" uv run make -j"$(nproc)" || exit 1
+    sudo -u glcoin RUSTUP_HOME=/opt/rust CARGO_HOME=/opt/rust VERSION="${buildVersion}" uv run make -j"$(nproc)" || exit 1
   else
-    sudo -u bitcoin RUSTUP_HOME=/opt/rust CARGO_HOME=/opt/rust uv run make -j"$(nproc)" || exit 1
+    sudo -u glcoin RUSTUP_HOME=/opt/rust CARGO_HOME=/opt/rust uv run make -j"$(nproc)" || exit 1
   fi
   echo
   echo "########## install"
@@ -120,17 +122,17 @@ function buildAndInstallCLbinaries() {
 function downloadAndVerifySourceZip() {
   # Downloads, verifies, and extracts the CLN source zip
   # Uses CLVERSION variable for the version to download
-  cd /home/bitcoin || exit 1
+  cd /home/glcoin || exit 1
   echo
   echo "- Downloading Core Lightning ${CLVERSION} source release"
   echo
 
   # Download the source zip and SHA256SUMS signature file
-  sudo -u bitcoin wget -O "clightning-${CLVERSION}.zip" \
+  sudo -u glcoin wget -O "clightning-${CLVERSION}.zip" \
     "https://github.com/ElementsProject/lightning/releases/download/${CLVERSION}/clightning-${CLVERSION}.zip" || exit 1
-  sudo -u bitcoin wget -O "SHA256SUMS-${CLVERSION}" \
+  sudo -u glcoin wget -O "SHA256SUMS-${CLVERSION}" \
     "https://github.com/ElementsProject/lightning/releases/download/${CLVERSION}/SHA256SUMS-${CLVERSION}" || exit 1
-  sudo -u bitcoin wget -O "SHA256SUMS-${CLVERSION}.asc" \
+  sudo -u glcoin wget -O "SHA256SUMS-${CLVERSION}.asc" \
     "https://github.com/ElementsProject/lightning/releases/download/${CLVERSION}/SHA256SUMS-${CLVERSION}.asc" || exit 1
 
   echo
@@ -138,21 +140,21 @@ function downloadAndVerifySourceZip() {
   echo
 
   # Import PGP key
-  sudo -u bitcoin wget -O "/var/cache/raspiblitz/pgp_keys_${PGPsigner}.asc" "${PGPpubkeyLink}" || exit 1
+  sudo -u glcoin wget -O "/var/cache/raspiblesk/pgp_keys_${PGPsigner}.asc" "${PGPpubkeyLink}" || exit 1
   echo "# Verifying ${PGPsigner} key fingerprint"
-  fingerprint=$(gpg --show-keys --keyid-format LONG "/var/cache/raspiblitz/pgp_keys_${PGPsigner}.asc" 2>/dev/null | grep -c "${PGPpubkeyFingerprint}")
+  fingerprint=$(gpg --show-keys --keyid-format LONG "/var/cache/raspiblesk/pgp_keys_${PGPsigner}.asc" 2>/dev/null | grep -c "${PGPpubkeyFingerprint}")
   if [ "${fingerprint}" -lt 1 ]; then
     echo "# ERROR --> ${PGPsigner} PGP fingerprint mismatch"
     exit 1
   fi
-  sudo -u bitcoin gpg --import "/var/cache/raspiblitz/pgp_keys_${PGPsigner}.asc" || exit 1
+  sudo -u glcoin gpg --import "/var/cache/raspiblesk/pgp_keys_${PGPsigner}.asc" || exit 1
 
   echo
   echo "- Verifying SHA256SUMS signature"
   echo
 
   # Verify the signature on SHA256SUMS
-  sudo -u bitcoin gpg --verify "SHA256SUMS-${CLVERSION}.asc" "SHA256SUMS-${CLVERSION}" 2>&1 | tee /tmp/cl_gpg_verify.txt
+  sudo -u glcoin gpg --verify "SHA256SUMS-${CLVERSION}.asc" "SHA256SUMS-${CLVERSION}" 2>&1 | tee /tmp/cl_gpg_verify.txt
   goodSignature=$(grep -c "Good signature" /tmp/cl_gpg_verify.txt)
   if [ "${goodSignature}" -lt 1 ]; then
     echo "# ERROR --> SHA256SUMS signature verification failed"
@@ -180,18 +182,18 @@ function downloadAndVerifySourceZip() {
   echo
 
   # Extract and set up directory
-  sudo -u bitcoin unzip -q "clightning-${CLVERSION}.zip" || exit 1
-  sudo -u bitcoin rm -rf lightning
-  sudo -u bitcoin mv "clightning-${CLVERSION}" lightning
-  sudo -u bitcoin rm -f "clightning-${CLVERSION}.zip" "SHA256SUMS-${CLVERSION}" "SHA256SUMS-${CLVERSION}.asc"
+  sudo -u glcoin unzip -q "clightning-${CLVERSION}.zip" || exit 1
+  sudo -u glcoin rm -rf lightning
+  sudo -u glcoin mv "clightning-${CLVERSION}" lightning
+  sudo -u glcoin rm -f "clightning-${CLVERSION}.zip" "SHA256SUMS-${CLVERSION}" "SHA256SUMS-${CLVERSION}.asc"
 }
 
 function runTests() {
   # Test dependencies are managed by uv sync in installDependencies()
-  cd /home/bitcoin/lightning || exit 1
+  cd /home/glcoin/lightning || exit 1
   echo "- run tests (using uv run)"
   echo
-  sudo -u bitcoin RUSTUP_HOME=/opt/rust CARGO_HOME=/opt/rust uv run make check VALGRIND=0 || exit 1
+  sudo -u glcoin RUSTUP_HOME=/opt/rust CARGO_HOME=/opt/rust uv run make check VALGRIND=0 || exit 1
 }
 
 echo "# Running: 'cl.install.sh $*'"
@@ -235,25 +237,81 @@ fi
 
 if [ "$1" = "install" ]; then
 
-  echo "# *** INSTALL CORE LIGHTNING ${CLVERSION} BINARY ***"
-  echo "# only binary install to system"
-  echo "# no configuration, no systemd service"
+  echo "# *** INSTALL CORE LIGHTNING ${CLVERSION} (Glcoin-patched) ***"
+  echo "# Official CLN does not know about Glcoin's chain."
+  echo "# A build patched with patches/cln/chainparams_glcoin.patch is required."
 
   # check if the binary is already installed
   if [ -f /usr/local/bin/lightningd ]; then
-    echo "Core Lightning binary already installed - done"
+    echo "# Core Lightning binary already installed - done"
     exit 0
   fi
 
-  # download and verify the source from github
-  downloadAndVerifySourceZip
+  # detect architecture
+  if [ "$(uname -m | grep -c 'arm')" -gt 0 ]; then
+    clnArch="armv7"
+  elif [ "$(uname -m | grep -c 'aarch64')" -gt 0 ]; then
+    clnArch="arm64"
+  elif [ "$(uname -m | grep -c 'x86_64')" -gt 0 ]; then
+    clnArch="amd64"
+  else
+    echo "# FAIL - unsupported architecture: $(uname -m)"
+    exit 1
+  fi
 
-  installDependencies
+  # -----------------------------------------------------------------------
+  # OPTION 1: pre-built Glcoin-patched CLN tarball
+  # Place cln-glcoin-${CLVERSION}-linux-${arch}.tar.gz in /tmp before running.
+  # Format: prefix tarball extracted with 'tar -xzf ... -C /usr/local'
+  # Must contain: bin/lightningd, bin/lightning-cli, libexec/c-lightning/...
+  # -----------------------------------------------------------------------
+  PREBUILT_TARBALL="/tmp/cln-glcoin-${CLVERSION}-linux-${clnArch}.tar.gz"
+  if [ ! -f "${PREBUILT_TARBALL}" ]; then
+    echo "# Attempting GitHub Release download: ${GITHUB_RELEASE_BASE}/$(basename "${PREBUILT_TARBALL}")"
+    wget -q --show-progress --timeout=120 \
+      -O "${PREBUILT_TARBALL}" \
+      "${GITHUB_RELEASE_BASE}/$(basename "${PREBUILT_TARBALL}")" || rm -f "${PREBUILT_TARBALL}"
+  fi
+  if [ -f "${PREBUILT_TARBALL}" ]; then
+    echo "# Found pre-built Glcoin CLN tarball: ${PREBUILT_TARBALL}"
+    tar -xzf "${PREBUILT_TARBALL}" -C /usr/local || { echo "# FAIL - could not extract tarball"; exit 1; }
+    echo "# Installed from pre-built tarball"
+  else
+    # -----------------------------------------------------------------------
+    # OPTION 2: build from source with Glcoin chainparams patch
+    # Downloads official CLN source, applies the patch, builds.
+    # On a Raspberry Pi 4 this takes ~60-120 minutes.
+    # -----------------------------------------------------------------------
+    echo "# No pre-built tarball found at ${PREBUILT_TARBALL}"
+    echo "# Building CLN from source with Glcoin chainparams patch..."
+    echo "# (This will take 60-120 minutes on a Raspberry Pi)"
 
-  # Pass version since zip has no git history
-  buildAndInstallCLbinaries "${CLVERSION}" || exit 1
+    downloadAndVerifySourceZip
 
-  installed=$(sudo -u bitcoin lightning-cli --version)
+    # Apply the Glcoin chainparams patch
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    CHAINPARAMS_PATCH="${SCRIPT_DIR}/../../patches/cln/chainparams_glcoin.patch"
+    if [ ! -f "${CHAINPARAMS_PATCH}" ]; then
+      CHAINPARAMS_PATCH="/home/admin/config/raspiblitz/patches/cln/chainparams_glcoin.patch"
+    fi
+    if [ -f "${CHAINPARAMS_PATCH}" ]; then
+      echo "# Applying Glcoin chainparams patch..."
+      cd /home/glcoin/lightning || exit 1
+      sudo -u glcoin patch -p1 < "${CHAINPARAMS_PATCH}" || { echo "# FAIL - chainparams patch failed"; exit 1; }
+      echo "# Patch applied successfully"
+    else
+      echo "# FAIL - chainparams patch not found at ${CHAINPARAMS_PATCH}"
+      echo "# CLN without this patch does not recognise Glcoin's chain and will refuse to start"
+      exit 1
+    fi
+
+    installDependencies
+
+    # Pass version since zip has no git history
+    buildAndInstallCLbinaries "${CLVERSION}" || exit 1
+  fi
+
+  installed=$(sudo -u glcoin lightning-cli --version)
   if [ ${#installed} -eq 0 ]; then
     echo
     echo "# BUILD FAILED --> Was not able to install Core Lightning"
@@ -264,17 +322,17 @@ if [ "$1" = "install" ]; then
   if [ "${correctVersion}" -eq 0 ]; then
     echo
     echo "# BUILD FAILED --> installed Core Lightning is not version ${CLVERSION}"
-    sudo -u bitcoin lightning-cli --version
+    sudo -u glcoin lightning-cli --version
     exit 1
   fi
   echo
-  echo "- OK the installation of Core Lightning ${installed} is successful"
+  echo "# OK - Core Lightning ${installed} installed (Glcoin-patched)"
   exit 0
 fi
 
 # vars
-source /home/admin/raspiblitz.info
-source /mnt/hdd/app-data/raspiblitz.conf
+source /home/admin/raspiblesk.info
+source /mnt/hdd/app-data/raspiblesk.conf
 TORGROUP="debian-tor"
 
 if [ "$1" = update ] || [ "$1" = testPR ]; then
@@ -288,14 +346,14 @@ echo "# Using the settings for: ${network} ${CHAIN}"
 if [ "$1" = on ] || [ "$1" = update ] || [ "$1" = testPR ]; then
 
   if [ "${CHAIN}" == "testnet" ] && [ "${testnet}" != "on" ]; then
-    echo "# before activating testnet on cl, first activate testnet on bitcoind"
-    echo "err='missing bitcoin testnet'"
+    echo "# before activating testnet on cl, first activate testnet on glcoind"
+    echo "err='missing glcoin testnet'"
     exit 1
   fi
 
   if [ "${CHAIN}" == "signet" ] && [ "${signet}" != "on" ]; then
-    echo "# before activating signet on cl, first activate signet on bitcoind"
-    echo "err='missing bitcoin signet'"
+    echo "# before activating signet on cl, first activate signet on glcoind"
+    echo "err='missing glcoin signet'"
     exit 1
   fi
 
@@ -305,7 +363,7 @@ if [ "$1" = on ] || [ "$1" = update ] || [ "$1" = testPR ]; then
     echo
     sudo apt-get update
 
-    cd /home/bitcoin || exit 1
+    cd /home/glcoin || exit 1
     echo
     echo "# Deleting the old source code"
     sudo rm -rf lightning
@@ -324,7 +382,7 @@ if [ "$1" = on ] || [ "$1" = update ] || [ "$1" = testPR ]; then
       echo
       echo "# Cloning https://github.com/ElementsProject/lightning.git"
       echo
-      sudo -u bitcoin git clone https://github.com/ElementsProject/lightning.git
+      sudo -u glcoin git clone https://github.com/ElementsProject/lightning.git
       cd lightning || exit 1
       echo
       echo "# Updating to the latest commit in:"
@@ -338,14 +396,14 @@ if [ "$1" = on ] || [ "$1" = update ] || [ "$1" = testPR ]; then
       echo
       echo "# Cloning https://github.com/ElementsProject/lightning.git"
       echo
-      sudo -u bitcoin git clone https://github.com/ElementsProject/lightning.git
+      sudo -u glcoin git clone https://github.com/ElementsProject/lightning.git
       cd lightning || exit 1
       echo
       PRnumber=$2 || exit 1
       echo "# Using the PR:"
       echo "# https://github.com/ElementsProject/lightning/pull/${PRnumber}"
-      sudo -u bitcoin git fetch origin pull/${PRnumber}/head:pr${PRnumber} || exit 1
-      sudo -u bitcoin git checkout pr${PRnumber} || exit 1
+      sudo -u glcoin git fetch origin pull/${PRnumber}/head:pr${PRnumber} || exit 1
+      sudo -u glcoin git checkout pr${PRnumber} || exit 1
     fi
 
     installDependencies
@@ -355,7 +413,7 @@ if [ "$1" = on ] || [ "$1" = update ] || [ "$1" = testPR ]; then
       buildAndInstallCLbinaries "${CLVERSION}" || exit 1
     else
       currentCLversion=$(
-        cd /home/bitcoin/lightning || exit 1
+        cd /home/glcoin/lightning || exit 1
         git describe --tags 2>/dev/null || echo "unknown"
       )
       echo "# Building from source Core Lightning $currentCLversion"
@@ -371,22 +429,37 @@ if [ "$1" = on ] || [ "$1" = update ] || [ "$1" = testPR ]; then
   # make sure binary is installed (will skip if already done)
   /home/admin/config.scripts/cl.install.sh install || exit 1
 
-  echo "# Make sure bitcoin is in the ${TORGROUP} group"
-  sudo usermod -a -G ${TORGROUP} bitcoin
+  echo "# Make sure glcoin is in the ${TORGROUP} group"
+  sudo usermod -a -G ${TORGROUP} glcoin
 
-  echo "# Add plugin-dir: /home/bitcoin/${netprefix}cl-plugins-enabled"
-  echo "# Add plugin-dir: /home/bitcoin/cl-plugins-available"
+  echo "# Add plugin-dir: /home/glcoin/${netprefix}cl-plugins-enabled"
+  echo "# Add plugin-dir: /home/glcoin/cl-plugins-available"
   # note that the disk is mounted with noexec
-  sudo -u bitcoin mkdir /home/bitcoin/${netprefix}cl-plugins-enabled 2>/dev/null
-  sudo -u bitcoin mkdir /home/bitcoin/cl-plugins-available 2>/dev/null
+  sudo -u glcoin mkdir /home/glcoin/${netprefix}cl-plugins-enabled 2>/dev/null
+  sudo -u glcoin mkdir /home/glcoin/cl-plugins-available 2>/dev/null
+
+  # read glcoin RPC password and set per-network port
+  PASSWORD_B=$(sudo cat /mnt/hdd/app-data/glcoin/glcoin.conf 2>/dev/null | grep rpcpassword | cut -c 13-)
+  if [ "${CHAIN}" = "testnet" ]; then
+    glcoinRpcPort=11617
+  elif [ "${CHAIN}" = "signet" ]; then
+    glcoinRpcPort=31617
+  else
+    glcoinRpcPort=1617
+  fi
+
+  # create glcoin-cli wrapper so CLN can call it as 'bitcoin-cli'
+  echo "#!/bin/sh
+exec /usr/local/bin/glcoin-cli -rpcport=${glcoinRpcPort} \"\$@\"" | sudo tee /usr/local/bin/glcoin-cli-wrapper
+  sudo chmod 0755 /usr/local/bin/glcoin-cli-wrapper
 
   echo "# Store the lightning data in /mnt/hdd/app-data/.lightning"
   # Create the main and network-specific lightning directories
   sudo mkdir -p "/mnt/hdd/app-data/.lightning/${CLNETWORK}"
-  sudo chown -R bitcoin:bitcoin /mnt/hdd/app-data/.lightning
-  echo "# Symlink to /home/bitcoin/"
-  sudo rm -rf /home/bitcoin/.lightning # not a symlink, delete
-  sudo ln -s /mnt/hdd/app-data/.lightning /home/bitcoin/
+  sudo chown -R glcoin:glcoin /mnt/hdd/app-data/.lightning
+  echo "# Symlink to /home/glcoin/"
+  sudo rm -rf /home/glcoin/.lightning # not a symlink, delete
+  sudo ln -s /mnt/hdd/app-data/.lightning /home/glcoin/
   echo "# Symlink to /home/admin/"
   sudo rm -rf /home/admin/.lightning # not a symlink, delete
   sudo ln -s /mnt/hdd/app-data/.lightning /home/admin/
@@ -398,10 +471,17 @@ if [ "$1" = on ] || [ "$1" = update ] || [ "$1" = testPR ]; then
 network=${CLNETWORK}
 log-file=cl.log
 log-level=info
-plugin-dir=/home/bitcoin/${netprefix}cl-plugins-enabled
+plugin-dir=/home/glcoin/${netprefix}cl-plugins-enabled
 clnrest-port=${portprefix}7378
 clnrest-host=0.0.0.0
 grpc-port=${portprefix}4772
+
+# Glcoin backend connection
+bitcoin-cli=/usr/local/bin/glcoin-cli-wrapper
+bitcoin-rpcport=${glcoinRpcPort}
+bitcoin-rpcuser=glcoinrpc
+bitcoin-rpcpassword=${PASSWORD_B}
+bitcoin-datadir=/mnt/hdd/app-data/glcoin
 
 # Tor settings
 proxy=127.0.0.1:9050
@@ -412,12 +492,12 @@ always-use-proxy=true
   else
     echo "# The file ${CLCONF} is already present"
   fi
-  sudo chown -R bitcoin:bitcoin /mnt/hdd/app-data/.lightning
-  sudo chown -R bitcoin:bitcoin /home/bitcoin/
+  sudo chown -R glcoin:glcoin /mnt/hdd/app-data/.lightning
+  sudo chown -R glcoin:glcoin /home/glcoin/
 
   ## Create a wallet from seedwords for mainnet
   if [ ${CHAIN} = "mainnet" ]; then
-    hsmSecretPath="/home/bitcoin/.lightning/${CLNETWORK}/hsm_secret"
+    hsmSecretPath="/home/glcoin/.lightning/${CLNETWORK}/hsm_secret"
     if sudo ls $hsmSecretPath; then
       echo "# $hsmSecretPath is already present"
     else
@@ -441,21 +521,21 @@ always-use-proxy=true
   #############
   echo
   echo "# Set logrotate for ${netprefix}lightningd"
-  if ! sudo ls /home/bitcoin/.lightning/${CLNETWORK}/cl.log_old 2>/dev/null; then
-    sudo -u bitcoin mkdir /home/bitcoin/.lightning/${CLNETWORK}/cl.log_old
+  if ! sudo ls /home/glcoin/.lightning/${CLNETWORK}/cl.log_old 2>/dev/null; then
+    sudo -u glcoin mkdir /home/glcoin/.lightning/${CLNETWORK}/cl.log_old
   fi
   echo "\
-/home/bitcoin/.lightning/${CLNETWORK}/cl.log
+/home/glcoin/.lightning/${CLNETWORK}/cl.log
 {
         rotate 4
         size 100M
         copytruncate
         missingok
-        olddir /home/bitcoin/.lightning/${CLNETWORK}/cl.log_old
+        olddir /home/glcoin/.lightning/${CLNETWORK}/cl.log_old
         notifempty
         nocompress
         sharedscripts
-        su bitcoin bitcoin
+        su glcoin glcoin
 }" | sudo tee /etc/logrotate.d/${netprefix}lightningd
   # debug:
   # sudo logrotate --debug /etc/logrotate.d/lightningd
@@ -464,16 +544,16 @@ always-use-proxy=true
   if ! grep -Eq "^alias ${netprefix}lightning-cli" /home/admin/_aliases; then
     echo "# Adding aliases: ${netprefix}cl, ${netprefix}cllog, ${netprefix}clconf"
     echo "\
-alias ${netprefix}cl=\"sudo -u bitcoin /usr/local/bin/lightning-cli\
+alias ${netprefix}cl=\"sudo -u glcoin /usr/local/bin/lightning-cli\
  --conf=${CLCONF}\"
 alias ${netprefix}cllog=\"sudo\
- tail -n 30 -f /home/bitcoin/.lightning/${CLNETWORK}/cl.log\"
+ tail -n 30 -f /home/glcoin/.lightning/${CLNETWORK}/cl.log\"
 alias ${netprefix}clconf=\"sudo nano ${CLCONF}\"
 " | sudo tee -a /home/admin/_aliases
     sudo chown admin:admin /home/admin/_aliases
   fi
 
-  echo "# The installed Core Lightning version is: $(sudo -u bitcoin /usr/local/bin/lightningd --version)"
+  echo "# The installed Core Lightning version is: $(sudo -u glcoin /usr/local/bin/lightningd --version)"
   echo
   echo "# To activate the aliases reopen the terminal or use:"
   echo "source ~/_aliases"
@@ -481,29 +561,29 @@ alias ${netprefix}clconf=\"sudo nano ${CLCONF}\"
   echo "sudo journalctl -fu ${netprefix}lightningd"
   echo "sudo systemctl status ${netprefix}lightningd"
   echo "# logs:"
-  echo "sudo tail -f /home/bitcoin/.lightning/${CLNETWORK}/cl.log"
+  echo "sudo tail -f /home/glcoin/.lightning/${CLNETWORK}/cl.log"
   echo "# for the command line options use"
   echo "${netprefix}lightning-cli help"
   echo
 
-  # setting values in the raspiblitz.conf
-  /home/admin/config.scripts/blitz.conf.sh set ${netprefix}cl on
-  # blitz.conf.sh needs sudo access - cannot be run in cl.check.sh
-  if [ ! -f /home/bitcoin/cl-plugins-enabled/c-lightning-http-plugin ]; then
-    /home/admin/config.scripts/blitz.conf.sh set clHTTPplugin "off"
+  # setting values in the raspiblesk.conf
+  /home/admin/config.scripts/blesk.conf.sh set ${netprefix}cl on
+  # blesk.conf.sh needs sudo access - cannot be run in cl.check.sh
+  if [ ! -f /home/glcoin/cl-plugins-enabled/c-lightning-http-plugin ]; then
+    /home/admin/config.scripts/blesk.conf.sh set clHTTPplugin "off"
   fi
-  if [ ! -f /home/bitcoin/${netprefix}cl-plugins-enabled/feeadjuster.py ]; then
-    /home/admin/config.scripts/blitz.conf.sh set ${netprefix}feeadjuster "off"
+  if [ ! -f /home/glcoin/${netprefix}cl-plugins-enabled/feeadjuster.py ]; then
+    /home/admin/config.scripts/blesk.conf.sh set ${netprefix}feeadjuster "off"
   fi
-  if [ ! -f /home/bitcoin/${netprefix}cl-plugins-enabled/cln-grpc ]; then
-    /home/admin/config.scripts/blitz.conf.sh set "${netprefix}clnGRPCport" "off"
+  if [ ! -f /home/glcoin/${netprefix}cl-plugins-enabled/cln-grpc ]; then
+    /home/admin/config.scripts/blesk.conf.sh set "${netprefix}clnGRPCport" "off"
   fi
 
   # if this is the first lightning mainnet turned on - make default
   [ "${lightning}" == "none" ] && lightning=""
   if [ "${CHAIN}" == "mainnet" ] && [ "${lightning}" == "" ]; then
     echo "# CL is now the default lightning implementation"
-    /home/admin/config.scripts/blitz.conf.sh set lightning cl
+    /home/admin/config.scripts/blesk.conf.sh set lightning cl
   fi
 
   exit 0
@@ -525,7 +605,7 @@ if [ "$1" = "display-seed" ]; then
   source <(/home/admin/config.scripts/network.aliases.sh getvars cl $displayNetwork)
 
   # check if seedword file exists
-  seedwordFile="/home/bitcoin/.lightning/${CLNETWORK}/seedwords.info"
+  seedwordFile="/home/glcoin/.lightning/${CLNETWORK}/seedwords.info"
   echo "# seedwordFile(${seedwordFile})"
   seedwordFileExists=$(ls ${seedwordFile} 2>/dev/null | grep -c "seedwords.info")
   echo "# seedwordFileExists(${seedwordFileExists})"
@@ -550,8 +630,8 @@ if [ "$1" = "display-seed" ]; then
         --textbox "${seedwordFile}" 14 92
     fi
   else
-    # hsmFile="/home/bitcoin/.lightning/${CLNETWORK}/hsm_secret"
-    whiptail --title "Core Lightning ${displayNetwork} Wallet Info" --msgbox "Your Core Lightning ${displayNetwork} wallet was already created before - there are no seed words available.\n\nTo secure your wallet secret you can manually backup the file: /home/bitcoin/.lightning/${CLNETWORK}/hsm_secret" 11 76
+    # hsmFile="/home/glcoin/.lightning/${CLNETWORK}/hsm_secret"
+    whiptail --title "Core Lightning ${displayNetwork} Wallet Info" --msgbox "Your Core Lightning ${displayNetwork} wallet was already created before - there are no seed words available.\n\nTo secure your wallet secret you can manually backup the file: /home/glcoin/.lightning/${CLNETWORK}/hsm_secret" 11 76
   fi
 
   exit 0
@@ -569,18 +649,18 @@ if [ "$1" = "off" ]; then
     sudo rm -f /usr/local/bin/lightningd
     sudo rm -f /usr/local/bin/lightning-cli
     echo "# Removing the source code"
-    sudo rm -rf /home/bitcoin/lightning
+    sudo rm -rf /home/glcoin/lightning
   fi
-  # setting value in the raspiblitz.conf
-  /home/admin/config.scripts/blitz.conf.sh set ${netprefix}cl "off"
+  # setting value in the raspiblesk.conf
+  /home/admin/config.scripts/blesk.conf.sh set ${netprefix}cl "off"
 
   # if cl mainnet was default - remove
   if [ "${CHAIN}" == "mainnet" ] && [ "${lightning}" == "cl" ]; then
     echo "# Core Lightning is REMOVED as the default lightning implementation"
-    /home/admin/config.scripts/blitz.conf.sh set lightning "none"
+    /home/admin/config.scripts/blesk.conf.sh set lightning "none"
     if [ "${lnd}" == "on" ]; then
       echo "# LND is now the new default lightning implementation"
-      /home/admin/config.scripts/blitz.conf.sh set lightning "lnd"
+      /home/admin/config.scripts/blesk.conf.sh set lightning "lnd"
     fi
   fi
 fi

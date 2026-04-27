@@ -8,12 +8,12 @@ specialOption=$1 # (optional - can be 'update', 'recovery' or 'migration' )
 
 # chose how to setup node (fresh or from a upload backup)
 OPTIONS=()
-OPTIONS+=(FRESHSETUP "Setup a new RaspiBlitz")
+OPTIONS+=(FRESHSETUP "Setup a new RaspiBlesk")
 if [ "${specialOption}" == "update" ] || [ "${specialOption}" == "recovery" ]; then
-  OPTIONS+=(RECOVER "Recover/Update RaspiBlitz")  
+  OPTIONS+=(RECOVER "Recover/Update RaspiBlesk")  
 fi
 if [ "${specialOption}" == "migration" ]; then
-  OPTIONS+=(CONVERT "Make Node a RaspiBlitz")  
+  OPTIONS+=(CONVERT "Make Node a RaspiBlesk")  
 fi
 OPTIONS+=(FROMBACKUP "Upload Migration Backup")
 OPTIONS+=(FROMHDD "Copy from HDD/SSD/NVMe")
@@ -22,7 +22,7 @@ OPTIONS+=(SHUTDOWN "Shutdown without Changes")
 CHOICE_HEIGHT=$(("${#OPTIONS[@]}/2+1"))
 HEIGHT=$(($CHOICE_HEIGHT+8))
 
-CHOICE=$(dialog --clear --backtitle "RaspiBlitz ${codeVersion}-${codeRelease} - Setup" --title "⚡ Welcome to your RaspiBlitz ⚡" --menu "\nChoose how you want to setup your RaspiBlitz: \n " ${HEIGHT} 66 ${CHOICE_HEIGHT}  "${OPTIONS[@]}" 2>&1 >/dev/tty)
+CHOICE=$(dialog --clear --backtitle "RaspiBlesk ${codeVersion}-${codeRelease} - Setup" --title "⚡ Welcome to your RaspiBlesk ⚡" --menu "\nChoose how you want to setup your RaspiBlesk: \n " ${HEIGHT} 66 ${CHOICE_HEIGHT}  "${OPTIONS[@]}" 2>&1 >/dev/tty)
 
 case $CHOICE in
         FRESHSETUP)
@@ -55,6 +55,6 @@ case $CHOICE in
         *)
             # 3 --> ESC/CANCEL = EXIT TO TERMINAL
             clear
-            echo "Exit to Terminal from RaspiBlitz Setup ..."
+            echo "Exit to Terminal from RaspiBlesk Setup ..."
             exit  3
 esac

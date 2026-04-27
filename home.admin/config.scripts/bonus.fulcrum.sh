@@ -2,6 +2,8 @@
 
 # https://github.com/cculianu/Fulcrum/releases
 fulcrumVersion="2.1.0"
+GLCOIN_RELEASE="v1.0.0"
+GITHUB_RELEASE_BASE="https://github.com/raspiblesk/raspiblesk/releases/download/${GLCOIN_RELEASE}"
 
 portTCP="50021"
 portSSL="50022"
@@ -49,7 +51,7 @@ if [ "$1" = "status" ]; then
   displayVersion=$(/home/fulcrum/Fulcrum -v 2>/dev/null | grep Fulcrum)
   echo "version='${displayVersion}'"
 
-  source /mnt/hdd/app-data/raspiblitz.conf
+  source /mnt/hdd/app-data/raspiblesk.conf
   if [ "${fulcrum}" = "on" ]; then
     echo "configured=1"
   else
@@ -127,8 +129,8 @@ if [ "$1" = "status-sync" ] || [ "$1" = "status" ]; then
     echo "electrumResponding=${electrumResponding}"
 
     # sync info
-    source <(/home/admin/_cache.sh get btc_mainnet_blocks_headers)
-    blockchainHeight="${btc_mainnet_blocks_headers}"
+    source <(/home/admin/_cache.sh get glc_mainnet_blocks_headers)
+    blockchainHeight="${glc_mainnet_blocks_headers}"
     lastBlockchainHeight=$(($blockchainHeight - 1))
     if [ $electrumResponding -eq 0 ]; then
       syncedToBlock=$(sudo journalctl -u fulcrum -n 100 | grep Processed | tail -n1 | grep -oP '(?<=Processed height: )\d+')
@@ -211,7 +213,7 @@ Check 'sudo nginx -t' for a detailed error message.
       sudo mkdir /var/log/nginx
       sudo systemctl restart nginx
     fi
-    /home/admin/config.scripts/blitz.web.sh
+    /home/admin/config.scripts/blesk.web.sh
     echo "Press ENTER to get back to the Fulcrum menu."
     read -r
   fi
@@ -247,7 +249,7 @@ Check 'sudo nginx -t' for a detailed error message.
     echo "On Network Settings > Server menu:"
     echo "- deactivate automatic server selection"
     echo "- as manual server set '${localIP}' & '${portSSL}'"
-    echo "- laptop and RaspiBlitz need to be within same local network"
+    echo "- laptop and RaspiBlesk need to be within same local network"
     echo
     echo "To start directly from laptop terminal use"
     echo "PC: electrum --oneserver --server ${localIP}:${portSSL}:s"
@@ -259,15 +261,15 @@ Check 'sudo nginx -t' for a detailed error message.
       echo
       echo "To connect through Tor open the Tor Browser and start with the options:"
       echo "electrum --oneserver --server ${TORaddress}:50022:s --proxy socks5:127.0.0.1:9150"
-      sudo /home/admin/config.scripts/blitz.display.sh qr "${TORaddress}"
+      sudo /home/admin/config.scripts/blesk.display.sh qr "${TORaddress}"
     fi
     echo
-    echo "For more details check the RaspiBlitz README on Fulcrum:"
-    echo "https://github.com/raspiblitz/raspiblitz"
+    echo "For more details check the RaspiBlesk README on Fulcrum:"
+    echo "https://github.com/raspiblesk/raspiblesk"
     echo
     echo "Press ENTER to continue..."
     read -r
-    sudo /home/admin/config.scripts/blitz.display.sh hide
+    sudo /home/admin/config.scripts/blesk.display.sh hide
     ;;
   STATUS)
     sudo /home/admin/config.scripts/bonus.fulcrum.sh status
@@ -364,34 +366,47 @@ Check 'sudo nginx -t' for a detailed error message.
   exit 0
 fi
 
-function downloadAndVerifyBinary() {
-  cd /home/fulcrum || exit 1
+function installFulcrumBinary() {
+  local tarball="/tmp/fulcrum-glcoin-v${fulcrumVersion}-linux-${arch}.tar.gz"
 
-  # download the prebuilt binary
-  sudo -u fulcrum wget https://github.com/cculianu/Fulcrum/releases/download/v${fulcrumVersion}/Fulcrum-${fulcrumVersion}-${build}.tar.gz || exit 1
-  sudo -u fulcrum wget https://github.com/cculianu/Fulcrum/releases/download/v${fulcrumVersion}/Fulcrum-${fulcrumVersion}-shasums.txt || exit 1
-  sudo -u fulcrum wget https://github.com/cculianu/Fulcrum/releases/download/v${fulcrumVersion}/Fulcrum-${fulcrumVersion}-shasums.txt.asc || exit 1
-
-  # Verify
-  # get the PGP key
-  curl https://raw.githubusercontent.com/Electron-Cash/keys-n-hashes/master/pubkeys/calinkey.txt | sudo -u fulcrum gpg --import
-
-  echo "# Look for 'Good signature'"
-  sudo -u fulcrum gpg --verify Fulcrum-${fulcrumVersion}-shasums.txt.asc || exit 1
-
-  echo "# Look for 'OK'"
-  sudo -u fulcrum sha256sum -c Fulcrum-${fulcrumVersion}-shasums.txt --ignore-missing || exit 1
-
-  echo "# Unpack"
-  sudo -u fulcrum tar -xvf Fulcrum-${fulcrumVersion}-${build}.tar.gz
-
-  # symlink to fulcrum home
-  # remove first to start clean
   sudo rm -f /home/fulcrum/Fulcrum
   sudo rm -f /home/fulcrum/FulcrumAdmin
-  # symlink
-  sudo ln -s /home/fulcrum/Fulcrum-${fulcrumVersion}-${build}/Fulcrum /home/fulcrum/
-  sudo ln -s /home/fulcrum/Fulcrum-${fulcrumVersion}-${build}/FulcrumAdmin /home/fulcrum/
+
+  if [ ! -f "$tarball" ]; then
+    echo "# Attempting GitHub Release download: ${GITHUB_RELEASE_BASE}/$(basename "${tarball}")"
+    wget -q --show-progress --timeout=120 \
+      -O "$tarball" \
+      "${GITHUB_RELEASE_BASE}/$(basename "${tarball}")" || rm -f "$tarball"
+  fi
+  if [ -f "$tarball" ]; then
+    echo "# Found pre-built Glcoin Fulcrum tarball: ${tarball}"
+    sudo -u fulcrum tar -xf "$tarball" -C /home/fulcrum/ || { echo "# FAIL - could not extract tarball"; exit 1; }
+    sudo chmod +x /home/fulcrum/Fulcrum
+    echo "# Installed from pre-built tarball"
+  else
+    echo "# No pre-built tarball found at ${tarball}"
+    echo "# Building Fulcrum from source (requires Qt6, librocksdb-dev, zlib1g-dev — slow on arm64)"
+    sudo apt install -y qt6-base-dev librocksdb-dev zlib1g-dev libzmq3-dev || exit 1
+    local srcdir="/home/fulcrum/Fulcrum-src"
+    sudo -u fulcrum git clone --depth=1 --branch "v${fulcrumVersion}" \
+      https://github.com/cculianu/Fulcrum.git "$srcdir" || exit 1
+    cd "$srcdir" || exit 1
+    local patchfile="/home/admin/config/raspiblitz/patches/fulcrum/glcoin_segwit_detection.patch"
+    if [ -f "$patchfile" ]; then
+      sudo -u fulcrum patch -p1 < "$patchfile" || { echo "# FAIL - could not apply Glcoin patch"; exit 1; }
+    else
+      echo "# WARNING: Glcoin Fulcrum patch not found at ${patchfile} — segwit will NOT work"
+    fi
+    sudo -u fulcrum qmake6 Fulcrum.pro || exit 1
+    sudo -u fulcrum make -j2 || exit 1
+    sudo -u fulcrum strip Fulcrum
+    sudo cp Fulcrum /home/fulcrum/Fulcrum
+    sudo cp FulcrumAdmin /home/fulcrum/FulcrumAdmin
+    sudo chown fulcrum:fulcrum /home/fulcrum/Fulcrum /home/fulcrum/FulcrumAdmin
+    sudo chmod +x /home/fulcrum/Fulcrum
+    cd /home/fulcrum || exit 1
+    sudo -u fulcrum rm -rf "$srcdir"
+  fi
 }
 
 function createSystemdService() {
@@ -410,7 +425,7 @@ function createSystemdService() {
   echo "\
 [Unit]
 Description=Fulcrum
-After=network.target bitcoind.service
+After=network.target glcoind.service
 StartLimitBurst=2
 StartLimitIntervalSec=20
 
@@ -431,9 +446,9 @@ WantedBy=multi-user.target
 
 # set the platform
 if [ "$(uname -m)" = "aarch64" ]; then
-  build="arm64-linux"
-elif [ "$(uname -m)" = "x86_64" ]; then
-  build="x86_64-linux"
+  arch="arm64"
+else
+  arch="amd64"
 fi
 
 if [ "$1" = on ]; then
@@ -441,16 +456,16 @@ if [ "$1" = on ]; then
   /home/admin/config.scripts/network.txindex.sh on
 
   # activate zram
-  /home/admin/config.scripts/blitz.zram.sh on
+  /home/admin/config.scripts/blesk.zram.sh on
 
-  /home/admin/config.scripts/blitz.conf.sh set rpcworkqueue 512 /mnt/hdd/app-data/bitcoin/bitcoin.conf noquotes
-  /home/admin/config.scripts/blitz.conf.sh set rpcthreads 128 /mnt/hdd/app-data/bitcoin/bitcoin.conf noquotes
-  /home/admin/config.scripts/blitz.conf.sh set 'main.zmqpubhashblock' 'tcp://0.0.0.0:8433' /mnt/hdd/app-data/bitcoin/bitcoin.conf noquotes
+  /home/admin/config.scripts/blesk.conf.sh set rpcworkqueue 512 /mnt/hdd/app-data/glcoin/glcoin.conf noquotes
+  /home/admin/config.scripts/blesk.conf.sh set rpcthreads 128 /mnt/hdd/app-data/glcoin/glcoin.conf noquotes
+  /home/admin/config.scripts/blesk.conf.sh set 'main.zmqpubhashblock' 'tcp://0.0.0.0:8433' /mnt/hdd/app-data/glcoin/glcoin.conf noquotes
 
   source <(/home/admin/_cache.sh get state)
   if [ "${state}" == "ready" ]; then
-    echo "# Restarting bitcoind"
-    sudo systemctl restart bitcoind
+    echo "# Restarting glcoind"
+    sudo systemctl restart glcoind
   fi
 
   # create a dedicated user
@@ -458,7 +473,7 @@ if [ "$1" = on ]; then
 
   sudo apt install -y libssl-dev # was needed on Debian Bullseye
 
-  downloadAndVerifyBinary
+  installFulcrumBinary
 
   echo "# Create the database directory in /mnt/hdd/app-storage (on the disk)"
   sudo mkdir -p /mnt/hdd/app-storage/fulcrum/db
@@ -469,14 +484,17 @@ if [ "$1" = on ]; then
   sudo chown -R fulcrum:fulcrum /home/fulcrum/.fulcrum
 
   echo "# Create a config file"
-  echo "# Get the RPC credentials from the bitcoin.conf"
-  RPC_USER=$(sudo cat /mnt/hdd/app-data/bitcoin/bitcoin.conf | grep rpcuser | cut -c 9-)
-  PASSWORD_B=$(sudo cat /mnt/hdd/app-data/bitcoin/bitcoin.conf | grep rpcpassword | cut -c 13-)
+  echo "# Get the RPC credentials from the glcoin.conf"
+  RPC_USER=$(sudo cat /mnt/hdd/app-data/glcoin/glcoin.conf | grep rpcuser | cut -c 9-)
+  PASSWORD_B=$(sudo cat /mnt/hdd/app-data/glcoin/glcoin.conf | grep rpcpassword | cut -c 13-)
   echo "## Fulcrum Config File
 ## for full explanations see:
 ## https://github.com/cculianu/Fulcrum/blob/master/doc/fulcrum-example-config.conf
 datadir = /home/fulcrum/.fulcrum/db
-bitcoind = 127.0.0.1:8332
+## Fulcrum's daemon connection key is 'bitcoind' regardless of coin
+## NOTE: Fulcrum validates the genesis hash — requires a Fulcrum fork or patch
+##       to add Glcoin's genesis (6e605c9c...) to the known-chain list.
+bitcoind = 127.0.0.1:1617
 rpcuser = ${RPC_USER}
 rpcpassword = ${PASSWORD_B}
 
@@ -565,8 +583,8 @@ stream {
   # Tor
   /home/admin/config.scripts/tor.onion-service.sh fulcrum ${portTCP} ${portTCP} ${portSSL} ${portSSL}
 
-  # setting value in raspiblitz config
-  /home/admin/config.scripts/blitz.conf.sh set fulcrum "on"
+  # setting value in raspiblesk config
+  /home/admin/config.scripts/blesk.conf.sh set fulcrum "on"
 
   echo "# Follow the logs with the command:"
   echo "sudo journalctl -fu fulcrum"
@@ -580,14 +598,14 @@ if [ "$1" = update ]; then
   echo "# The latest release is: $fulcrumVersion"
 
   # check if the binary is already installed
-  if [ -f /home/fulcrum/Fulcrum-${fulcrumVersion}-${build}/Fulcrum ]; then
-    echo "# Fulcrum-${fulcrumVersion}-${build} is already installed"
+  if [ -f /home/fulcrum/Fulcrum ]; then
+    echo "# Fulcrum ${fulcrumVersion} is already installed"
     exit 0
   else
-    echo "# Installing Fulcrum-${fulcrumVersion}-${build}"
+    echo "# Installing Fulcrum ${fulcrumVersion}"
   fi
 
-  downloadAndVerifyBinary
+  installFulcrumBinary
 
   sudo systemctl disable --now fulcrum
 
@@ -640,8 +658,8 @@ if [ "$1" = off ]; then
   # To manually remove, edit: sudo nano /etc/nginx/nginx.conf
   # and remove the 'upstream fulcrum' and related 'server' block
 
-  # setting value in raspiblitz config
-  /home/admin/config.scripts/blitz.conf.sh set fulcrum "off"
+  # setting value in raspiblesk config
+  /home/admin/config.scripts/blesk.conf.sh set fulcrum "off"
 
   echo "# Fulcrum uninstalled successfully"
   echo "# NOTE: nginx configuration for Fulcrum remains in /etc/nginx/nginx.conf"

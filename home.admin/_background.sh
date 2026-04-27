@@ -5,15 +5,15 @@
 # it runs ALMOST every seconds
 
 # INFOFILE - state data from bootstrap
-infoFile="/home/admin/raspiblitz.info"
+infoFile="/home/admin/raspiblesk.info"
 
-# CONFIGFILE - configuration of RaspiBlitz
-configFile="/mnt/hdd/app-data/raspiblitz.conf"
+# CONFIGFILE - configuration of RaspiBlesk
+configFile="/mnt/hdd/app-data/raspiblesk.conf"
 
 # LOGS see: sudo journalctl -f -u background
 
 echo "_background.sh STARTED"
-echo "INFO: _background.sh loop started - sudo journalctl -f -u background" >> /home/admin/raspiblitz.log
+echo "INFO: _background.sh loop started - sudo journalctl -f -u background" >> /home/admin/raspiblesk.log
 
 counter=0
 while [ 1 ]
@@ -42,7 +42,7 @@ do
 
   ####################################################
   # SKIP BACKGROUND TASK LOOP ON CERTAIN SYSTEM STATES
-  # https://github.com/rootzoll/raspiblitz/issues/160
+  # https://github.com/rootzoll/raspiblesk/issues/160
   ####################################################
 
   if [ "${state}" == "" ] || [ "${state}" == "copysource" ] || [ "${state}" == "copytarget" ]; then
@@ -74,7 +74,7 @@ do
 
   ####################################################
   # MONITOR LOG SIZES
-  # https://github.com/rootzoll/raspiblitz/issues/2659
+  # https://github.com/rootzoll/raspiblesk/issues/2659
   ####################################################
 
   # once a day
@@ -86,7 +86,7 @@ do
 
   ####################################################
   # RECHECK DHCP-SERVER
-  # https://github.com/rootzoll/raspiblitz/issues/160
+  # https://github.com/rootzoll/raspiblesk/issues/160
   ####################################################
 
   # every 5 minutes
@@ -111,9 +111,9 @@ do
   # RECHECK PUBLIC IP
   #
   # when public IP changes
-  #  -  restart bitcoind with new IP
+  #  -  restart glcoind with new IP
   #  -  restart LND with new IP (if autounlock is enabled)
-  #  -  restart BTCRPCexplorer if enabled in config or running)
+  #  -  restart GlcoinRPCexplorer if enabled in config or running)
   ####################################################
 
   # every 15min - not too often
@@ -145,7 +145,7 @@ do
       # store the old IP address
       publicIP_Old="${publicIP}"
       # refresh data
-      source /mnt/hdd/app-data/raspiblitz.conf
+      source /mnt/hdd/app-data/raspiblesk.conf
       # store the new IP address
       publicIP_New="${publicIP}"
       # some log output
@@ -156,30 +156,30 @@ do
       if [ "${ipv6}" = "on" ]; then
         # if the old or the new IPv6 address is "::1" something has gone wrong in "internet.sh update-publicip" => no need to restart services
         if [ "${publicIP_Old}" != "::1" ] && [ "${publicIP_New}" != "::1" ]; then
-          # restart bitcoind as the global IP is stored in the node configuration
+          # restart glcoind as the global IP is stored in the node configuration
           # and we will get more connections if this matches our real IP address
-          # otherwise the bitcoin-node connections will slowly decline
-          echo "IPv6 only is enabled => restart bitcoind to pickup up new publicIP as local IP"
-          systemctl stop bitcoind
+          # otherwise the glcoin-node connections will slowly decline
+          echo "IPv6 only is enabled => restart glcoind to pickup up new publicIP as local IP"
+          systemctl stop glcoind
           sleep 3
-          systemctl start bitcoind
+          systemctl start glcoind
 
-          # if BTCRPCexplorer is currently running
+          # if GlcoinRPCexplorer is currently running
           # it needs to be restarted to pickup the new IP for its "Node Status Page"
           # but this is only needed in IPv6 only mode
-          breIsRunning=$(systemctl status btc-rpc-explorer 2>/dev/null | grep -c 'active (running)')
+          breIsRunning=$(systemctl status glc-rpc-explorer 2>/dev/null | grep -c 'active (running)')
           if [ ${breIsRunning} -eq 1 ]; then
-            echo "BTCRPCexplorer is running => restart BTCRPCexplorer to pickup up new publicIP for the bitcoin node"
-            systemctl stop btc-rpc-explorer
-            systemctl start btc-rpc-explorer
+            echo "GlcoinRPCexplorer is running => restart GlcoinRPCexplorer to pickup up new publicIP for the glcoin node"
+            systemctl stop glc-rpc-explorer
+            systemctl start glc-rpc-explorer
           else
-            echo "new publicIP but no BTCRPCexplorer restart because not running"
+            echo "new publicIP but no GlcoinRPCexplorer restart because not running"
           fi
         else
-          echo "IPv6 only is ON, but publicIP_Old OR publicIP_New is equal ::1 => no need to restart bitcoind nor BTCRPCexplorer"
+          echo "IPv6 only is ON, but publicIP_Old OR publicIP_New is equal ::1 => no need to restart glcoind nor GlcoinRPCexplorer"
         fi
       else
-        echo "IPv6 only is OFF => no need to restart bitcoind nor BTCRPCexplorer"
+        echo "IPv6 only is OFF => no need to restart glcoind nor GlcoinRPCexplorer"
       fi
 
       # only restart LND if auto-unlock is activated
@@ -234,15 +234,15 @@ do
   # check every 1min
   recheckSync=$(($counter % 60))
   if [ ${recheckSync} -eq 1 ] && [ "${chain}" == "main" ]; then
-    source <(/home/admin/config.scripts/bitcoin.monitor.sh mainnet network)
+    source <(/home/admin/config.scripts/glcoin.monitor.sh mainnet network)
     echo "Blockchain Sync Monitoring: peers=${btc_peers}"
     if [ "${btc_peers}" == "0" ] && [ "${btc_running}" == "1" ]; then
       echo "Blockchain Sync Monitoring: ZERO PEERS DETECTED .. doing out-of-band kickstart"
-      /home/admin/config.scripts/bitcoin.monitor.sh mainnet peer-kickstart
+      /home/admin/config.scripts/glcoin.monitor.sh mainnet peer-kickstart
     fi
     if [ "${i2pd}" == "on" ] && [ "${btc_peers_i2p}" == "0" ] && [ "${btc_running}" == "1" ]; then
       echo "Blockchain Sync Monitoring: IP2TOR 0 peers .. doing out-of-band kickstart"
-      /home/admin/config.scripts/bitcoin.monitor.sh mainnet peer-kickstart i2p
+      /home/admin/config.scripts/glcoin.monitor.sh mainnet peer-kickstart i2p
     fi
   fi
 
@@ -298,7 +298,7 @@ do
       sudo touch /var/log/auth.log
       sudo chown root:adm /var/log/auth.log
       sudo service rsyslog restart
-      /home/admin/config.scripts/blitz.error.sh _background.sh "log-delete" "REPAIR: /var/log/ >5GB" "Logs in /var/log in were bigger then 5GB and got emergency delete to prevent fillup." "${debuginfo}"
+      /home/admin/config.scripts/blesk.error.sh _background.sh "log-delete" "REPAIR: /var/log/ >5GB" "Logs in /var/log in were bigger then 5GB and got emergency delete to prevent fillup." "${debuginfo}"
       sleep 10
     else
       echo "OK - logs are at ${logsMegaByte} MB - within safety limit"
@@ -307,7 +307,7 @@ do
   fi
 
   ####################################################
-  # MONITOR Initial Syncing of Bitcoin & Lightning
+  # MONITOR Initial Syncing of Glcoin & Lightning
   # - turn off recovery mode
   ####################################################
 
@@ -334,7 +334,7 @@ do
       # first check if flags need to be reset (manually delete of blockchain)
       if [ "${flagBtcDone}" == "1" ] && [ "${flagBtcActive}" == "1" ]; then
         flagBtcDone=0
-        /home/admin/config.scripts/blitz.conf.sh set btc_${CHAIN}net_sync_initial_done ${flagBtcDone} /home/admin/raspiblitz.info
+        /home/admin/config.scripts/blesk.conf.sh set btc_${CHAIN}net_sync_initial_done ${flagBtcDone} /home/admin/raspiblesk.info
         echo "EVENT --> btc_${CHAIN}net_sync_initial_done changed to ${flagBtcDone}"
       fi
 
@@ -348,7 +348,7 @@ do
       # when started done is set - but not not active anymore --> end of IDB event detected
       if [ "${flagBtcDone}" == "0" ] && [ "${flagBtcOnline}" == "1" ] && [ "${flagBtcSynced}" == "1" ]; then
         flagBtcDone=1
-        /home/admin/config.scripts/blitz.conf.sh set btc_${CHAIN}net_sync_initial_done ${flagBtcDone} /home/admin/raspiblitz.info
+        /home/admin/config.scripts/blesk.conf.sh set btc_${CHAIN}net_sync_initial_done ${flagBtcDone} /home/admin/raspiblesk.info
         echo "EVENT --> btc_${CHAIN}net_sync_initial_done changed to ${flagBtcDone}"
       fi
 
@@ -372,7 +372,7 @@ do
         # first check if flags need to be reset (manually a rescan was triggered)
         if [ "${flagLNSyncDone}" == "1" ] && [ "${flagLNRecoveryMode}" == "1" ]; then
           flagLNSyncDone=0
-          /home/admin/config.scripts/blitz.conf.sh set ln_${LN}_${CHAIN}net_sync_initial_done ${flagLNSyncDone} /home/admin/raspiblitz.info
+          /home/admin/config.scripts/blesk.conf.sh set ln_${LN}_${CHAIN}net_sync_initial_done ${flagLNSyncDone} /home/admin/raspiblesk.info
           echo "EVENT --> ln_${LN}_${CHAIN}net_sync_initial_done to ${flagLNSyncDone}"
         fi
 
@@ -384,7 +384,7 @@ do
 
             # write event
             flagLNSyncDone=1
-            /home/admin/config.scripts/blitz.conf.sh set ln_${LN}_${CHAIN}net_sync_initial_done ${flagLNSyncDone} /home/admin/raspiblitz.info
+            /home/admin/config.scripts/blesk.conf.sh set ln_${LN}_${CHAIN}net_sync_initial_done ${flagLNSyncDone} /home/admin/raspiblesk.info
             echo "EVENT --> ln_${LN}_${CHAIN}net_sync_initial_done to ${flagLNSyncDone}"
 
             # LND if recovery mode was on - deactivate now
@@ -410,7 +410,7 @@ do
 
   ####################################################
   # Check for end of Initial Blockhain & Lightning Sync
-  # bitcoin mainnet only / special on dbcache size
+  # glcoin mainnet only / special on dbcache size
   ####################################################
 
   # check every 60secs
@@ -419,7 +419,7 @@ do
 
     # check if flag exists (gets created on setup)
     # this flag signals that an initial blockchain sync/chatchup was happening
-    flagExists=$(ls /mnt/hdd/bitcoin/blocks/selfsync.flag 2>/dev/null | grep -c "selfsync.flag")
+    flagExists=$(ls /mnt/hdd/glcoin/blocks/selfsync.flag 2>/dev/null | grep -c "selfsync.flag")
     if [ ${flagExists} -eq 1 ]; then
 
       source <(/home/admin/_cache.sh get btc_default_sync_initialblockdownload)
@@ -428,23 +428,23 @@ do
         echo "CHECK FOR END OF IBD --> reduce RAM for next reboot"
 
         # remove flag
-        rm /mnt/hdd/bitcoin/blocks/selfsync.flag
+        rm /mnt/hdd/glcoin/blocks/selfsync.flag
 
         # set dbcache back to normal (to give room for other apps after reboot in the future)
         kbSizeRAM=$(cat /proc/meminfo | grep "MemTotal" | sed 's/[^0-9]*//g')
 
         # RP4 4GB
         if [ ${kbSizeRAM} -gt 3500000 ]; then
-          echo "Detected RAM >=4GB --> normalizing bitcoin.conf"
-          sed -i "s/^dbcache=.*/dbcache=512/g" /mnt/hdd/app-data/bitcoin/bitcoin.conf
+          echo "Detected RAM >=4GB --> normalizing glcoin.conf"
+          sed -i "s/^dbcache=.*/dbcache=512/g" /mnt/hdd/app-data/glcoin/glcoin.conf
         # RP4 2GB
         elif [ ${kbSizeRAM} -gt 1500000 ]; then
-          echo "Detected RAM >=2GB --> normalizing bitcoin.conf"
-          sed -i "s/^dbcache=.*/dbcache=256/g" /mnt/hdd/app-data/bitcoin/bitcoin.conf
+          echo "Detected RAM >=2GB --> normalizing glcoin.conf"
+          sed -i "s/^dbcache=.*/dbcache=256/g" /mnt/hdd/app-data/glcoin/glcoin.conf
         #RP3/4 1GB
         else
-          echo "Detected RAM <=1GB --> normalizing bitcoin.conf"
-          sed -i "s/^dbcache=.*/dbcache=128/g" /mnt/hdd/app-data/bitcoin/bitcoin.conf
+          echo "Detected RAM <=1GB --> normalizing glcoin.conf"
+          sed -i "s/^dbcache=.*/dbcache=128/g" /mnt/hdd/app-data/glcoin/glcoin.conf
         fi
 
         # relax sanning on sync progress (after 30 more secs)
@@ -512,7 +512,7 @@ do
 
 
         # check if a additional local backup target is set
-        # see ./config.scripts/blitz.backupdevice.sh
+        # see ./config.scripts/blesk.backupdevice.sh
         if [ "${localBackupDeviceUUID}" != "" ] && [ "${localBackupDeviceUUID}" != "off" ]; then
 
           # check if device got mounted on "/mnt/backup" (gets mounted by _bootstrap.sh)
@@ -537,11 +537,11 @@ do
         fi
 
         # check if a SCP backup target is set
-        # parameter in raspiblitz.conf:
+        # parameter in raspiblesk.conf:
         # scpBackupTarget='[USER]@[SERVER]:[DIRPATH-WITHOUT-ENDING-/]'
         # optionally a custom option string for the scp command can be set with
         # scpBackupOptions='[YOUR-CUSTOM-OPTIONS]'
-        # On target server add the public key of your RaspiBlitz to the authorized_keys for the user
+        # On target server add the public key of your RaspiBlesk to the authorized_keys for the user
         # https://www.linode.com/docs/security/authentication/use-public-key-authentication-with-ssh/
         if [ ${#scpBackupTarget} -gt 0 ]; then
           echo "--> Offsite-Backup SFTP Server"
@@ -594,7 +594,7 @@ do
     source ${configFile}
     source <(/home/admin/config.scripts/network.aliases.sh getvars cl ${chain}net)
     # check if emergency.recover exists
-    erPath=/home/bitcoin/.lightning/${CLNETWORK}/emergency.recover
+    erPath=/home/glcoin/.lightning/${CLNETWORK}/emergency.recover
     erExists=$(ls $erPath 2>/dev/null | grep -c 'emergency.recover')
     if [ ${erExists} -eq 1 ]; then
 
@@ -618,7 +618,7 @@ do
         echo "OK emergency.recover copied to '${localBackupPath}' and '${localTimestampedPath}' and '/boot/firmware/${netprefix}emergency.recover'"
 
         # check if a additional local backup target is set
-        # see ./config.scripts/blitz.backupdevice.sh
+        # see ./config.scripts/blesk.backupdevice.sh
         if [ "${localBackupDeviceUUID}" != "" ] && [ "${localBackupDeviceUUID}" != "off" ]; then
 
           # check if device got mounted on "/mnt/backup" (gets mounted by _bootstrap.sh)
@@ -643,11 +643,11 @@ do
         fi
 
         # check if a SCP backup target is set
-        # parameter in raspiblitz.conf:
+        # parameter in raspiblesk.conf:
         # scpBackupTarget='[USER]@[SERVER]:[DIRPATH-WITHOUT-ENDING-/]'
         # optionally a custom option string for the scp command can be set with
         # scpBackupOptions='[YOUR-CUSTOM-OPTIONS]'
-        # On target server add the public key of your RaspiBlitz to the authorized_keys for the user
+        # On target server add the public key of your RaspiBlesk to the authorized_keys for the user
         # https://www.linode.com/docs/security/authentication/use-public-key-authentication-with-ssh/
         if [ ${#scpBackupTarget} -gt 0 ]; then
           echo "--> Offsite-Backup SFTP Server"

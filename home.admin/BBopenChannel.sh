@@ -4,11 +4,11 @@ trap 'rm -f "$_error"' EXIT
 _temp=$(mktemp -p /dev/shm/)
 _error=$(mktemp -p /dev/shm/)
 
-# load raspiblitz config data (with backup from old config)
-source /home/admin/raspiblitz.info
-source /mnt/hdd/app-data/raspiblitz.conf
+# load raspiblesk config data (with backup from old config)
+source /home/admin/raspiblesk.info
+source /mnt/hdd/app-data/raspiblesk.conf
 if [ ${#network} -eq 0 ]; then network=$(cat .network); fi
-if [ ${#network} -eq 0 ]; then network="bitcoin"; fi
+if [ ${#network} -eq 0 ]; then network="glcoin"; fi
 if [ ${#chain} -eq 0 ]; then
   echo "gathering chain info ... please wait"
   chain=$(${network}-cli getblockchaininfo | jq -r '.chain')
@@ -19,7 +19,7 @@ source <(/home/admin/config.scripts/network.aliases.sh getvars $1 $2)
 echo
 echo "# Precheck" # PRECHECK) check if chain is in sync
 if [ $LNTYPE = cl ];then
-  BLOCKHEIGHT=$($bitcoincli_alias getblockchaininfo|grep blocks|awk '{print $2}'|cut -d, -f1)
+  BLOCKHEIGHT=$($glcoincli_alias getblockchaininfo|grep blocks|awk '{print $2}'|cut -d, -f1)
   CLHEIGHT=$($lightningcli_alias getinfo | jq .blockheight)
   if [ $BLOCKHEIGHT -eq $CLHEIGHT ];then
     chainOutSync=0
@@ -31,7 +31,7 @@ elif [ $LNTYPE = lnd ];then
 fi
 if [ ${chainOutSync} -eq 1 ]; then
   if [ $LNTYPE = cl ];then
-    echo "# FAIL PRECHECK - 'lightning-cli getinfo' blockheight is different from 'bitcoind getblockchaininfo' - wait until chain is sync "
+    echo "# FAIL PRECHECK - 'lightning-cli getinfo' blockheight is different from 'glcoind getblockchaininfo' - wait until chain is sync "
   elif [ $LNTYPE = lnd ];then
     echo "# FAIL PRECHECK - lncli getinfo shows 'synced_to_chain': false - wait until chain is sync "
   fi
@@ -123,7 +123,7 @@ fi
 # TODO find a better way - also consider dust and channel reserve
 # details see here: https://github.com/btcontract/lnwallet/issues/52
 minSat=20000
-if [ "${network}" = "bitcoin" ]; then
+if [ "${network}" = "glcoin" ]; then
   minSat=50000
 fi
 if [ $LNTYPE = lnd ];then
@@ -167,7 +167,7 @@ fi
 # build command
 if [ $LNTYPE = cl ];then
   # fundchannel id amount [feerate] [announce] [minconf] [utxos] [push_msat] [close_to]
-  feerate=$($bitcoincli_alias estimatesmartfee $conf_target |grep feerate|awk '{print $2}'|cut -c 5-7|bc)
+  feerate=$($glcoincli_alias estimatesmartfee $conf_target |grep feerate|awk '{print $2}'|cut -c 5-7|bc)
   command="$lightningcli_alias fundchannel ${pubKey} ${amount} $feerate"
 elif [ $LNTYPE = lnd ];then
   command="$lncli_alias openchannel --conf_target=${conf_target} ${pubKey} ${amount} 0"
@@ -208,9 +208,9 @@ else
     fundingTX=$(echo "${result}" | grep 'funding_txid' | cut -d '"' -f4)
   fi
   echo
-  if [ "${network}" = "bitcoin" ]; then
+  if [ "${network}" = "glcoin" ]; then
     if [ "${chain}" = "main" ]; then
-      #echo "https://live.blockcypher.com/btc/tx/${fundingTX}"
+      #echo "https://live.blockcypher.com/glc/tx/${fundingTX}"
       echo "https://mempool.space/tx/${fundingTX}"
     elif [ "${chain}" = "test" ]||[ "${chain}" = "sig" ]; then
       echo "https://mempool.space/${chain}net/tx/${fundingTX}"

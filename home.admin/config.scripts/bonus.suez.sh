@@ -16,7 +16,7 @@ PGPsigner="prusnak"
 PGPpubkeyLink="https://rusnak.io/public/pgp.txt"
 PGPpubkeyFingerprint="91F3B339B9A02A3D"
 
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 
 # show info menu
 if [ "$1" = "menu" ]; then
@@ -32,7 +32,7 @@ fi
 if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   echo "# INSTALL SUEZ"
 
-  cd /home/bitcoin || exit 1
+  cd /home/glcoin || exit 1
 
   # poetry
   sudo pip3 config set global.break-system-packages true
@@ -40,12 +40,12 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   sudo pip3 install poetry
 
   # download source code
-  sudo -u bitcoin git clone https://github.com/prusnak/suez.git
+  sudo -u glcoin git clone https://github.com/prusnak/suez.git
   cd suez || exit 1
-  sudo -u bitcoin git reset --hard $SUEZVERSION
-#  sudo -u bitcoin /home/admin/config.scripts/blitz.git-verify.sh \
+  sudo -u glcoin git reset --hard $SUEZVERSION
+#  sudo -u glcoin /home/admin/config.scripts/blesk.git-verify.sh \
 #    "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" || exit 1
-  sudo -u bitcoin poetry install
+  sudo -u glcoin poetry install
 
   # make sure default virtaulenv is used
   sudo apt-get remove -y python3-virtualenv 2>/dev/null
@@ -53,7 +53,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   sudo apt-get install -y python3-virtualenv
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set suez "on"
+  /home/admin/config.scripts/blesk.conf.sh set suez "on"
 
   echo "# To use the alias in /home/admin/_aliases:"
   echo "source /home/admin/_aliases"
@@ -67,11 +67,11 @@ fi
 # switch off
 if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   echo "# REMOVING SUEZ"
-  sudo rm -rf /home/bitcoin/suez
+  sudo rm -rf /home/glcoin/suez
   echo "# OK, Suez is removed."
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set suez "off"
+  /home/admin/config.scripts/blesk.conf.sh set suez "off"
 
   exit 0
 fi
@@ -79,20 +79,20 @@ fi
 # update
 if [ "$1" = "update" ]; then
   echo "# UPDATE SUEZ"
-  cd /home/bitcoin || exit 1
+  cd /home/glcoin || exit 1
   # dependency
   sudo pip3 config set global.break-system-packages true
   sudo pip3 install --upgrade pip
   sudo pip3 install poetry
   # download source code
   if [ -d suez ]; then
-    sudo -u bitcoin git clone https://github.com/prusnak/suez.git
+    sudo -u glcoin git clone https://github.com/prusnak/suez.git
   fi
   cd suez || exit 1
-  sudo -u bitcoin git pull
-#  sudo -u bitcoin /home/admin/config.scripts/blitz.git-verify.sh \
+  sudo -u glcoin git pull
+#  sudo -u glcoin /home/admin/config.scripts/blesk.git-verify.sh \
 #    "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" || exit 1
-  sudo -u bitcoin poetry install
+  sudo -u glcoin poetry install
   echo "# Updated to the latest in https://github.com/prusnak/suez/commits/master"
 
   # make sure default virtaulenv is used

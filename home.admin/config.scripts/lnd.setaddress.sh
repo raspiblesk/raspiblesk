@@ -32,7 +32,7 @@ if [ "${mode}" = "on" ]; then
   echo "# address(${address})"
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set lndAddress "${address}"
+  /home/admin/config.scripts/blesk.conf.sh set lndAddress "${address}"
 
   echo "# changing lnd.conf"
 
@@ -63,7 +63,7 @@ if [ "${mode}" = "off" ]; then
   sudo systemctl stop lnd 2>/dev/null
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set lndAddress ""
+  /home/admin/config.scripts/blesk.conf.sh set lndAddress ""
 
   echo "# changing lnd.conf"
 

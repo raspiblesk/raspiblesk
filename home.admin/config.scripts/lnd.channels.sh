@@ -3,7 +3,7 @@
 
 # make executable & copy to 
 # /usr/local/bin/lnchannels
-# current user must be able to execute bitcoin-cli and lncli
+# current user must be able to execute glcoin-cli and lncli
 
 # Usage
 # $ lnchannels            to display lnd mainnet channels

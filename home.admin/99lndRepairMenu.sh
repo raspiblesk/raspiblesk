@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# get raspiblitz config
-echo "# get raspiblitz config"
-source /home/admin/raspiblitz.info
-source /mnt/hdd/app-data/raspiblitz.conf
+# get raspiblesk config
+echo "# get raspiblesk config"
+source /home/admin/raspiblesk.info
+source /mnt/hdd/app-data/raspiblesk.conf
 
 source <(/home/admin/config.scripts/network.aliases.sh getvars lnd $1)
 
-sudo mkdir /var/cache/raspiblitz/temp 2>/dev/null
+sudo mkdir /var/cache/raspiblesk/temp 2>/dev/null
 
 askLNDbackupCopy()
 {
@@ -44,11 +44,11 @@ Download LND Data Backup now?
 getpasswordC() # from dialogPasswords.sh
 {
   # temp file for password results
-  _temp="/var/cache/raspiblitz/temp/.temp.tmp"
-  sudo /home/admin/config.scripts/blitz.passwords.sh set x "PASSWORD C - Lightning Wallet Password" $_temp
+  _temp="/var/cache/raspiblesk/temp/.temp.tmp"
+  sudo /home/admin/config.scripts/blesk.passwords.sh set x "PASSWORD C - Lightning Wallet Password" $_temp
   passwordC=$(sudo cat $_temp)
   sudo rm $_temp
-  dialog --backtitle "RaspiBlitz - Setup" --msgbox "\nThanks - Password C accepted.\n\nAlways use this password to \nunlock your Lightning Wallet." 10 34
+  dialog --backtitle "RaspiBlesk - Setup" --msgbox "\nThanks - Password C accepted.\n\nAlways use this password to \nunlock your Lightning Wallet." 10 34
 }
 
 lndHealthCheck() 
@@ -84,7 +84,7 @@ lndHealthCheck()
 syncAndCheckLND() # from _provision.setup.sh
 {
   # make sure all directories are linked
-  sudo /home/admin/config.scripts/blitz.data.sh link
+  sudo /home/admin/config.scripts/blesk.data.sh link
 
   # check if now a config exists
   configLinkedCorrectly=$(ls /mnt/hdd/app-data/lnd/${netprefix}lnd.conf | grep -c "${netprefix}lnd.conf")
@@ -110,10 +110,10 @@ syncAndCheckLND() # from _provision.setup.sh
   sudo systemctl start ${netprefix}lnd
   echo "Starting LND Service ... executed"  
   
-  if [ $(sudo -u bitcoin ls /mnt/hdd/app-data/lnd/data/chain/bitcoin/${chain}net/wallet.db 2>/dev/null | grep -c wallet.db) -gt 0 ]; then
+  if [ $(sudo -u glcoin ls /mnt/hdd/app-data/lnd/data/chain/glcoin/${chain}net/wallet.db 2>/dev/null | grep -c wallet.db) -gt 0 ]; then
     echo "# OK, there is an LND wallet present"
   else
-    echo "lnd-no-wallet" "there is no LND wallet present" "/mnt/hdd/app-data/lnd/data/chain/bitcoin/${chain}net/wallet.db --> missing"
+    echo "lnd-no-wallet" "there is no LND wallet present" "/mnt/hdd/app-data/lnd/data/chain/glcoin/${chain}net/wallet.db --> missing"
     exit 13
   fi
   # sync macaroons & TLS to other users
@@ -122,12 +122,12 @@ syncAndCheckLND() # from _provision.setup.sh
 
   # check if macaroon exists now - if not fail
   attempt=0
-  while [ $(sudo -u bitcoin ls -la /mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/admin.macaroon 2>/dev/null | grep -c admin.macaroon) -eq 0 ]; do
+  while [ $(sudo -u glcoin ls -la /mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/admin.macaroon 2>/dev/null | grep -c admin.macaroon) -eq 0 ]; do
     echo "Waiting 2 mins for LND to create macaroons ... (${attempt}0s)"
     sleep 10
     attempt=$((attempt+1))
     if [ $attempt -eq 12 ];then
-      /home/admin/config.scripts/blitz.error.sh _provision.setup.sh "lnd-no-macaroons" "lnd did not create macaroons" "/mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/admin.macaroon --> missing"
+      /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "lnd-no-macaroons" "lnd did not create macaroons" "/mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/admin.macaroon --> missing"
       exit 14
     fi
   done
@@ -154,12 +154,12 @@ function restoreFromSeed()
     whiptail --title "IMPORTANT INFO" --yes-button "ENTER SEED" --no-button "Go Back" --yesno "
 Using JUST SEED WORDS will only recover your on-chain funds.
 To also try to recover the open channel funds you need the
-channel.backup file (since RaspiBlitz v1.2 / LND 0.6-beta)
+channel.backup file (since RaspiBlesk v1.2 / LND 0.6-beta)
 or having a complete LND rescue-backup from your old node.
     " 11 65
     
     # start seed input and get results
-    _temp="/var/cache/raspiblitz/.temp.tmp"
+    _temp="/var/cache/raspiblesk/.temp.tmp"
     /home/admin/config.scripts/lnd.backup.sh seed-import-gui $_temp
     source $_temp 2>/dev/null
     sudo rm $_temp 2>/dev/null
@@ -198,7 +198,7 @@ or having a complete LND rescue-backup from your old node.
 function restoreSCB()
 {
     # import SCB and get results
-    _temp="/var/cache/raspiblitz/.temp.tmp"
+    _temp="/var/cache/raspiblesk/.temp.tmp"
     # 'production' to use passwordA
     /home/admin/config.scripts/lnd.backup.sh scb-import-gui production $_temp
     source $_temp 2>/dev/null
@@ -215,7 +215,7 @@ function restoreSCB()
     echo "Restoring the channel.backup can be repeated until all the channels are force closed."
     echo
     echo "Make sure to enter the Raspiblitz menu to trigger the next step."
-    echo "If menu does not open automatically - use command: raspiblitz"
+    echo "If menu does not open automatically - use command: raspiblesk"
     echo "Press ENTER to continue or CTRL+C to abort"
     read key
 
@@ -260,7 +260,7 @@ function restoreSCB()
 #            sudo journalctl -u ${netprefix}lnd
 #            echo
 #            echo "# ${netprefix}lnd logs:"
-#            sudo tail /mnt/hdd/app-data/lnd/logs/bitcoin/${CHAIN}/lnd.log
+#            sudo tail /mnt/hdd/app-data/lnd/logs/glcoin/${CHAIN}/lnd.log
 #            exit 12
 #          fi
 #          sleep 10
@@ -294,12 +294,12 @@ function removeLNDwallet
   sudo rm -rf /mnt/hdd/app-data/lnd/data/chain/${network}/${CHAIN}
   sudo rm -rf /mnt/hdd/app-data/lnd/logs/${network}/${CHAIN}
   sudo rm -rf /mnt/hdd/app-data/lnd/data/graph/${CHAIN}
-  sudo rm -rf home/bitcoin/.lnd/data/watchtower/${CHAIN}
+  sudo rm -rf home/glcoin/.lnd/data/watchtower/${CHAIN}
 }
 
 # BASIC MENU INFO
 WIDTH=64
-BACKTITLE="RaspiBlitz"
+BACKTITLE="RaspiBlesk"
 TITLE="LND repair options for $CHAIN"
 MENU=""
 OPTIONS=()
@@ -346,7 +346,7 @@ case $CHOICE in
     echo
     echo "Press ENTER when your backup download is done to shutdown."
     read key
-    sudo /home/admin/config.scripts/blitz.shutdown.sh
+    sudo /home/admin/config.scripts/blesk.shutdown.sh
     ;;
   RESET-LND)
     askLNDbackupCopy
@@ -359,7 +359,7 @@ case $CHOICE in
         l1="Please enter the name of your new LND node:\n"
         l2="different name is better for a fresh identity\n"
         l3="one word, use up to 32 basic characters"
-        dialog --backtitle "RaspiBlitz - Setup (${network}/${chain})" --inputbox "$l1$l2$l3" 13 52 2>$_temp
+        dialog --backtitle "RaspiBlesk - Setup (${network}/${chain})" --inputbox "$l1$l2$l3" 13 52 2>$_temp
         result=$( cat $_temp | tr -dc '[:alnum:]-.' | tr -d ' ' )
         echo "processing ..."
         sleep 3
@@ -373,17 +373,17 @@ case $CHOICE in
     sudo /home/admin/config.scripts/lnd.install.sh display-seed ${chain}net delete
 
     #TODO the new hostname is not taken into account on init (user can change set the lnd name in menu later)
-    # make sure host is named like in the raspiblitz config
+    # make sure host is named like in the raspiblesk config
     # echo "Setting the Name/Alias/Hostname .."
     sudo /home/admin/config.scripts/lnd.setname.sh ${chain}net "${result}"
-    # /home/admin/config.scripts/blitz.conf.sh set hostname "${result}"
+    # /home/admin/config.scripts/blesk.conf.sh set hostname "${result}"
 
     syncAndCheckLND
 
     echo "Press ENTER to return to main menu."
     read key    
     # go back to main menu (and show)
-    /home/admin/00raspiblitz.sh
+    /home/admin/00raspiblesk.sh
     exit 0
     ;;
   
@@ -412,7 +412,7 @@ case $CHOICE in
     ## from dialogLightningWallet.sh 
     # import file
     # run upload dialog and get result
-    _temp="/var/cache/raspiblitz/temp/.temp.tmp"
+    _temp="/var/cache/raspiblesk/temp/.temp.tmp"
     /home/admin/config.scripts/lnd.backup.sh lnd-import-gui production $_temp
     source $_temp 2>/dev/null
     sudo rm $_temp 2>/dev/null
@@ -426,7 +426,7 @@ case $CHOICE in
     echo "Press ENTER to return to main menu."
     read key
     # go back to main menu (and show)
-    /home/admin/00raspiblitz.sh
+    /home/admin/00raspiblesk.sh
     exit 0
     ;;
 
@@ -447,7 +447,7 @@ case $CHOICE in
     echo "Press ENTER to return to main menu."
     read key
     # go back to main menu (and show)
-    /home/admin/00raspiblitz.sh
+    /home/admin/00raspiblesk.sh
     exit 0
     ;;
 
@@ -471,7 +471,7 @@ case $CHOICE in
     read key
 
     # go back to main menu (and show)
-    /home/admin/00raspiblitz.sh
+    /home/admin/00raspiblesk.sh
     exit 0
     ;;
 
@@ -480,7 +480,7 @@ case $CHOICE in
     restoreSCB
 
     # go back to main menu (and show)
-    /home/admin/00raspiblitz.sh
+    /home/admin/00raspiblesk.sh
 
     exit 0
     ;;
@@ -511,7 +511,7 @@ case $CHOICE in
     echo "'sudo tail -n 30 -f /mnt/hdd/app-data/lnd/logs/${network}/${chain}net/lnd.log'"
     echo
     echo "Press ENTER to continue"
-    echo "use CTRL+C any time to exit .. then use the command 'raspiblitz' to return to the menu"
+    echo "use CTRL+C any time to exit .. then use the command 'raspiblesk' to return to the menu"
     echo "(the rescan will continue in the background)"
     echo "#######################################################################################"
     read key

@@ -15,25 +15,25 @@ plugin="feeadjuster"
 
 if [ "$1" = "on" ];then
 
-  if [ ! -f "/home/bitcoin/cl-plugins-available/plugins/${plugin}/${plugin}.py" ]; then
-    cd /home/bitcoin/cl-plugins-available || exit 1
-    sudo -u bitcoin git clone https://github.com/lightningd/plugins.git
-    sudo -u bitcoin pip config set global.break-system-packages true
-    sudo -u bitcoin pip install -r /home/bitcoin/cl-plugins-available/plugins/${plugin}/requirements.txt
+  if [ ! -f "/home/glcoin/cl-plugins-available/plugins/${plugin}/${plugin}.py" ]; then
+    cd /home/glcoin/cl-plugins-available || exit 1
+    sudo -u glcoin git clone https://github.com/lightningd/plugins.git
+    sudo -u glcoin pip config set global.break-system-packages true
+    sudo -u glcoin pip install -r /home/glcoin/cl-plugins-available/plugins/${plugin}/requirements.txt
   fi
-  if [ ! -L /home/bitcoin/${netprefix}cl-plugins-enabled/${plugin}.py ];then
-    sudo ln -s /home/bitcoin/cl-plugins-available/plugins/${plugin}/${plugin}.py \
-               /home/bitcoin/${netprefix}cl-plugins-enabled
-    sudo chmod +x /home/bitcoin/cl-plugins-available/plugins/${plugin}/${plugin}.py
+  if [ ! -L /home/glcoin/${netprefix}cl-plugins-enabled/${plugin}.py ];then
+    sudo ln -s /home/glcoin/cl-plugins-available/plugins/${plugin}/${plugin}.py \
+               /home/glcoin/${netprefix}cl-plugins-enabled
+    sudo chmod +x /home/glcoin/cl-plugins-available/plugins/${plugin}/${plugin}.py
   fi
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set ${netprefix}feeadjuster "on"
+  /home/admin/config.scripts/blesk.conf.sh set ${netprefix}feeadjuster "on"
 
   source <(/home/admin/_cache.sh get state)
   if [ "${state}" == "ready" ] && [ "$3" != "norestart" ]; then
     echo "# Start ${netprefix}${plugin}"
-    $lightningcli_alias plugin start /home/bitcoin/cl-plugins-enabled/${plugin}.py
+    $lightningcli_alias plugin start /home/glcoin/cl-plugins-enabled/${plugin}.py
   fi
 
 fi
@@ -41,16 +41,16 @@ fi
 if [ "$1" = "off" ];then
 
   echo "Stop the ${plugin}"
-  $lightningcli_alias plugin stop home/bitcoin/${netprefix}cl-plugins-enabled/${plugin}.py
+  $lightningcli_alias plugin stop home/glcoin/${netprefix}cl-plugins-enabled/${plugin}.py
 
   echo "# delete symlink"
-  sudo rm -rf /home/bitcoin/${netprefix}cl-plugins-enabled/${plugin}.py
+  sudo rm -rf /home/glcoin/${netprefix}cl-plugins-enabled/${plugin}.py
   
   echo "# Edit ${CLCONF}"
   sudo sed -i "/^feeadjuster/d" ${CLCONF}
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set ${netprefix}feeadjuster "off"
+  /home/admin/config.scripts/blesk.conf.sh set ${netprefix}feeadjuster "off"
 
   echo "# The ${plugin} was uninstalled"
 fi

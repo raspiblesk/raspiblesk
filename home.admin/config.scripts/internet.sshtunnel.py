@@ -6,11 +6,11 @@ import sys
 
 # IDEA: At the moment its just Reverse-SSH Tunnels thats why [INTERNAL-PORT]<[EXTERNAL-PORT]
 # For the future also just local ssh tunnels could be added with [INTERNAL-PORT]-[EXTERNAL-PORT]
-# for the use case when a server wants to use a RaspiBlitz behind a NAT as Lightning backend
+# for the use case when a server wants to use a RaspiBlesk behind a NAT as Lightning backend
 
 # display config script info
 if len(sys.argv) <= 1 or sys.argv[1] == "-h" or sys.argv[1] == "help":
-    print("forward ports from another server to raspiblitz with reverse SSH tunnel")
+    print("forward ports from another server to raspiblesk with reverse SSH tunnel")
     print("internet.sshtunnel.py on|off|restore USER@SERVER:PORT [--m:MONITORINGPORT] \"INTERNAL-PORT<EXTERNAL-PORT\"")
     print("note that INTERNAL-PORT<EXTERNAL-PORT can one or multiple forwardings")
     sys.exit(1)
@@ -168,12 +168,12 @@ def on(restore_on_update=False):
 
     # copy SSH keys for backup (for update with new sd card)
     print("making backup copy of SSH keys")
-    subprocess.call("sudo /home/admin/config.scripts/blitz.ssh.sh backup", shell=True)
+    subprocess.call("sudo /home/admin/config.scripts/blesk.ssh.sh backup", shell=True)
     print("DONE")
 
-    # write ssh tunnel data to raspiblitz config (for update with new sd card)
-    print("*** Updating RaspiBlitz Config")
-    with open('/mnt/hdd/app-data/raspiblitz.conf') as f:
+    # write ssh tunnel data to raspiblesk config (for update with new sd card)
+    print("*** Updating RaspiBlesk Config")
+    with open('/mnt/hdd/app-data/raspiblesk.conf') as f:
         file_content = f.read()
     if file_content.count("sshtunnel=") == 0:
         file_content = file_content + "\nsshtunnel=''"
@@ -210,13 +210,13 @@ def on(restore_on_update=False):
 
         if forwarding_lnd:
             # setting server explicitly on LND if LND port is forwarded
-            print("Setting fixed address for LND with raspiblitz lndAddress")
+            print("Setting fixed address for LND with raspiblesk lndAddress")
             file_content = re.sub("lndAddress=.*", "lndAddress='{}'".format(ssh_server_host), file_content)
         else:
-            print("No need to set fixed address for LND with raspiblitz lndAddress")
+            print("No need to set fixed address for LND with raspiblesk lndAddress")
     file_content = "".join([s for s in file_content.splitlines(True) if s.strip("\r\n")]) + "\n"
     print(file_content)
-    with open("/mnt/hdd/app-data/raspiblitz.conf", "w") as text_file:
+    with open("/mnt/hdd/app-data/raspiblesk.conf", "w") as text_file:
         text_file.write(file_content)
     print("DONE")
 
@@ -238,10 +238,10 @@ def on(restore_on_update=False):
     print("*** WIN - SSH TUNNEL SERVICE SETUP ***")
     print("**************************************")
     print("See chapter 'How to setup port-forwarding with a SSH tunnel?' in:")
-    print("https://github.com/rootzoll/raspiblitz/blob/dev/FAQ.md")
+    print("https://github.com/rootzoll/raspiblesk/blob/dev/FAQ.md")
     print("- Tunnel service needs final reboot to start.")
     print("- After reboot check logs: sudo journalctl -f -u {}".format(SERVICE_NAME))
-    print("- Make sure the SSH pub key of this RaspiBlitz is in 'authorized_keys' of {}:".format(ssh_server_host))
+    print("- Make sure the SSH pub key of this RaspiBlesk is in 'authorized_keys' of {}:".format(ssh_server_host))
     print(ssh_pubkey)
     print()
 
@@ -263,13 +263,13 @@ def off():
     subprocess.call("sudo /home/admin/config.scripts/lnd.setaddress.sh off", shell=True)
     print()
 
-    print("*** Removing SSH Tunnel data from RaspiBlitz config")
-    with open('/mnt/hdd/app-data/raspiblitz.conf') as f:
+    print("*** Removing SSH Tunnel data from RaspiBlesk config")
+    with open('/mnt/hdd/app-data/raspiblesk.conf') as f:
         file_content = f.read()
     file_content = re.sub("sshtunnel=.*", "", file_content)
     file_content = re.sub("\n\n", "\n", file_content)
     print(file_content)
-    with open("/mnt/hdd/app-data/raspiblitz.conf", "w") as text_file:
+    with open("/mnt/hdd/app-data/raspiblesk.conf", "w") as text_file:
         text_file.write(file_content)
     print("OK Done")
 

@@ -6,7 +6,7 @@
 ##########################################################################
 
 # YOUR REPO (REPLACE WITH YOUR OWN FORK IF NEEDED)
-REPO="https://github.com/raspiblitz/raspiblitz"
+REPO="https://github.com/raspiblesk/raspiblesk"
 
 # folders to store the build results
 BUILDFOLDER="images"
@@ -19,7 +19,7 @@ fi
 
 # usage info
 echo "packer.sh [BRANCH] [arm|x86] [min|fat] [?lastcommithash]"
-echo "Build RaspiBlitz install images on a Debian LIVE system"
+echo "Build RaspiBlesk install images on a Debian LIVE system"
 echo "From repo (change in script is needed):"
 echo $REPO
 echo "Results will be stored in:"
@@ -84,7 +84,7 @@ fi
 apt update && apt install -y git make
 
 # clean old repo
-rm -rf raspiblitz 2>/dev/null
+rm -rf raspiblesk 2>/dev/null
 
 # download the repo
 git clone $REPO
@@ -94,13 +94,13 @@ if [ $? -gt 0 ]; then
   exit 1
 fi
 
-cd raspiblitz
+cd raspiblesk
 
 # checkout the desired branch
 git checkout $BRANCH
 if [ $? -gt 0 ]; then
   cd ..
-  rm -rf raspiblitz 2>/dev/null
+  rm -rf raspiblesk 2>/dev/null
   echo "# BRANCH: ${BRANCH}"
   echo "error='git checkout BRANCH failed'"
   exit 1
@@ -114,7 +114,7 @@ if [ ${#COMMITHASH} -gt 0 ]; then
   matches=$(echo "${actualCOMMITHASH}" | grep -c "${COMMITHASH}")
   if [ ${matches} -eq 0 ]; then
     cd ..
-    rm -rf raspiblitz 2>/dev/null
+    rm -rf raspiblesk 2>/dev/null
     echo "error='COMMITHASH of branch does not match'"
     exit 1
   fi
@@ -134,7 +134,7 @@ if [ ${#codeVersion} -eq 0 ]; then
   echo "error='codeVersion not found'"
   exit 1
 fi
-echo "# RaspiBlitz Version: ${codeVersion}"
+echo "# RaspiBlesk Version: ${codeVersion}"
 
 # get date as string formatted like YEAR-MONTH-DAY
 dateString=$(date +%Y-%m-%d)
@@ -142,16 +142,16 @@ echo "# Date: ${dateString}"
 
 if [ "${ARCH}" == "arm" ] && [ "${TYPE}" == "min" ]; then
   PACKERTARGET="arm64-rpi-lean-image"
-  PACKERBUILDPATH="./raspiblitz/ci/arm64-rpi/packer-builder-arm/raspiblitz-arm64-rpi-lean.img"
-  PACKERFINALFILE="raspiblitz-min-v${codeVersion}-${dateString}.img"
+  PACKERBUILDPATH="./raspiblesk/ci/arm64-rpi/packer-builder-arm/raspiblesk-arm64-rpi-lean.img"
+  PACKERFINALFILE="raspiblesk-min-v${codeVersion}-${dateString}.img"
 elif [ "${ARCH}" == "arm" ] && [ "${TYPE}" == "fat" ]; then
   PACKERTARGET="arm64-rpi-fatpack-image" 
-  PACKERBUILDPATH="./raspiblitz/ci/arm64-rpi/packer-builder-arm/raspiblitz-arm64-rpi-fat.img"
-  PACKERFINALFILE="raspiblitz-fat-v${codeVersion}-${dateString}.img"
+  PACKERBUILDPATH="./raspiblesk/ci/arm64-rpi/packer-builder-arm/raspiblesk-arm64-rpi-fat.img"
+  PACKERFINALFILE="raspiblesk-fat-v${codeVersion}-${dateString}.img"
 elif [ "${ARCH}" == "x86" ] && [ "${TYPE}" == "min" ]; then
   PACKERTARGET="amd64-lean-server-legacyboot-image"
-  PACKERBUILDPATH="./raspiblitz/ci/amd64/builds/raspiblitz-amd64-debian-lean-qemu/raspiblitz-amd64-debian-lean.qcow2"
-  PACKERFINALFILE="raspiblitz-amd64-min-v${codeVersion}-${dateString}.qcow2"
+  PACKERBUILDPATH="./raspiblesk/ci/amd64/builds/raspiblesk-amd64-debian-lean-qemu/raspiblesk-amd64-debian-lean.qcow2"
+  PACKERFINALFILE="raspiblesk-amd64-min-v${codeVersion}-${dateString}.qcow2"
 else
   echo "error='$ARCH-$TYPE not supported'"
   exit 1
@@ -241,7 +241,7 @@ fi
 
 
 echo "# clean up"
-rm -rf ./../raspiblitz 2>/dev/null
+rm -rf ./../raspiblesk 2>/dev/null
 
 echo "# SIGN & SECURE IMAGE ###########################################"
 echo

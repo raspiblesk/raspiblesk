@@ -8,8 +8,8 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ "$1" = "-help" ];
   exit 1
 fi
 
-# load raspiblitz conf
-source /mnt/hdd/app-data/raspiblitz.conf
+# load raspiblesk conf
+source /mnt/hdd/app-data/raspiblesk.conf
 source <(/home/admin/config.scripts/network.aliases.sh getvars lnd $2)
 
 # config file
@@ -43,8 +43,8 @@ if [ "$1" == "prestart" ]; then
 
   echo "### RUNNING lnd.check.sh prestart"
 
-  if [ "$USER" != "bitcoin" ]; then
-    echo "# FAIL: run as user 'bitcoin'"
+  if [ "$USER" != "glcoin" ]; then
+    echo "# FAIL: run as user 'glcoin'"
     exit 1
   fi
 
@@ -71,13 +71,13 @@ if [ "$1" == "prestart" ]; then
   # restart counting
   if [ "${lightning}" == "lnd" ] && [ "${targetchain}" == "mainnet" ]; then
     # count start if that service is the main lightning client
-    /home/admin/config.scripts/blitz.systemd.sh log lightning STARTED
+    /home/admin/config.scripts/blesk.systemd.sh log lightning STARTED
   fi
 
   ##### APPLICATION OPTIONS SECTION #####
 
-  # remove sync-freelist=1 (use =true if you want to overrule raspiblitz)
-  # https://github.com/rootzoll/raspiblitz/issues/3251
+  # remove sync-freelist=1 (use =true if you want to overrule raspiblesk)
+  # https://github.com/rootzoll/raspiblesk/issues/3251
   sed -i "/^# Avoid slow startup time/d" ${lndConfFile}
   sed -i "/^sync-freelist=1/d" ${lndConfFile}
 
@@ -87,16 +87,16 @@ if [ "$1" == "prestart" ]; then
     sed -i "/^wallet-unlock-password-file=/d" ${lndConfFile}
   fi
 
-  ##### BITCOIN OPTIONS SECTION #####
+  ##### GLCOIN OPTIONS SECTION #####
 
-  # [bitcoin]
+  # [glcoin]
   sectionName="[Bb]itcoin"
-  if [ "${network}" != "bitcoin" ] && [ "${network}" != "" ]; then
+  if [ "${network}" != "glcoin" ] && [ "${network}" != "" ]; then
     sectionName="${network}"
   fi
   echo "# [${sectionName}] config ..."
 
-  # make sure lnd config has a [bitcoind] section
+  # make sure lnd config has a [glcoind] section
   sectionExists=$(cat ${lndConfFile} | grep -c "^\[${sectionName}\]")
   echo "# sectionExists(${sectionExists})"
   if [ "${sectionExists}" == "0" ]; then
@@ -106,7 +106,7 @@ if [ "$1" == "prestart" ]; then
 " | tee -a ${lndConfFile}
   fi
 
-  # get line number of [bitcoin] section
+  # get line number of [glcoin] section
   sectionLine=$(cat ${lndConfFile} | grep -n "^\[${sectionName}\]" | cut -d ":" -f1)
   echo "# sectionLine(${sectionLine})"
   insertLine=$(expr $sectionLine + 1)
@@ -119,28 +119,28 @@ if [ "$1" == "prestart" ]; then
 " | tee -a ${lndConfFile}
   fi
 
-  # SET/UPDATE bitcoin.active
+  # SET/UPDATE glcoin.active
   echo "# ${network}.active insert/update"
   setting ${lndConfFile} ${insertLine} "${network}\.active" "1"
 
-  # SET/UPDATE bitcoin.mainnet
+  # SET/UPDATE glcoin.mainnet
   echo "# ${network}.${targetchain} insert/update"
   setting ${lndConfFile} ${insertLine} "${network}\.${targetchain}" "1"
 
-  # SET/UPDATE bitcoin.node
+  # SET/UPDATE glcoin.node
   echo "# ${network}.node insert/update"
   setting ${lndConfFile} ${insertLine} "${network}\.node" "${network}d"
 
-  ##### BITCOIND OPTIONS SECTION #####
+  ##### GLCOIND OPTIONS SECTION #####
 
-  # [bitcoind]
+  # [glcoind]
   sectionName="[Bb]itcoind"
-  if [ "${network}" != "bitcoin" ] && [ "${network}" != "" ]; then
+  if [ "${network}" != "glcoin" ] && [ "${network}" != "" ]; then
     sectionName="${network}d"
   fi
   echo "# [${sectionName}] config ..."
 
-  # make sure lnd config has a [bitcoind] section
+  # make sure lnd config has a [glcoind] section
   sectionExists=$(cat ${lndConfFile} | grep -c "^\[${sectionName}\]")
   echo "# sectionExists(${sectionExists})"
   if [ "${sectionExists}" == "0" ]; then
@@ -150,7 +150,7 @@ if [ "$1" == "prestart" ]; then
 " | tee -a ${lndConfFile}
   fi
 
-  # get line number of [bitcoind] section
+  # get line number of [glcoind] section
   sectionLine=$(cat ${lndConfFile} | grep -n "^\[${sectionName}\]" | cut -d ":" -f1)
   echo "# sectionLine(${sectionLine})"
   insertLine=$(expr $sectionLine + 1)
@@ -192,8 +192,11 @@ if [ "$1" == "prestart" ]; then
   fi
   setting ${lndConfFile} ${insertLine} "${network}d\.rpcuser" "${RPCUSER}"
 
-  # SET/UPDATE rpchost
-  setting ${lndConfFile} ${insertLine} "${network}d\.rpchost" "127\.0\.0\.1\:${portprefix}8332"
+  # SET/UPDATE rpchost — use Glcoin RPC ports (1617/11617/31617)
+  if [ "${portprefix}" = "1" ]; then glcoinRpcPort=11617
+  elif [ "${portprefix}" = "3" ]; then glcoinRpcPort=31617
+  else glcoinRpcPort=1617; fi
+  setting ${lndConfFile} ${insertLine} "bitcoind\.rpchost" "127\.0\.0\.1\:${glcoinRpcPort}"
 
   ##### APPLICATION OPTIONS SECTION #####
 
@@ -205,7 +208,7 @@ if [ "$1" == "prestart" ]; then
   setting ${lndConfFile} ${insertLine} "rpclisten" "0\.0\.0\.0\:1${L2rpcportmod}009"
   setting ${lndConfFile} ${insertLine} "restlisten" "0\.0\.0\.0\:${portprefix}8080"
 
-  # enforce LND port is set correctly (if set in raspiblitz.conf)
+  # enforce LND port is set correctly (if set in raspiblesk.conf)
   if [ "${lndPort}" != "" ]; then
     setting ${lndConfFile} ${insertLine} "listen" "0\.0\.0\.0\:${portprefix}${lndPort}"
   else
@@ -310,7 +313,7 @@ if [ "$1" == "prestart" ]; then
     setting ${lndConfFile} ${insertLine} "tor.v3" "true"
     setting ${lndConfFile} ${insertLine} "tor.active" "true"
 
-    # take care of incompatible settings https://github.com/rootzoll/raspiblitz/issues/2787#issuecomment-991245694
+    # take care of incompatible settings https://github.com/rootzoll/raspiblesk/issues/2787#issuecomment-991245694
     if [ $(cat ${lndConfFile} | grep -c "^tor.skip-proxy-for-clearnet-targets=true") -gt 0 ] ||
       [ $(cat ${lndConfFile} | grep -c "^tor.skip-proxy-for-clearnet-targets=1") -gt 0 ]; then
       setting ${lndConfFile} ${insertLine} "tor.streamisolation" "false"
@@ -452,12 +455,12 @@ elif [ "$1" == "basic-setup" ]; then
   fi
 
   # get network from config (BLOCKCHAIN)
-  lndNetwork="bitcoin"
+  lndNetwork="glcoin"
   echo "network='${lndNetwork}'"
 
-  # check if network is same the raspiblitz config
+  # check if network is same the raspiblesk config
   if [ "${network}" != "${lndNetwork}" ]; then
-    echo "err='$(netprefix)lnd.conf: blockchain network in $(netprefix)lnd.conf (${lndNetwork}) is different from raspiblitz.conf (${network})'"
+    echo "err='$(netprefix)lnd.conf: blockchain network in $(netprefix)lnd.conf (${lndNetwork}) is different from raspiblesk.conf (${network})'"
   fi
 
   # check for admin macaroon exist (on HDD)

@@ -16,11 +16,11 @@ if [ "$1" == "install" ]; then
 
   # write systemd service
   cat > /etc/systemd/system/background.scan.service <<EOF
-# Monitor the RaspiBlitz State
+# Monitor the RaspiBlesk State
 # /etc/systemd/system/background.scan.service
 
 [Unit]
-Description=RaspiBlitz Background Monitoring Service
+Description=RaspiBlesk Background Monitoring Service
 Wants=redis.service
 After=redis.service
 
@@ -50,11 +50,11 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
-# CONFIGFILE - configuration of RaspiBlitz
-configFile="/mnt/hdd/app-data/raspiblitz.conf"
+# CONFIGFILE - configuration of RaspiBlesk
+configFile="/mnt/hdd/app-data/raspiblesk.conf"
 
 # INFOFILE - persited state data
-infoFile="/home/admin/raspiblitz.info"
+infoFile="/home/admin/raspiblesk.info"
 
 # better readable seconds (slightly off to reduce same time window trigger)
 MINUTE=60
@@ -70,8 +70,8 @@ WEEK=604800
 MONTH=2592000
 YEAR=31536000
 
-# make sure root is in group bitcoin and allowed to read macaroons
-usermod -G bitcoin root
+# make sure root is in group glcoin and allowed to read macaroons
+usermod -G glcoin root
 
 ####################################################################
 # INIT
@@ -90,11 +90,11 @@ usermod -G bitcoin root
 /home/admin/_cache.sh init btc_default_address ""
 /home/admin/_cache.sh init btc_default_port ""
 
-# import all base values from raspiblitz.info
+# import all base values from raspiblesk.info
 echo "importing: ${infoFile}"
 /home/admin/_cache.sh import $infoFile
 
-# import all base values from raspiblitz.config (if exists)
+# import all base values from raspiblesk.config (if exists)
 configFileExists=$(ls ${configFile} | grep -c "${configFile}")
 if [ "${configFileExists}" != "0" ]; then
   echo "importing: ${configFile}"
@@ -106,15 +106,15 @@ echo "importing: _version.info"
 /home/admin/_cache.sh import /home/admin/_version.info
 
 # get hardware info
-source <(/home/admin/config.scripts/blitz.hardware.sh status)
+source <(/home/admin/config.scripts/blesk.hardware.sh status)
 /home/admin/_cache.sh set system_ram_mb "${ramMB}"
 /home/admin/_cache.sh set system_ram_gb "${ramGB}"
 
 # flag that init was done (will be checked on each loop)
 /home/admin/_cache.sh set system_init_time "$(date +%s)"
 
-# add info about start to raspiblitz.log
-echo "INFO: _bootstrap.scan.sh loop started > sudo journalctl -f -u background.scan" >> /home/admin/raspiblitz.log
+# add info about start to raspiblesk.log
+echo "INFO: _bootstrap.scan.sh loop started > sudo journalctl -f -u background.scan" >> /home/admin/raspiblesk.log
 
 while [ 1 ]
 do
@@ -128,7 +128,7 @@ do
   source <(/home/admin/_cache.sh get system_init_time)
   if [ "${system_init_time}" == "" ]; then
     echo "FAIL: CACHE IS MISSING INIT DATA ... exiting to let systemd restart"
-    echo "INFO: _bootstrap.scan.sh -> cache not running - exiting" >> /home/admin/raspiblitz.log
+    echo "INFO: _bootstrap.scan.sh -> cache not running - exiting" >> /home/admin/raspiblesk.log
     exit 1
   fi
 
@@ -170,7 +170,7 @@ do
   fi
 
   # update code commit
-  codeCommit=$(git -C /home/admin/raspiblitz rev-parse --short HEAD)
+  codeCommit=$(git -C /home/admin/raspiblesk rev-parse --short HEAD)
   /home/admin/_cache.sh set codeCommit "${codeCommit}"
 
   #################
@@ -187,8 +187,8 @@ do
 
   source <(/home/admin/_cache.sh valid system_ups_status)
   if [ "${stillvalid}" == "0" ] || [ ${age} -gt ${MINUTE} ]; then
-    echo "updating: /home/admin/config.scripts/blitz.ups.sh status"
-    source <(/home/admin/config.scripts/blitz.ups.sh status)
+    echo "updating: /home/admin/config.scripts/blesk.ups.sh status"
+    source <(/home/admin/config.scripts/blesk.ups.sh status)
     /home/admin/_cache.sh set system_ups_status "${upsStatus}"
     /home/admin/_cache.sh set system_ups_battery "${upsBattery}"
   fi
@@ -219,7 +219,7 @@ do
       /home/admin/_cache.sh set internet_public_ipv6 "${ipv6}"
       # globalip --> ip detected from the outside
       /home/admin/_cache.sh set internet_public_ip_detected "${globalip}"
-      # publicip --> may consider the static IP overide by raspiblitz config
+      # publicip --> may consider the static IP overide by raspiblesk config
       /home/admin/_cache.sh set internet_public_ip_forced "${publicip}"
       # cleanip --> the publicip with no brackets like used on IPv6
       /home/admin/_cache.sh set internet_public_ip_clean "${cleanip}"
@@ -258,8 +258,8 @@ do
   # info on storage medium
   source <(/home/admin/_cache.sh valid hdd_used_info)
   if [ "${stillvalid}" == "0" ] || [ ${age} -gt ${MINUTE2} ]; then
-    echo "updating: /home/admin/config.scripts/blitz.data.sh status"
-    source <(/home/admin/config.scripts/blitz.data.sh status)
+    echo "updating: /home/admin/config.scripts/blesk.data.sh status"
+    source <(/home/admin/config.scripts/blesk.data.sh status)
 
     # get TB from storageSizeGB 
     storageSizeTB=$(echo "scale=2; ${storageSizeGB}/1024" | bc)
@@ -303,12 +303,12 @@ do
   ####################################################################
 
   # read/update config values
-  source /mnt/hdd/app-data/raspiblitz.conf
+  source /mnt/hdd/app-data/raspiblesk.conf
 
   ###################
-  # BITCOIN
+  # GLCOIN
 
-  if [ "${network}" == "bitcoin" ]; then
+  if [ "${network}" == "glcoin" ]; then
 
     # loop thru mainet, testnet & signet
     networks=( "main" "test" "sig" )
@@ -320,15 +320,15 @@ do
 
       # skip if network is not on by config
       if [ "${CHAIN}" == "main" ] && [ "${mainnet}" != "on" ] && [ "${isDefaultChain}" != "1" ]; then
-        #echo "skip btc ${CHAIN}net scan - because its off"
+        #echo "skip glc ${CHAIN}net scan - because its off"
         continue
       fi
       if [ "${CHAIN}" == "test" ] && [ "${testnet}" != "on" ]; then
-        #echo "skip btc ${CHAIN}net scan - because its off"
+        #echo "skip glc ${CHAIN}net scan - because its off"
         continue
       fi
       if [ "${CHAIN}" == "sig" ] && [ "${signet}" != "on" ]; then
-        #echo "skip btc ${CHAIN}net scan - because its off"
+        #echo "skip glc ${CHAIN}net scan - because its off"
         continue
       fi
 
@@ -362,8 +362,8 @@ do
         )
       fi
       if [ "${stillvalid}" == "0" ] || [ ${age} -gt ${CYCLE_QUICK} ]; then
-        echo "updating: /home/admin/config.scripts/bitcoin.monitor.sh ${CHAIN}net status"
-        source <(/home/admin/config.scripts/bitcoin.monitor.sh ${CHAIN}net status)
+        echo "updating: /home/admin/config.scripts/glcoin.monitor.sh ${CHAIN}net status"
+        source <(/home/admin/config.scripts/glcoin.monitor.sh ${CHAIN}net status)
         /home/admin/_cache.sh set btc_${CHAIN}net_activated "1"
         /home/admin/_cache.sh set btc_${CHAIN}net_version "${btc_version}"
         /home/admin/_cache.sh set btc_${CHAIN}net_running "${btc_running}"
@@ -411,8 +411,8 @@ do
         fi
         if [ "${stillvalid}" == "0" ] || [ ${age} -gt ${CYCLE_MID} ]; then
           error=""
-          echo "updating: /home/admin/config.scripts/bitcoin.monitor.sh ${CHAIN}net info"
-          source <(/home/admin/config.scripts/bitcoin.monitor.sh ${CHAIN}net info)
+          echo "updating: /home/admin/config.scripts/glcoin.monitor.sh ${CHAIN}net info"
+          source <(/home/admin/config.scripts/glcoin.monitor.sh ${CHAIN}net info)
           if [ "${error}" == "" ]; then
             /home/admin/_cache.sh set btc_${CHAIN}net_synced "${btc_synced}"
             /home/admin/_cache.sh set btc_${CHAIN}net_blocks_headers "${btc_blocks_headers}"
@@ -454,8 +454,8 @@ do
         fi
         if [ "${stillvalid}" == "0" ] || [ ${age} -gt ${CYCLE_MID} ]; then
           error=""
-          echo "updating: /home/admin/config.scripts/bitcoin.monitor.sh ${CHAIN}net network"
-          source <(/home/admin/config.scripts/bitcoin.monitor.sh ${CHAIN}net network)
+          echo "updating: /home/admin/config.scripts/glcoin.monitor.sh ${CHAIN}net network"
+          source <(/home/admin/config.scripts/glcoin.monitor.sh ${CHAIN}net network)
           if [ "${error}" == "" ]; then
             /home/admin/_cache.sh set btc_${CHAIN}net_peers "${btc_peers}"
             /home/admin/_cache.sh set btc_${CHAIN}net_address "${btc_address}"
@@ -481,8 +481,8 @@ do
         fi
         if [ "${stillvalid}" == "0" ] || [ ${age} -gt ${CYCLE_LONG} ]; then
           error=""
-          echo "updating: /home/admin/config.scripts/bitcoin.monitor.sh ${CHAIN}net mempool"
-          source <(/home/admin/config.scripts/bitcoin.monitor.sh ${CHAIN}net mempool)
+          echo "updating: /home/admin/config.scripts/glcoin.monitor.sh ${CHAIN}net mempool"
+          source <(/home/admin/config.scripts/glcoin.monitor.sh ${CHAIN}net mempool)
           if [ "${error}" == "" ]; then
             /home/admin/_cache.sh set btc_${CHAIN}net_mempool_transactions "${btc_mempool_transactions}"
             if [ "${isDefaultChain}" == "1" ]; then
@@ -949,7 +949,7 @@ do
       btc_default_sync_initial_done="${flagBtcDone}"
     fi
 
-    # check for all btc sync
+    # check for all glc sync
     if [ "${flagBtcDone}" != "1" ]; then
       btc_all_sync_initial_done=0
     fi
@@ -995,11 +995,11 @@ do
     blitz_sync_initial_done="${btc_all_sync_initial_done}"
     blitz_default_sync_initial_done="${btc_default_sync_initial_done}"
   else
-    # only if ALL btc & ln sync done (multiple can be active) - the complete blitz has done syncing
+    # only if ALL glc & ln sync done (multiple can be active) - the complete blitz has done syncing
     if [ "${btc_all_sync_initial_done}" == "1" ] && [ "${ln_all_sync_initial_done}" == "1" ]; then
       blitz_sync_initial_done="1"
     fi
-    # only if DEFAULT btc & ln sync done - the complete blitz has done syncing
+    # only if DEFAULT glc & ln sync done - the complete blitz has done syncing
     if [ "${btc_default_sync_initial_done}" == "1" ] && [ "${ln_default_sync_initial_done}" == "1" ]; then
       blitz_default_sync_initial_done="1"
     fi

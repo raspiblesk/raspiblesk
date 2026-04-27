@@ -4,13 +4,14 @@ variable "iso_name" { default = "debian-13.2.0-amd64-netinst.iso" }
 variable "iso_checksum" { default = "677c4d57aa034dc192b5191870141057574c1b05df2b9569c0ee08aa4e32125d" }
 
 variable "pack" { default = "lean" }
-variable "github_user" { default = "raspiblitz" }
+variable "github_user" { default = "raspiblesk" }
 variable "branch" { default = "dev" }
+variable "glcoin_source_path" { default = "" }
 variable "desktop" { default = "none" }
 
 variable "boot" { default = "uefi" }
 variable "preseed_file" { default = "preseed.cfg" }
-variable "hostname" { default = "raspiblitz-amd64" }
+variable "hostname" { default = "raspiblesk-amd64" }
 
 variable "image_size" { default = "27000" }
 variable "image_type" { default = "qcow2" }
@@ -62,8 +63,8 @@ source "qemu" "debian" {
   iso_url          = "https://cdimage.debian.org/cdimage/release/current/amd64/iso-cd/${var.iso_name}"
   memory           = var.memory
   output_directory = "../builds/${local.name_template}-qemu"
-  shutdown_command = "echo 'raspiblitz' | sudo /sbin/shutdown -hP now"
-  ssh_password     = "raspiblitz"
+  shutdown_command = "echo 'raspiblesk' | sudo /sbin/shutdown -hP now"
+  ssh_password     = "raspiblesk"
   ssh_port         = 22
   ssh_timeout      = "10000s"
   ssh_username     = "pi"
@@ -84,6 +85,15 @@ build {
   description = "Can't use variables here yet!"
   sources     = ["source.qemu.debian"]
 
+  dynamic "provisioner" {
+    for_each = var.glcoin_source_path != "" ? [1] : []
+    labels   = ["file"]
+    content {
+      source      = var.glcoin_source_path
+      destination = "/tmp/glcoin-src"
+    }
+  }
+
   provisioner "shell" {
     environment_vars = [
       "HOME_DIR=/home/pi",
@@ -93,7 +103,7 @@ build {
       "desktop=${var.desktop}"
     ]
 
-    execute_command   = "echo 'raspiblitz' | {{.Vars}} sudo -S -E sh -eux '{{.Path}}'"
+    execute_command   = "echo 'raspiblesk' | {{.Vars}} sudo -S -E sh -eux '{{.Path}}'"
     expect_disconnect = true
     scripts = [
       "./../_common/env.sh",
@@ -102,7 +112,7 @@ build {
       "./scripts/networking.sh",
       "./scripts/sudoers.sh",
       "./scripts/systemd.sh",
-      "./scripts/build.raspiblitz.sh",
+      "./scripts/build.raspiblesk.sh",
       "./scripts/cleanup.sh"
     ]
   }

@@ -25,7 +25,7 @@ PGPpubkeyFingerprint="(4AEE18F83AFDEB23|B5690EEEBB952194)"
 # PGPpubkeyLink="https://github.com/${PGPsigner}.gpg"
 # PGPpubkeyFingerprint="B9A26449A5528325"
 
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 
 isInstalled=$(sudo ls /etc/systemd/system/circuitbreaker.service 2>/dev/null | grep -c 'circuitbreaker.service')
 
@@ -100,7 +100,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     cd circuitbreaker || exit 1
     sudo -u circuitbreaker git reset --hard $pinnedVersion
 
-    sudo -u circuitbreaker /home/admin/config.scripts/blitz.git-verify.sh \
+    sudo -u circuitbreaker /home/admin/config.scripts/blesk.git-verify.sh \
      "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" || exit 1
 
     sudo -u circuitbreaker /usr/local/go/bin/go install ./... || exit 1
@@ -168,7 +168,7 @@ WantedBy=multi-user.target
   fi
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set circuitbreaker "on"
+  /home/admin/config.scripts/blesk.conf.sh set circuitbreaker "on"
 
   sudo ufw allow 9236 comment circuitbreaker_https
 
@@ -191,8 +191,8 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
     echo "# circuitbreaker.service is not installed."
   fi
 
-  # setting value in raspiblitz.conf
-  /home/admin/config.scripts/blitz.conf.sh set circuitbreaker "off"
+  # setting value in raspiblesk.conf
+  /home/admin/config.scripts/blesk.conf.sh set circuitbreaker "off"
 
   sudo ufw delete allow 9236
 

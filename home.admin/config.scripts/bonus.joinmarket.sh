@@ -2,7 +2,7 @@
 
 # links:
 # https://github.com/JoinMarket-Org/joinmarket-clientserver#quickstart---recommended-installation-method-linux-only
-# https://github.com/openoms/bitcoin-tutorials/tree/master/joinmarket
+# https://github.com/openoms/glcoin-tutorials/tree/master/joinmarket
 # https://github.com/openoms/joininbox
 
 # https://github.com/openoms/joininbox/tags
@@ -24,7 +24,7 @@ if [ "$1" = "menu" ]; then
     --yes-button "Start Joininbox" \
     --no-button "Cancel" \
     --yesno "Usage notes:
-https://github.com/openoms/bitcoin-tutorials/blob/master/joinmarket/README.md
+https://github.com/openoms/glcoin-tutorials/blob/master/joinmarket/README.md
 
 Can also type: 'jm' in the command line to switch to the dedicated user,
 and start the JoininBox menu.
@@ -40,7 +40,7 @@ PGPsigner="openoms"
 PGPpubkeyLink="https://github.com/openoms.gpg"
 PGPpubkeyFingerprint="13C688DB5B9C745DE4D2E4545BFB77609B081B65"
 
-source /mnt/hdd/app-data/raspiblitz.conf 2>/dev/null
+source /mnt/hdd/app-data/raspiblesk.conf 2>/dev/null
 
 # switch on
 if [ "$1" = "install" ]; then
@@ -75,7 +75,7 @@ if [ "$1" = "install" ]; then
     cd /home/joinmarket/joininbox || exit 1
     # https://github.com/openoms/joininbox/releases/
     sudo -u joinmarket git reset --hard ${JBTAG}
-    sudo -u joinmarket /home/admin/config.scripts/blitz.git-verify.sh \
+    sudo -u joinmarket /home/admin/config.scripts/blesk.git-verify.sh \
       "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" "${JBTAG}" || exit 1
 
     # copy the scripts in place
@@ -195,33 +195,33 @@ if [ -z \"\$TMUX\" ]; then
 fi
 " | sudo -u joinmarket tee -a /home/joinmarket/.bashrc
 
-  echo "# Check 'deprecatedrpc=create_bdb' in bitcoin.conf"
-  if ! sudo grep "deprecatedrpc=create_bdb" "/mnt/hdd/app-data/bitcoin/bitcoin.conf"; then
-    echo "# Place 'deprecatedrpc=create_bdb' in bitcoin.conf"
-    echo "deprecatedrpc=create_bdb" | sudo tee -a "/mnt/hdd/app-data/bitcoin/bitcoin.conf"
+  echo "# Check 'deprecatedrpc=create_bdb' in glcoin.conf"
+  if ! sudo grep "deprecatedrpc=create_bdb" "/mnt/hdd/app-data/glcoin/glcoin.conf"; then
+    echo "# Place 'deprecatedrpc=create_bdb' in glcoin.conf"
+    echo "deprecatedrpc=create_bdb" | sudo tee -a "/mnt/hdd/app-data/glcoin/glcoin.conf"
     source <(/home/admin/_cache.sh get state)
     if [ ${state} != "recovering" ]; then
-      echo "# Restarting bitcoind"
-      sudo systemctl restart bitcoind
+      echo "# Restarting glcoind"
+      sudo systemctl restart glcoind
     fi
   fi
 
-  # make sure the Bitcoin Core wallet is on
+  # make sure the Glcoin Core wallet is on
   /home/admin/config.scripts/network.wallet.sh on
-  if [ $(/usr/local/bin/bitcoin-cli -conf=/mnt/hdd/app-data/bitcoin/bitcoin.conf listwallets | grep -c wallet.dat) -eq 0 ]; then
+  if [ $(/usr/local/bin/glcoin-cli -conf=/mnt/hdd/app-data/glcoin/glcoin.conf listwallets | grep -c wallet.dat) -eq 0 ]; then
     echo "# Create a non-descriptor wallet.dat"
-    /usr/local/bin/bitcoin-cli -conf=/mnt/hdd/app-data/bitcoin/bitcoin.conf -named createwallet wallet_name=wallet.dat descriptors=false
+    /usr/local/bin/glcoin-cli -conf=/mnt/hdd/app-data/glcoin/glcoin.conf -named createwallet wallet_name=wallet.dat descriptors=false
   else
-    isDescriptor=$(/usr/local/bin/bitcoin-cli -conf=/mnt/hdd/app-data/bitcoin/bitcoin.conf -rpcwallet=wallet.dat getwalletinfo | grep -c '"descriptors": true,')
+    isDescriptor=$(/usr/local/bin/glcoin-cli -conf=/mnt/hdd/app-data/glcoin/glcoin.conf -rpcwallet=wallet.dat getwalletinfo | grep -c '"descriptors": true,')
     if [ "$isDescriptor" -gt 0 ]; then
       # unload
-      bitcoin-cli unloadwallet wallet.dat
-      echo "# Move the wallet.dat with descriptors to /mnt/hdd/bitcoin/descriptors"
-      sudo mv /mnt/hdd/bitcoin/wallet.dat /mnt/hdd/bitcoin/descriptors
+      glcoin-cli unloadwallet wallet.dat
+      echo "# Move the wallet.dat with descriptors to /mnt/hdd/glcoin/descriptors"
+      sudo mv /mnt/hdd/glcoin/wallet.dat /mnt/hdd/glcoin/descriptors
       echo "# Create a non-descriptor wallet.dat"
-      bitcoin-cli -conf=/mnt/hdd/app-data/bitcoin/bitcoin.conf -named createwallet wallet_name=wallet.dat descriptors=false
+      glcoin-cli -conf=/mnt/hdd/app-data/glcoin/glcoin.conf -named createwallet wallet_name=wallet.dat descriptors=false
     else
-      echo "# The non-descriptor wallet.dat is loaded in bitcoind."
+      echo "# The non-descriptor wallet.dat is loaded in glcoind."
     fi
   fi
 
@@ -234,8 +234,8 @@ fi
     exit 1
   fi
 
-  # set the raspiblitz.conf
-  /home/admin/config.scripts/blitz.conf.sh set joinmarket "on"
+  # set the raspiblesk.conf
+  /home/admin/config.scripts/blesk.conf.sh set joinmarket "on"
 
   exit 0
 fi
@@ -244,7 +244,7 @@ fi
 if [ "$1" = "0" ] || [ "$1" = "off" ]; then
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set joinmarket "off"
+  /home/admin/config.scripts/blesk.conf.sh set joinmarket "off"
 
   if [ -d /home/joinmarket ]; then
     echo "Removing the joinmarket user"

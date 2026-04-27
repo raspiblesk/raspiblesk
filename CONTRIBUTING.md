@@ -1,11 +1,11 @@
 # Community development
 
-Everybody is welcome to join, improve, and extend the RaspiBlitz - it's a work in progress. Check the issues if you wanna help out or add new ideas. You can find the scripts used for RaspiBlitz interactions on the device at /home/admin or in this Git repo's subfolder home.admin.
+Everybody is welcome to join, improve, and extend the RaspiBlesk - it's a work in progress. Check the issues if you wanna help out or add new ideas. You can find the scripts used for RaspiBlesk interactions on the device at /home/admin or in this Git repo's subfolder home.admin.
 
 ## Understanding Blitz project
 
-RaspiBlitz is inspired by the [RaspiBolt guide](https://raspibolt.github.io/raspibolt/). Tutorial on how to build a lightning node on the RaspberryPi. So much thx to Stadicus :)
-To start your Deep Dive into the RaspiBlitz project, watch [this video](https://www.youtube.com/watch?v=QXUGg45CWLo).
+RaspiBlesk is inspired by the [RaspiBolt guide](https://raspibolt.github.io/raspibolt/). Tutorial on how to build a lightning node on the RaspberryPi. So much thx to Stadicus :)
+To start your Deep Dive into the RaspiBlesk project, watch [this video](https://www.youtube.com/watch?v=QXUGg45CWLo).
 
 ### Blitz philosophy
 
@@ -15,7 +15,7 @@ To start your Deep Dive into the RaspiBlitz project, watch [this video](https://
 
 ## Getting started
 
-Get all details on "How to contribute to RaspiBlitz Development" on [this video](https://www.youtube.com/watch?v=ZVtZepV3OfM).
+Get all details on "How to contribute to RaspiBlesk Development" on [this video](https://www.youtube.com/watch?v=ZVtZepV3OfM).
 
 ### Levels
 
@@ -31,18 +31,18 @@ Not all enhancements needs to go through all levels, these are levels of difficu
 #### Medium
 
 1. **Sovereignty** --> Fork the repo to have the changes controlled by you.
-1. **Experiment** --> Try things out on your RaspiBlitz.
+1. **Experiment** --> Try things out on your RaspiBlesk.
 1. **Executable** --> Turn your experiment into a basic shell script.
 
 #### Advanced
 
-1. **Config script** --> Integrate your executable into the RaspiBlitz environment.
+1. **Config script** --> Integrate your executable into the RaspiBlesk environment.
 1. **SSH-GUI** --> Make it easier for others to use your config script.
 1. **WEB-GUI** --> Turn your feature into customer ready
 
 ### Workflow
 
-Use the `github` command from terminal to set your RaspiBlitz to your own forked repo and development branch and use the command `patch` to sync your RaspiBlitz quickly with your latest commits. 
+Use the `github` command from terminal to set your RaspiBlesk to your own forked repo and development branch and use the command `patch` to sync your RaspiBlesk quickly with your latest commits. 
 
 **Solving issues**
 
@@ -86,8 +86,8 @@ Project maintainers reserve the right to weigh the opinions of peer reviewers us
 Reviewers that have demonstrated a deeper commitment and understanding of the project over time or who have clear domain expertise may naturally have more weight, as one would expect in all walks of life.
 
 ## Release policy
-The project leader is the release manager for each RaspiBlitz release.
+The project leader is the release manager for each RaspiBlesk release.
 
 ## Copyright
-By contributing to this repository, you agree to license your work under the [MIT license](https://github.com/raspiblitz/raspiblitz/blob/master/LICENSE).
+By contributing to this repository, you agree to license your work under the [MIT license](https://github.com/raspiblesk/raspiblesk/blob/master/LICENSE).
 Any work contributed where you are not the original author must contain its license header with the original author(s) and source.

@@ -21,12 +21,12 @@ def setup_logging(default_path=os.path.abspath(os.path.expanduser('~/.blitz-tui.
         if IS_WIN32_ENV:
             log_file = "blitz-tui.log"
         else:
-            if os.path.isdir('/var/cache/raspiblitz'):
+            if os.path.isdir('/var/cache/raspiblesk'):
                 try:
-                    os.mkdir('/var/cache/raspiblitz/{}'.format(getpass.getuser()))
+                    os.mkdir('/var/cache/raspiblesk/{}'.format(getpass.getuser()))
                 except FileExistsError:
                     pass
-                log_file = os.path.abspath('/var/cache/raspiblitz/{}/blitz-tui.log'.format(getpass.getuser()))
+                log_file = os.path.abspath('/var/cache/raspiblesk/{}/blitz-tui.log'.format(getpass.getuser()))
             else:
                 log_file = os.path.abspath(os.path.expanduser('~/blitz-tui.log'))
 

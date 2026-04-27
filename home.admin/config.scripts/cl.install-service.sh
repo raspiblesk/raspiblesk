@@ -13,23 +13,23 @@ fi
 # source <(/home/admin/config.scripts/network.aliases.sh getvars cl <mainnet|testnet|signet>)
 source <(/home/admin/config.scripts/network.aliases.sh getvars cl $1)
 
-if [ $(sudo -u bitcoin cat ${CLCONF} | grep -c "^http-pass") -gt 0 ];then
-  if [ ! -f /home/bitcoin/cl-plugins-enabled/c-lightning-http-plugin ]; then
+if [ $(sudo -u glcoin cat ${CLCONF} | grep -c "^http-pass") -gt 0 ];then
+  if [ ! -f /home/glcoin/cl-plugins-enabled/c-lightning-http-plugin ]; then
     echo "# The clHTTPplugin is not present but in config"
     /home/admin/config.scripts/cl-plugin.http.sh on norestart
   fi
 fi
 
-if [ $(sudo -u bitcoin cat ${CLCONF} | grep -c "^feeadjuster") -gt 0 ];then
-  if [ ! -f /home/bitcoin/${netprefix}cl-plugins-enabled/feeadjuster.py ];then
+if [ $(sudo -u glcoin cat ${CLCONF} | grep -c "^feeadjuster") -gt 0 ];then
+  if [ ! -f /home/glcoin/${netprefix}cl-plugins-enabled/feeadjuster.py ];then
     echo "# The feeadjuster plugin is not present but in config"
     /home/admin/config.scripts/cl-plugin.feeadjuster.sh on $CHAIN norestart
   fi
 fi
 
-if grep -Eq "${netprefix}clEncryptedHSM=on" /mnt/hdd/app-data/raspiblitz.conf;then
-  if grep -Eq "${netprefix}clAutoUnlock=on" /mnt/hdd/app-data/raspiblitz.conf;then
-    passwordFile=/home/bitcoin/.${netprefix}cl.pw
+if grep -Eq "${netprefix}clEncryptedHSM=on" /mnt/hdd/app-data/raspiblesk.conf;then
+  if grep -Eq "${netprefix}clAutoUnlock=on" /mnt/hdd/app-data/raspiblesk.conf;then
+    passwordFile=/home/glcoin/.${netprefix}cl.pw
   else
     passwordFile=/dev/shm/.${netprefix}cl.pw
   fi
@@ -41,7 +41,7 @@ else
 fi
 
 sudo mkdir -p /run/lightningd
-sudo chown bitcoin:bitcoin /run/lightningd
+sudo chown glcoin:glcoin /run/lightningd
 
 sudo systemctl stop ${netprefix}lightningd
 sudo systemctl disable ${netprefix}lightningd
@@ -50,9 +50,9 @@ echo "# Create /etc/systemd/system/${netprefix}lightningd.service"
 echo "
 [Unit]
 Description=c-lightning daemon on $CHAIN
-Requires=${netprefix}bitcoind.service
-After=${netprefix}bitcoind.service
-PartOf=${netprefix}bitcoind.service
+Requires=${netprefix}glcoind.service
+After=${netprefix}glcoind.service
+PartOf=${netprefix}glcoind.service
 Wants=network-online.target
 After=network-online.target
 
@@ -61,10 +61,10 @@ ExecStartPre=-/home/admin/config.scripts/cl.check.sh prestart $CHAIN
 ExecStart=/bin/sh -c '${passwordInput}/usr/local/bin/lightningd --conf=${CLCONF} ${encryptedHSMoption} --rpc-file-mode 0660'
 ExecStartPost=-/home/admin/config.scripts/cl.check.sh poststart $CHAIN
 
-# Creates /run/lightningd owned by bitcoin
+# Creates /run/lightningd owned by glcoin
 RuntimeDirectory=lightningd
-User=bitcoin
-Group=bitcoin
+User=glcoin
+Group=glcoin
 # Use Type=simple - most reliable for CLN
 Type=simple
 # Don't use PIDFile with Type=simple to avoid conflicts

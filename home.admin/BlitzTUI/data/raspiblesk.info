@@ -1,0 +1,7 @@
+state=stresstest
+message='Testing Hardware 60s'
+network=glcoin
+chain=main
+setupStep=100
+baseimage=raspbian
+undervoltageReports=0

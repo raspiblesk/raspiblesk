@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# get raspiblitz config
-echo "get raspiblitz config"
-source /home/admin/raspiblitz.info
-source /mnt/hdd/app-data/raspiblitz.conf
+# get raspiblesk config
+echo "get raspiblesk config"
+source /home/admin/raspiblesk.info
+source /mnt/hdd/app-data/raspiblesk.conf
 
 source <(/home/admin/config.scripts/network.aliases.sh getvars lnd $1)
 
@@ -12,7 +12,7 @@ source <(/home/admin/config.scripts/network.aliases.sh getvars lnd $1)
 
 # BASIC MENU INFO
 WIDTH=64
-BACKTITLE="RaspiBlitz"
+BACKTITLE="RaspiBlesk"
 TITLE=" LND Lightning Options (${CHAIN}) "
 MENU=""
 OPTIONS=()
@@ -105,20 +105,20 @@ case $CHOICE in
       sudo /home/admin/config.scripts/lnd.setname.sh $CHAIN
       noreboot=$?
       if [ "${noreboot}" = "0" ]; then
-        sudo -u bitcoin ${network}-cli stop
+        sudo -u glcoin ${network}-cli stop
         echo "Press ENTER to Reboot."
         read key
-        sudo /home/admin/config.scripts/blitz.shutdown.sh reboot
+        sudo /home/admin/config.scripts/blesk.shutdown.sh reboot
         exit 0
       fi
       ;;
   SUEZ)
       clear
-      if [ ! -f /home/bitcoin/suez/suez ];then
+      if [ ! -f /home/glcoin/suez/suez ];then
         /home/admin/config.scripts/bonus.suez.sh on
       fi
-      cd /home/bitcoin/suez || exit 1 
-      sudo -u bitcoin poetry run /home/bitcoin/suez/suez \
+      cd /home/glcoin/suez || exit 1 
+      sudo -u glcoin poetry run /home/glcoin/suez/suez \
         --client-args=-n=${CHAIN} \
         --client-args=--rpcserver=localhost:1${L2rpcportmod}009
       echo
@@ -134,9 +134,9 @@ case $CHOICE in
       clear 
       echo
       # setting value in raspi blitz config
-      /home/admin/config.scripts/blitz.conf.sh set lightning "lnd"
-      sudo systemctl restart blitzapi 2>/dev/null
-      echo "# OK - lightning=lnd is set in /mnt/hdd/app-data/raspiblitz.conf"
+      /home/admin/config.scripts/blesk.conf.sh set lightning "lnd"
+      sudo systemctl restart bleskapi 2>/dev/null
+      echo "# OK - lightning=lnd is set in /mnt/hdd/app-data/raspiblesk.conf"
       echo
       echo "Press ENTER to return to main menu."
       read key
@@ -148,7 +148,7 @@ case $CHOICE in
     $lncli_alias wallet accounts list --name default | grep --color=never .*,
     echo
     echo "EXPERIMENTAL - DONT USE FOR SERIOUS FUND RECEIVING YET"
-    echo "Report your experience to: https://github.com/rootzoll/raspiblitz/issues/2192"
+    echo "Report your experience to: https://github.com/rootzoll/raspiblesk/issues/2192"
     echo 
     echo "Press ENTER to return to main menu."
     read key

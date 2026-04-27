@@ -4,9 +4,9 @@
 if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
   echo "# Usage:"
   echo "# source <(/home/admin/config.scripts/network.aliases.sh getvars <lnd|cl> <mainnet|testnet|signet>)"
-  echo "# if no values given uses the default values from the raspiblitz.conf"
+  echo "# if no values given uses the default values from the raspiblesk.conf"
   echo
-  echo "# chain is: main | test ; from raspiblitz.conf or raspiblitz.info or defaults to main"
+  echo "# chain is: main | test ; from raspiblesk.conf or raspiblesk.info or defaults to main"
   echo
   echo "# LNTYPE is: lnd | cl ; default: lnd"
   echo "# typeprefix is: "" | c"
@@ -14,17 +14,17 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
   echo "# CHAIN is: mainnet | testnet | signet"
   echo "# netprefix is:  "" | t | s"
   echo "# portprefix is: "" | 1 | 3"
-  echo "# CLNETWORK is: bitcoin / signet / testnet"
+  echo "# CLNETWORK is: glcoin / signet / testnet"
   exit 1
 fi
 
 if [ "$1" = getvars ]; then
 
-  source /home/admin/raspiblitz.info
-  source /mnt/hdd/app-data/raspiblitz.conf 2>/dev/null
+  source /home/admin/raspiblesk.info
+  source /mnt/hdd/app-data/raspiblesk.conf 2>/dev/null
 
   if [ ${#network} -eq 0 ]; then
-    network=bitcoin
+    network=glcoin
   fi
 
   # LNTYPE is: lnd | cl
@@ -39,7 +39,7 @@ if [ "$1" = getvars ]; then
   fi
   echo "LNTYPE=${LNTYPE}"
 
-  # from raspiblitz.conf or raspiblitz.info or defaults to main
+  # from raspiblesk.conf or raspiblesk.info or defaults to main
   if [ ${#chain} -eq 0 ]; then
     chain=main
   fi
@@ -79,7 +79,7 @@ if [ "$1" = getvars ]; then
   echo "zmqprefix=${zmqprefix}"
 
   if [ "${LNTYPE}" == "cl" ]; then
-    # CLNETWORK is: bitcoin / signet / testnet
+    # CLNETWORK is: glcoin / signet / testnet
     if [ "${chain}" == "main" ]; then
       CLNETWORK=${network}
     else
@@ -88,15 +88,15 @@ if [ "$1" = getvars ]; then
     echo "CLNETWORK=${CLNETWORK}"
 
     # CLCONF is the path to the config
-    if [ "${CLNETWORK}" == "bitcoin" ]; then
-      CLCONF="/home/bitcoin/.lightning/config"
+    if [ "${CLNETWORK}" == "glcoin" ]; then
+      CLCONF="/home/glcoin/.lightning/config"
     else
-      CLCONF="/home/bitcoin/.lightning/${CLNETWORK}/config"
+      CLCONF="/home/glcoin/.lightning/${CLNETWORK}/config"
     fi
     echo "CLCONF=${CLCONF}"
     typeprefix=c
 
-    echo "lightningcli_alias=\"sudo -u bitcoin /usr/local/bin/lightning-cli --conf=${CLCONF}\""
+    echo "lightningcli_alias=\"sudo -u glcoin /usr/local/bin/lightning-cli --conf=${CLCONF}\""
   fi
 
   # typeprefix is: "" | c
@@ -108,10 +108,10 @@ if [ "$1" = getvars ]; then
   echo "lndConfFile=${lndConfFile}"
 
   # instead of all
-  # sudo -u bitcoin /usr/local/bin/lncli --chain=${network} --network=${chain}net
-  echo "lncli_alias=\"sudo -u bitcoin /usr/local/bin/lncli -n=${chain}net --rpcserver localhost:1${L2rpcportmod}009\""
-  # sudo -u bitcoin ${network}-cli -datadir=/home/bitcoin/.${network}
-  echo "bitcoincli_alias=\"/usr/local/bin/${network}-cli -datadir=/home/bitcoin/.${network} -rpcport=${portprefix}8332\""
+  # sudo -u glcoin /usr/local/bin/lncli --chain=${network} --network=${chain}net
+  echo "lncli_alias=\"sudo -u glcoin /usr/local/bin/lncli -n=${chain}net --rpcserver localhost:1${L2rpcportmod}009\""
+  # sudo -u glcoin ${network}-cli -datadir=/home/glcoin/.${network}
+  echo "glcoincli_alias=\"/usr/local/bin/${network}-cli -datadir=/home/glcoin/.${network} -rpcport=${portprefix}1617\""
 
 fi
 

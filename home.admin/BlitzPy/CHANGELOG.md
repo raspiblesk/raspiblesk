@@ -13,6 +13,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - add write() to BlitzPy config Classes
 
-## [0.1.0] - 2020-05-22 (Bitcoin Pizza Day)
+## [0.1.0] - 2020-05-22 (Glcoin Pizza Day)
 ### Added
 - initial creation

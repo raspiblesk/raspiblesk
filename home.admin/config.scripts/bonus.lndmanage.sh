@@ -13,7 +13,7 @@ lndmanageVersion="0.16.0"
 pgpKeyDownload="https://github.com/bitromortac.gpg"
 gpgFingerprint="0453B9F5071261A40FDB34181965063FC13BEBE2"
 
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 
 # show info menu
 if [ "$1" = "menu" ]; then
@@ -87,7 +87,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   fi
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set lndmanage "on"
+  /home/admin/config.scripts/blesk.conf.sh set lndmanage "on"
   echo "#######################################################################"
   echo "# OK install done"
   echo "#######################################################################"
@@ -102,7 +102,7 @@ fi
 if [ "$1" = "0" ] || [ "$1" = "off" ]; then
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set lndmanage "off"
+  /home/admin/config.scripts/blesk.conf.sh set lndmanage "off"
   
   echo "*** REMOVING LNDMANAGE ***"
   sudo rm -rf /home/admin/lndmanage

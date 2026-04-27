@@ -2,6 +2,8 @@
 
 # https://github.com/romanz/electrs/releases
 ELECTRSVERSION="v0.10.10"
+GLCOIN_RELEASE="v1.0.0"
+GITHUB_RELEASE_BASE="https://github.com/raspiblesk/raspiblesk/releases/download/${GLCOIN_RELEASE}"
 
 # command info
 if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
@@ -18,7 +20,7 @@ PGPsigner="romanz"
 PGPpubkeyLink="https://github.com/${PGPsigner}.gpg"
 PGPpubkeyFingerprint="87CAE5FA46917CBB"
 
-source /mnt/hdd/app-data/raspiblitz.conf 2>/dev/null
+source /mnt/hdd/app-data/raspiblesk.conf 2>/dev/null
 
 # give status (dont call regularly - just on occasions)
 if [ "$1" = "status" ]; then
@@ -127,9 +129,9 @@ if [ "$1" = "status-sync" ]; then
         blockheight=${syncedBlock}
 
         # calculate the progress
-        source <(/home/admin/_cache.sh get btc_mainnet_blocks_verified)
-        if [ "$btc_mainnet_blocks_verified" -eq "$btc_mainnet_blocks_verified" ] 2>/dev/null; then
-          blockheightPercent=$(echo "scale=2; $syncedBlock / $btc_mainnet_blocks_verified * 100" | bc)
+        source <(/home/admin/_cache.sh get glc_mainnet_blocks_verified)
+        if [ "$glc_mainnet_blocks_verified" -eq "$glc_mainnet_blocks_verified" ] 2>/dev/null; then
+          blockheightPercent=$(echo "scale=2; $syncedBlock / $glc_mainnet_blocks_verified * 100" | bc)
           blockheightPercent=$(printf "%.0f\n" $blockheightPercent)
         fi
 
@@ -181,7 +183,7 @@ if [ "$1" = "menu" ]; then
 The electrum system service is not running.
 Please check the following debug info.
       " 8 48
-    /home/admin/config.scripts/blitz.debug.sh
+    /home/admin/config.scripts/blesk.debug.sh
     echo "Press ENTER to get back to main menu."
     read key
     exit 0
@@ -207,7 +209,7 @@ Check 'sudo nginx -t' for a detailed error message.
       sudo mkdir /var/log/nginx
       sudo systemctl restart nginx
     fi
-    /home/admin/config.scripts/blitz.web.sh
+    /home/admin/config.scripts/blesk.web.sh
     echo "Press ENTER to get back to main menu."
     read key
     exit 0
@@ -233,7 +235,7 @@ Check 'sudo nginx -t' for a detailed error message.
     echo "On Network Settings > Server menu:"
     echo "- deactivate automatic server selection"
     echo "- as manual server set '${localIP}':'${portTCP}':t"
-    echo "- laptop and RaspiBlitz need to be within same local network"
+    echo "- laptop and RaspiBlesk need to be within same local network"
     echo
     echo "To start directly from laptop terminal use"
     echo "PC: electrum --oneserver --server ${localIP}:${portTCP}:t"
@@ -245,18 +247,18 @@ Check 'sudo nginx -t' for a detailed error message.
       echo
       echo "To connect through TOR open the Tor Browser and start with the options:"
       echo "electrum --oneserver --server ${TORaddress}:50001:t --proxy socks5:127.0.0.1:9150"
-      sudo /home/admin/config.scripts/blitz.display.sh qr "${TORaddress}"
+      sudo /home/admin/config.scripts/blesk.display.sh qr "${TORaddress}"
     fi
     echo
     echo "If you want to use SSL encrypted connections use in examples above"
     echo "'${localIP}':'${portSSL}':s' instead of '${localIP}':'${portTCP}':t"
     echo
-    echo "For more details check the RaspiBlitz README on ElectRS:"
-    echo "https://github.com/rootzoll/raspiblitz"
+    echo "For more details check the RaspiBlesk README on ElectRS:"
+    echo "https://github.com/rootzoll/raspiblesk"
     echo
     echo "Press ENTER to get back to main menu."
     read key
-    sudo /home/admin/config.scripts/blitz.display.sh hide
+    sudo /home/admin/config.scripts/blesk.display.sh hide
     ;;
   STATUS)
     sudo /home/admin/config.scripts/bonus.electrs.sh status
@@ -302,27 +304,60 @@ if [ "$1" = "install" ]; then
     sudo adduser --system --group --home /home/electrs electrs
     cd /home/electrs
 
-    echo
-    echo "# Installing Rust for the electrs user"
-    echo
-    # https://github.com/romanz/electrs/blob/master/doc/usage.md#build-dependencies
-    sudo -u electrs curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sudo -u electrs sh -s -- --default-toolchain stable -y
-    sudo apt install -y clang cmake build-essential # for building 'rust-rocksdb'
+    # Detect arch for pre-built tarball lookup
+    if [ "$(uname -m | grep -c 'arm')" -gt 0 ]; then
+      electrsArch="armv7"
+    elif [ "$(uname -m | grep -c 'aarch64')" -gt 0 ]; then
+      electrsArch="arm64"
+    else
+      electrsArch="amd64"
+    fi
 
-    echo
-    echo "# Downloading and building electrs $ELECTRSVERSION. This will take ~40 minutes"
-    echo
-    sudo -u electrs git clone https://github.com/romanz/electrs
-    cd /home/electrs/electrs || exit 1
+    # OPTION 1: pre-built Glcoin-patched electrs binary tarball
+    # Place electrs-glcoin-${ELECTRSVERSION}-linux-${arch}.tar.gz in /tmp before running.
+    # Format: contains a single 'electrs' binary at the top level.
+    PREBUILT_TARBALL="/tmp/electrs-glcoin-${ELECTRSVERSION}-linux-${electrsArch}.tar.gz"
+    if [ ! -f "${PREBUILT_TARBALL}" ]; then
+      echo "# Attempting GitHub Release download: ${GITHUB_RELEASE_BASE}/$(basename "${PREBUILT_TARBALL}")"
+      wget -q --show-progress --timeout=120 \
+        -O "${PREBUILT_TARBALL}" \
+        "${GITHUB_RELEASE_BASE}/$(basename "${PREBUILT_TARBALL}")" || rm -f "${PREBUILT_TARBALL}"
+    fi
+    if [ -f "${PREBUILT_TARBALL}" ]; then
+      echo "# Found pre-built Glcoin electrs tarball: ${PREBUILT_TARBALL}"
+      mkdir -p /home/electrs/electrs/target/release
+      tar -xzf "${PREBUILT_TARBALL}" -C /home/electrs/electrs/target/release || { echo "# FAIL - could not extract tarball"; exit 1; }
+      sudo chown -R electrs:electrs /home/electrs/electrs
+      chmod +x /home/electrs/electrs/target/release/electrs
+      echo "# Installed from pre-built tarball"
+    else
+      # OPTION 2: build from source (romanz/electrs fork with network_glcoin.patch applied)
+      # This takes ~30-40 minutes and requires Rust + clang.
+      echo "# No pre-built tarball found at ${PREBUILT_TARBALL}"
+      echo "# Building patched electrs from source (this will take ~40 minutes)"
 
-    sudo -u electrs git reset --hard $ELECTRSVERSION
+      sudo -u electrs curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sudo -u electrs sh -s -- --default-toolchain stable -y
+      sudo apt install -y clang cmake build-essential
 
-    # verify
-    sudo -u electrs /home/admin/config.scripts/blitz.git-verify.sh \
-      "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" "${ELECTRSVERSION}" || exit 1
+      sudo -u electrs git clone https://github.com/romanz/electrs
+      cd /home/electrs/electrs || exit 1
+      sudo -u electrs git reset --hard $ELECTRSVERSION
 
-    # build
-    sudo -u electrs /home/electrs/.cargo/bin/cargo build --locked --release || exit 1
+      # verify
+      sudo -u electrs /home/admin/config.scripts/blesk.git-verify.sh \
+        "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" "${ELECTRSVERSION}" || exit 1
+
+      # apply Glcoin network name patch
+      GLCOIN_PATCH="/home/admin/config/raspiblitz/patches/electrs/network_glcoin.patch"
+      if [ -f "${GLCOIN_PATCH}" ]; then
+        sudo -u electrs patch -p1 < "${GLCOIN_PATCH}" || { echo "# FAIL - could not apply Glcoin patch"; exit 1; }
+      else
+        echo "# WARNING: Glcoin electrs patch not found at ${GLCOIN_PATCH}"
+        echo "# Build may fail at startup with 'unknown network: glcoin'"
+      fi
+
+      sudo -u electrs /home/electrs/.cargo/bin/cargo build --locked --release || exit 1
+    fi
   fi
   exit 0
 fi
@@ -360,10 +395,10 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     sudo chown -R electrs:electrs /mnt/hdd/app-storage/electrs
 
     echo
-    echo "# Getting RPC credentials from the bitcoin.conf"
+    echo "# Getting RPC credentials from the glcoin.conf"
     # read PASSWORD_B
-    RPC_USER=$(sudo cat /mnt/hdd/app-data/bitcoin/bitcoin.conf | grep rpcuser | cut -c 9-)
-    PASSWORD_B=$(sudo cat /mnt/hdd/app-data/bitcoin/bitcoin.conf | grep rpcpassword | cut -c 13-)
+    RPC_USER=$(sudo cat /mnt/hdd/app-data/glcoin/glcoin.conf | grep rpcuser | cut -c 9-)
+    PASSWORD_B=$(sudo cat /mnt/hdd/app-data/glcoin/glcoin.conf | grep rpcpassword | cut -c 13-)
     echo "# Done"
 
     echo
@@ -379,11 +414,13 @@ index-batch-size = 10
 wait_duration_secs = 10
 jsonrpc_timeout_secs = 15
 db_dir = \"/mnt/hdd/app-storage/electrs/db\"
-daemon_p2p_addr = \"127.0.0.1:8335\"
+daemon_p2p_addr = \"127.0.0.1:1619\"
+daemon_rpc_addr = \"127.0.0.1:1617\"
 auth = \"${RPC_USER}:${PASSWORD_B}\"
-# allow BTC-RPC-explorer show tx-s for addresses with a history of more than 100
+network = \"glcoin\"
+# allow GLC-RPC-explorer show tx-s for addresses with a history of more than 100
 txid_limit = 1000
-server_banner = \"Welcome to electrs $ELECTRSVERSION - the Electrum Rust Server on your RaspiBlitz\"
+server_banner = \"Welcome to electrs $ELECTRSVERSION - the Electrum Rust Server on your RaspiBlesk\"
 " | sudo tee /home/electrs/.electrs/config.toml
     sudo chmod 600 /home/electrs/.electrs/config.toml
     sudo chown electrs:electrs /home/electrs/.electrs/config.toml
@@ -464,7 +501,7 @@ stream {
     echo "
 [Unit]
 Description=Electrs
-After=bitcoind.service
+After=glcoind.service
 
 [Service]
 WorkingDirectory=/home/electrs/electrs
@@ -492,8 +529,8 @@ WantedBy=multi-user.target
     echo "# ElectRS is already installed."
   fi
 
-  # setting value in raspiblitz config
-  /home/admin/config.scripts/blitz.conf.sh set ElectRS "on"
+  # setting value in raspiblesk config
+  /home/admin/config.scripts/blesk.conf.sh set ElectRS "on"
 
   # Hidden Service for electrs if Tor active
   if [ "${runBehindTor}" = "on" ]; then
@@ -501,7 +538,7 @@ WantedBy=multi-user.target
     /home/admin/config.scripts/tor.onion-service.sh electrs 50002 50002 50001 50001
   fi
 
-  # determine bitcoin.conf network prefix based on chain
+  # determine glcoin.conf network prefix based on chain
   if [ "${chain}" = "main" ]; then
     btcprefix="main"
   elif [ "${chain}" = "test" ]; then
@@ -512,13 +549,13 @@ WantedBy=multi-user.target
     btcprefix="main"
   fi
 
- # whitelist connection in bitcoind
+ # whitelist connection in glcoind
   # migrate old non-prefixed whitebind to network-prefixed format (always to main.)
-  sudo sed -i "s/^whitebind=download@127.0.0.1:8335/main.whitebind=download@127.0.0.1:8335/g" /mnt/hdd/app-data/bitcoin/bitcoin.conf
+  sudo sed -i "s/^whitebind=download@127.0.0.1:1619/main.whitebind=download@127.0.0.1:1619/g" /mnt/hdd/app-data/glcoin/glcoin.conf
   # ensure network-prefixed whitebind exists for the current chain
-  if ! sudo grep -Eq "^${btcprefix}.whitebind=download@127.0.0.1:8335" /mnt/hdd/app-data/bitcoin/bitcoin.conf; then
-    echo "${btcprefix}.whitebind=download@127.0.0.1:8335" | sudo tee -a /mnt/hdd/app-data/bitcoin/bitcoin.conf
-    bitcoindRestart=yes
+  if ! sudo grep -Eq "^${btcprefix}.whitebind=download@127.0.0.1:1619" /mnt/hdd/app-data/glcoin/glcoin.conf; then
+    echo "${btcprefix}.whitebind=download@127.0.0.1:1619" | sudo tee -a /mnt/hdd/app-data/glcoin/glcoin.conf
+    glcoindRestart=yes
   fi
 
   # clean up
@@ -527,15 +564,15 @@ WantedBy=multi-user.target
 
   source <(/home/admin/_cache.sh get state)
   if [ "${state}" == "ready" ]; then
-    if [ "${bitcoindRestart}" == "yes" ]; then
-      sudo systemctl restart bitcoind
+    if [ "${glcoindRestart}" == "yes" ]; then
+      sudo systemctl restart glcoind
     fi
     sudo systemctl restart nginx
     sudo systemctl start electrs
-    # restart BTC-RPC-Explorer to reconfigure itself to use electrs for address API
-    if [ "${BTCRPCexplorer}" == "on" ]; then
-      sudo systemctl restart btc-rpc-explorer
-      echo "# BTC-RPC-Explorer restarted"
+    # restart GLC-RPC-Explorer to reconfigure itself to use electrs for address API
+    if [ "${GlcoinRPCexplorer}" == "on" ]; then
+      sudo systemctl restart glc-rpc-explorer
+      echo "# GLC-RPC-Explorer restarted"
     fi
   fi
 
@@ -576,10 +613,10 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
     sudo systemctl disable electrs
     sudo rm /etc/systemd/system/electrs.service
 
-    # restart BTC-RPC-Explorer to reconfigure itself to use electrs for address API
-    if [ "${BTCRPCexplorer}" == "on" ]; then
-      sudo systemctl restart btc-rpc-explorer
-      echo "# BTC-RPC-Explorer restarted"
+    # restart GLC-RPC-Explorer to reconfigure itself to use electrs for address API
+    if [ "${GlcoinRPCexplorer}" == "on" ]; then
+      sudo systemctl restart glc-rpc-explorer
+      echo "# GLC-RPC-Explorer restarted"
     fi
 
   else
@@ -595,8 +632,8 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   sudo ufw delete allow 50001
   sudo ufw delete allow 50002
 
-  # setting value in raspiblitz config
-  /home/admin/config.scripts/blitz.conf.sh set ElectRS "off"
+  # setting value in raspiblesk config
+  /home/admin/config.scripts/blesk.conf.sh set ElectRS "off"
 
   echo "# OK ElectRS off."
   exit 0
@@ -618,8 +655,14 @@ if [ "$1" = "update" ]; then
     echo "# Reset to the latest release tag: $updateVersion"
     sudo -u electrs git reset --hard $updateVersion
 
-    sudo -u electrs /home/admin/config.scripts/blitz.git-verify.sh \
+    sudo -u electrs /home/admin/config.scripts/blesk.git-verify.sh \
       "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" "${updateVersion}" || exit 1
+
+    # re-apply Glcoin network name patch after git reset
+    GLCOIN_PATCH="/home/admin/config/raspiblitz/patches/electrs/network_glcoin.patch"
+    if [ -f "${GLCOIN_PATCH}" ]; then
+      sudo -u electrs patch -p1 < "${GLCOIN_PATCH}" || { echo "# FAIL - could not apply Glcoin patch"; exit 1; }
+    fi
 
     echo "# Installing build dependencies"
     sudo -u electrs curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sudo -u electrs sh -s -- --default-toolchain stable -y
@@ -631,7 +674,7 @@ if [ "$1" = "update" ]; then
 
     # update config
     sudo -u electrs sed -i "/^server_banner = /d" /home/electrs/.electrs/config.toml
-    sudo -u electrs bash -c "echo 'server_banner = \"Welcome to electrs $updateVersion - the Electrum Rust Server on your RaspiBlitz\"' >> /home/electrs/.electrs/config.toml"
+    sudo -u electrs bash -c "echo 'server_banner = \"Welcome to electrs $updateVersion - the Electrum Rust Server on your RaspiBlesk\"' >> /home/electrs/.electrs/config.toml"
     # remove the deprecated timestamp entry
     sudo -u electrs sed -i '/^timestamp = true/d' /home/electrs/.electrs/config.toml
 

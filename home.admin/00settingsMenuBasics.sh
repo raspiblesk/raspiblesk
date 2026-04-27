@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# get raspiblitz config
-echo "get raspiblitz config"
-source /home/admin/raspiblitz.info
-source /mnt/hdd/app-data/raspiblitz.conf
+# get raspiblesk config
+echo "get raspiblesk config"
+source /home/admin/raspiblesk.info
+source /mnt/hdd/app-data/raspiblesk.conf
 
 echo "services default values"
 if [ ${#runBehindTor} -eq 0 ]; then runBehindTor="off"; fi
@@ -15,7 +15,7 @@ if [ ${#clboss} -eq 0 ]; then clboss="off"; fi
 if [ ${#clEncryptedHSM} -eq 0 ]; then clEncryptedHSM="off"; fi
 if [ ${#clAutoUnlock} -eq 0 ]; then clAutoUnlock="off"; fi
 if [ ${#clWatchtowerClient} -eq 0 ]; then clWatchtowerClient="off"; fi
-if [ ${#blitzapi} -eq 0 ]; then blitzapi="off"; fi
+if [ ${#bleskapi} -eq 0 ]; then bleskapi="off"; fi
 if [ ${#tailscale} -eq 0 ]; then tailscale="off"; fi
 if [ ${#telegraf} -eq 0 ]; then telegraf="off"; fi
 if [ ${#knots} -eq 0 ]; then knots="off"; fi
@@ -99,7 +99,7 @@ echo "run dialog ..."
 # BASIC MENU INFO
 OPTIONS=()
 
-OPTIONS+=(A 'Blitz API + WebUI' ${blitzapi})
+OPTIONS+=(A 'Blitz API + WebUI' ${bleskapi})
 
 # LCD options (only when running with LCD screen)
 if [ "${displayClass}" == "lcd" ]; then
@@ -143,7 +143,7 @@ if [ "${clNode}" == "on" ]; then
   fi
 fi
 
-OPTIONS+=(k 'Bitcoin Knots (experimental)' ${knots})
+OPTIONS+=(k 'Glcoin Knots (experimental)' ${knots})
 
 CHOICE_HEIGHT=$(("${#OPTIONS[@]}/2+1"))
 HEIGHT=$((CHOICE_HEIGHT+6))
@@ -167,11 +167,11 @@ anychange=0
 # Blitz API + webUI process choice
 choice="off"; check=$(echo "${CHOICES}" | grep -c "A")
 if [ ${check} -eq 1 ]; then choice="on"; fi
-if [ "${blitzapi}" != "${choice}" ]; then
+if [ "${bleskapi}" != "${choice}" ]; then
   echo "Blitz API + webUI settings changed .."
   anychange=1
-  sudo /home/admin/config.scripts/blitz.web.api.sh ${choice} DEFAULT
-  sudo /home/admin/config.scripts/blitz.web.ui.sh ${choice} DEFAULT
+  sudo /home/admin/config.scripts/blesk.web.api.sh ${choice} DEFAULT
+  sudo /home/admin/config.scripts/blesk.web.ui.sh ${choice} DEFAULT
   errorOnInstall=$?
   if [ "${choice}" =  "on" ]; then
     whiptail --title " Installed Blitz API + webUI" --msgbox "\
@@ -207,9 +207,9 @@ if [ "${runBehindTor}" != "${choice}" ]; then
 
     # inform user about privacy risk
     whiptail --title " PRIVACY NOTICE " --msgbox "
-RaspiBlitz will now install/activate Tor & after reboot run behind it.
+RaspiBlesk will now install/activate Tor & after reboot run behind it.
 
-Please keep in mind that thru your LND node id & your previous IP history with your internet provider your lightning node could still be linked to your personal id even when running behind Tor. To unlink you from that IP history its recommended that after the switch/reboot to Tor you also use the REPAIR > RESET-LND option to create a fresh LND wallet. That might involve closing all channels & move your funds out of RaspiBlitz before that RESET-LND.
+Please keep in mind that thru your LND node id & your previous IP history with your internet provider your lightning node could still be linked to your personal id even when running behind Tor. To unlink you from that IP history its recommended that after the switch/reboot to Tor you also use the REPAIR > RESET-LND option to create a fresh LND wallet. That might involve closing all channels & move your funds out of RaspiBlesk before that RESET-LND.
 " 16 76
   fi
 
@@ -247,7 +247,7 @@ if [ ${check} -eq 1 ]; then choice="1"; fi
 if [ "${lcdrotate}" != "${choice}" ]; then
   echo "LCD Rotate Setting changed .."
   anychange=1
-  sudo /home/admin/config.scripts/blitz.display.sh rotate ${choice}
+  sudo /home/admin/config.scripts/blesk.display.sh rotate ${choice}
   needsReboot=1
 else
   echo "LCD Rotate Setting unchanged."
@@ -259,7 +259,7 @@ if [ ${check} -eq 1 ]; then choice="1"; fi
 if [ "${touchscreen}" != "${choice}" ]; then
   echo "Touchscreen Setting changed .."
   anychange=1
-  sudo /home/admin/config.scripts/blitz.touchscreen.sh ${choice}
+  sudo /home/admin/config.scripts/blesk.touchscreen.sh ${choice}
   if [ "${choice}" == "1" ]; then
     dialog --title 'Touchscreen Activated' --msgbox 'Touchscreen was activated - will reboot.\n\nAfter reboot use the SCREEN option in main menu to calibrate the touchscreen.' 9 48
   fi
@@ -288,7 +288,7 @@ if [ "${NextcloudBackup}" != "${choice}" ]; then
   sudo -u admin /home/admin/config.scripts/nextcloud.upload.sh ${choice}
   if [ "${choice}" =  "on" ]; then
     # doing initial upload so that user can see result
-    source /mnt/hdd/app-data/raspiblitz.conf
+    source /mnt/hdd/app-data/raspiblesk.conf
     sudo /home/admin/config.scripts/nextcloud.upload.sh upload /mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/channel.backup
   fi
 else
@@ -477,17 +477,17 @@ fi
 choice="off"; check=$(echo "${CHOICES}" | grep -c "k")
 if [ ${check} -eq 1 ]; then choice="on"; fi
 if [ "${knots}" != "${choice}" ]; then
-  echo "Bitcoin Knots settings changed .."
+  echo "Glcoin Knots settings changed .."
   anychange=1
   sudo -u admin /home/admin/config.scripts/bonus.knots.sh ${choice}
   errorOnInstall=$?
   if [ ${errorOnInstall} -eq 0 ]; then
-    echo "Bitcoin Knots is installed."
+    echo "Glcoin Knots is installed."
   else
-    echo "Bitcoin Knots installation have failed."
+    echo "Glcoin Knots installation have failed."
   fi
 else
-  echo "Bitcoin Knots setting unchanged"
+  echo "Glcoin Knots setting unchanged"
 fi
 
 # parallel testnet process choice
@@ -498,8 +498,8 @@ if [ "${testnet}" != "${choice}" ] || \
   echo "# Parallel Testnets Setting changed .."
   anychange=1
   if [ "${choice}" = "on" ]; then
-    /home/admin/config.scripts/bitcoin.install.sh on testnet
-    /home/admin/config.scripts/bitcoin.install.sh on signet
+    /home/admin/config.scripts/glcoin.install.sh on testnet
+    /home/admin/config.scripts/glcoin.install.sh on signet
     if [ "${lightning}" == "lnd" ] || [ "${lnd}" == "on" ]; then
       /home/admin/config.scripts/lnd.install.sh on testnet initwallet
       /home/admin/config.scripts/lnd.install.sh on signet initwallet
@@ -514,8 +514,8 @@ if [ "${testnet}" != "${choice}" ] || \
     /home/admin/config.scripts/lnd.install.sh off signet
     /home/admin/config.scripts/cl.install.sh off testnet
     /home/admin/config.scripts/cl.install.sh off signet
-    /home/admin/config.scripts/bitcoin.install.sh off testnet
-    /home/admin/config.scripts/bitcoin.install.sh off signet
+    /home/admin/config.scripts/glcoin.install.sh off testnet
+    /home/admin/config.scripts/glcoin.install.sh off signet
   fi
   # make sure to reboot - nodes that people activate testnets can take a reboot
   needsReboot=1
@@ -533,8 +533,8 @@ if [ ${needsReboot} -eq 1 ]; then
    dialog --pause "OK. System will reboot to activate changes." 8 58 8
    clear
    echo "rebooting .. (please wait)"
-   # stop bitcoind
-   sudo -u bitcoin ${network}-cli stop
+   # stop glcoind
+   sudo -u glcoin ${network}-cli stop
    sleep 4
-   sudo /home/admin/config.scripts/blitz.shutdown.sh reboot
+   sudo /home/admin/config.scripts/blesk.shutdown.sh reboot
 fi

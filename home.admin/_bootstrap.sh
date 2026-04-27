@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # This script runs on every start called by boostrap.service
-# see logs with --> tail -n 100 /home/admin/raspiblitz.log
+# see logs with --> tail -n 100 /home/admin/raspiblesk.log
 
 # NOTE: this boostrap script runs as root user (bootstrap.service) - so no sudo needed
 
@@ -12,28 +12,28 @@
 # load codeVersion
 source /home/admin/_version.info
 
-# CONFIGFILE - configuration of RaspiBlitz
+# CONFIGFILE - configuration of RaspiBlesk
 # used by fresh SD image to recover configuration
 # and delivers basic config info for scripts 
-configFile="/mnt/hdd/app-data/raspiblitz.conf"
+configFile="/mnt/hdd/app-data/raspiblesk.conf"
 
 # LOGFILE - store debug logs of bootstrap
 # resets on every start
-logFile="/home/admin/raspiblitz.log"
+logFile="/home/admin/raspiblesk.log"
 
 # INFOFILE - state data from bootstrap
 # used by display and later setup steps
-infoFile="/home/admin/raspiblitz.info"
+infoFile="/home/admin/raspiblesk.info"
 
 # SETUPFILE
 # this key/value file contains the state during the setup process
-setupFile="/var/cache/raspiblitz/temp/raspiblitz.setup"
+setupFile="/var/cache/raspiblesk/temp/raspiblesk.setup"
 
  # make sure ram disk is mounted
 /home/admin/_cache.sh ramdisk on 
 
 # Backup last log file if available
-cp ${logFile} /home/admin/raspiblitz.last.log 2>/dev/null
+cp ${logFile} /home/admin/raspiblesk.last.log 2>/dev/null
 
 # Init boostrap log file
 echo "Writing logs to: ${logFile}"
@@ -41,7 +41,7 @@ echo "" > $logFile
 chmod 640 ${logFile}
 chown root:sudo ${logFile}
 echo "***********************************************" >> $logFile
-echo "Running RaspiBlitz Bootstrap ${codeVersion}" >> $logFile
+echo "Running RaspiBlesk Bootstrap ${codeVersion}" >> $logFile
 date >> $logFile
 echo "***********************************************" >> $logFile
 
@@ -50,27 +50,27 @@ systemctl list-units --type=service --state=running >> $logFile
 
 # make sure ssh is configured and running
 echo "# make sure SSH server is configured & running" >> $logFile
-/home/admin/config.scripts/blitz.ssh.sh checkrepair >> $logFile
+/home/admin/config.scripts/blesk.ssh.sh checkrepair >> $logFile
 
-echo "## prepare raspiblitz temp" >> $logFile
+echo "## prepare raspiblesk temp" >> $logFile
 
-# make sure /var/cache/raspiblitz/temp exists
-mkdir -p /var/cache/raspiblitz/temp
-chmod 777 /var/cache/raspiblitz/temp
+# make sure /var/cache/raspiblesk/temp exists
+mkdir -p /var/cache/raspiblesk/temp
+chmod 777 /var/cache/raspiblesk/temp
 
 ################################
-# INIT raspiblitz.info
+# INIT raspiblesk.info
 ################################
-# raspiblitz.info contains the persisted system state
+# raspiblesk.info contains the persisted system state
 # that either given by build or has to survive a reboot
-echo "## INIT raspiblitz.info" >> $logFile
+echo "## INIT raspiblesk.info" >> $logFile
 
-# set default values for raspiblitz.info (that are not set by build_sdcard.sh)
+# set default values for raspiblesk.info (that are not set by build_sdcard.sh)
 
 setupPhase='boot'
 setupStep=0
 fsexpanded=0
-blitzapi='off'
+bleskapi='off'
 
 btc_mainnet_sync_initial_done=0
 btc_testnet_sync_initial_done=0
@@ -93,7 +93,7 @@ fi
 # load already persisted valued (overwriting defaults if exist)
 source ${infoFile} 2>/dev/null
 
-# write fresh raspiblitz.info file
+# write fresh raspiblesk.info file
 echo "state=starting" > $infoFile
 echo "message=starting" >> $infoFile
 echo "setupPhase=${setupPhase}" >> $infoFile
@@ -101,7 +101,7 @@ echo "setupStep=${setupStep}" >> $infoFile
 echo "baseimage=${baseimage}" >> $infoFile
 echo "cpu=${cpu}" >> $infoFile
 echo "vm=${vm}" >> $infoFile
-echo "blitzapi=${blitzapi}" >> $infoFile
+echo "bleskapi=${bleskapi}" >> $infoFile
 echo "displayClass=${displayClass}" >> $infoFile
 echo "displayType=${displayType}" >> $infoFile
 echo "fsexpanded=${fsexpanded}" >> $infoFile
@@ -117,7 +117,7 @@ echo "ln_cl_signet_sync_initial_done=${ln_cl_signet_sync_initial_done}" >> $info
 
 chmod 664 ${infoFile}
 
-# write content of raspiblitz.info to logs
+# write content of raspiblesk.info to logs
 cat $infoFile >> $logFile
 
 # determine correct raspberrypi boot drive path (that easy to access when sd card is insert into laptop)
@@ -166,12 +166,12 @@ if [ "${provisionFlagExists}" = "1" ]; then
   /home/admin/_cache.sh set state "inconsistentsystem"
   /home/admin/_cache.sh set message "provision did not ran thru"
   echo "FAIL: 'provision did not ran thru' - need fresh sd card!" >> ${logFile}
-  rm /mnt/hdd/app-data/raspiblitz.setup
+  rm /mnt/hdd/app-data/raspiblesk.setup
   exit 1
 fi
 
 #########################
-# INIT RaspiBlitz Cache
+# INIT RaspiBlesk Cache
 #########################
 
 # make sure that redis service is enabled (disabled on fresh install medium)
@@ -249,7 +249,7 @@ fi
 ################################
 
 # Emergency cleaning logs when over 1GB (to prevent SD card filling up)
-# see https://github.com/rootzoll/raspiblitz/issues/418#issuecomment-472180944
+# see https://github.com/rootzoll/raspiblesk/issues/418#issuecomment-472180944
 echo "*** Checking Log Size ***"
 logsMegaByte=$(du -c -m /var/log | grep "total" | awk '{print $1;}')
 if [ ${logsMegaByte} -gt 1000 ]; then
@@ -272,17 +272,17 @@ echo ""
 ################################
 
 # display 3 secs logo - try to kickstart LCD
-# see https://github.com/rootzoll/raspiblitz/issues/195#issuecomment-469918692
-# see https://github.com/rootzoll/raspiblitz/issues/647
-# see https://github.com/rootzoll/raspiblitz/pull/1580
+# see https://github.com/rootzoll/raspiblesk/issues/195#issuecomment-469918692
+# see https://github.com/rootzoll/raspiblesk/issues/647
+# see https://github.com/rootzoll/raspiblesk/pull/1580
 randnum=$(shuf -i 0-7 -n 1)
-/home/admin/config.scripts/blitz.display.sh image /home/admin/raspiblitz/pictures/startlogo${randnum}.png
+/home/admin/config.scripts/blesk.display.sh image /home/admin/raspiblesk/pictures/startlogo${randnum}.png
 sleep 5
-/home/admin/config.scripts/blitz.display.sh hide
+/home/admin/config.scripts/blesk.display.sh hide
 
 ######################################
 # WAIT FOR FIRST FULL BACKGROUND SCAN
-echo "## RaspiBlitz Cache ... wait background.scan.service to finish first scan loop" >> $logFile
+echo "## RaspiBlesk Cache ... wait background.scan.service to finish first scan loop" >> $logFile
 systemscan_runtime=""
 while [ "${systemscan_runtime}" = "" ]
 do
@@ -293,7 +293,7 @@ done
 
 ################################
 # WAIT LOOP: HDD CONNECTED
-# (old RaspiBlitz Setup)
+# (old RaspiBlesk Setup)
 ################################
 
 echo "Waiting for HDD/SSD ..." >> $logFile
@@ -302,8 +302,8 @@ scenario="" # run loop at least on time
 until [ ${#scenario} -gt 0 ] && [[ ! "${scenario}" =~ ^error ]]; do
 
   # recheck HDD/SSD
-  source <(/home/admin/config.scripts/blitz.data.sh status)
-  echo "blitz.data.sh status - scenario: ${scenario}" >> $logFile
+  source <(/home/admin/config.scripts/blesk.data.sh status)
+  echo "blesk.data.sh status - scenario: ${scenario}" >> $logFile
 
   # in case of HDD analyse ERROR
   if [ "${scenario}" = "error:no-storage" ]; then
@@ -354,33 +354,33 @@ if [ "${scenario}" != "ready" ] ; then
   /home/admin/_cache.sh set state "system-init"
   /home/admin/_cache.sh set message "please wait"
 
-  # now that HDD/SSD is connected ... if relevant data from a previous RaspiBlitz was available
-  # /var/cache/raspiblitz/hdd-inspect exists with copy of config data to init system with
+  # now that HDD/SSD is connected ... if relevant data from a previous RaspiBlesk was available
+  # /var/cache/raspiblesk/hdd-inspect exists with copy of config data to init system with
   echo "STORAGE connected .. run inspection" >> $logFile
-  /home/admin/config.scripts/blitz.data.sh status -inspect >> $logFile
+  /home/admin/config.scripts/blesk.data.sh status -inspect >> $logFile
 
   #####################################
   # WIFI RESTORE
-  # from former RaspiBlitz
+  # from former RaspiBlesk
 
   # check if there is a WIFI configuration to backup or restore
-  if [ -d "/var/cache/raspiblitz/hdd-inspect/wifi" ]; then
-    echo "WIFI RESTORE from /var/cache/raspiblitz/hdd-inspect/wpa_supplicant.conf" >> $logFile
+  if [ -d "/var/cache/raspiblesk/hdd-inspect/wifi" ]; then
+    echo "WIFI RESTORE from /var/cache/raspiblesk/hdd-inspect/wpa_supplicant.conf" >> $logFile
     /home/admin/config.scripts/internet.wifi.sh backup-restore >> $logFile
   else
-    echo "No WIFI RESTORE because no /var/cache/raspiblitz/hdd-inspect/wpa_supplicant.conf" >> $logFile
+    echo "No WIFI RESTORE because no /var/cache/raspiblesk/hdd-inspect/wpa_supplicant.conf" >> $logFile
   fi
 
   ################################
   # SSH SERVER CERTS RESTORE
-  # from former RaspiBlitz
+  # from former RaspiBlesk
 
-  if [ -d "/var/cache/raspiblitz/hdd-inspect/sshd" ]; then
+  if [ -d "/var/cache/raspiblesk/hdd-inspect/sshd" ]; then
     # INIT OLD SSH HOST KEYS on Update/Recovery to prevent "Unknown Host" on ssh client
     echo "SSH SERVER CERTS RESTORE activating old SSH host keys" >> $logFile
-    /home/admin/config.scripts/blitz.ssh.sh restore /var/cache/raspiblitz/hdd-inspect/sshd/ssh >> $logFile
+    /home/admin/config.scripts/blesk.ssh.sh restore /var/cache/raspiblesk/hdd-inspect/sshd/ssh >> $logFile
   else
-    echo "No SSH SERVER CERTS RESTORE because no /var/cache/raspiblitz/hdd-inspect" >> $logFile
+    echo "No SSH SERVER CERTS RESTORE because no /var/cache/raspiblesk/hdd-inspect" >> $logFile
   fi
 
 fi
@@ -440,11 +440,11 @@ if [ "${scenario}" != "ready" ] && [ "${baseimage}" = "raspios_arm64" ]; then
   # FS EXPAND
   # extend sd card to maximum capacity
 
-  source <(/home/admin/config.scripts/blitz.bootdrive.sh status)
+  source <(/home/admin/config.scripts/blesk.bootdrive.sh status)
   if [ "${needsExpansion}" = "1" ] && [ "${fsexpanded}" = "0" ]; then
     echo "FSEXPAND needed ... starting process" >> $logFile
-    /home/admin/config.scripts/blitz.bootdrive.sh status >> $logFile
-    /home/admin/config.scripts/blitz.bootdrive.sh fsexpand >> $logFile
+    /home/admin/config.scripts/blesk.bootdrive.sh status >> $logFile
+    /home/admin/config.scripts/blesk.bootdrive.sh fsexpand >> $logFile
     systemInitReboot=1
     /home/admin/_cache.sh set message "FSEXPAND"
   elif [ "${tooSmall}" = "1" ]; then
@@ -474,7 +474,7 @@ if [ "${scenario}" != "ready" ] && [ "${baseimage}" = "raspios_arm64" ]; then
     rm ${raspi_bootdir}/hdmi*
     # switch to HDMI what will trigger reboot
     echo "HDMI switch found ... activating HDMI display output & flag reboot" >> $logFile
-    /home/admin/config.scripts/blitz.display.sh set-display hdmi >> $logFile
+    /home/admin/config.scripts/blesk.display.sh set-display hdmi >> $logFile
     systemInitReboot=1
   else
     echo "No HDMI switch found. " >> $logFile
@@ -492,8 +492,8 @@ if [ "${scenario}" != "ready" ] && [ "${baseimage}" = "raspios_arm64" ]; then
     rm ${raspi_bootdir}/ssh.reset* >> $logFile
     # delete ssh certs
     echo "SSHRESET switch found ... stopping SSH and deleting old certs" >> $logFile
-    /home/admin/config.scripts/blitz.ssh.sh renew >> $logFile
-    /home/admin/config.scripts/blitz.ssh.sh backup >> $logFile
+    /home/admin/config.scripts/blesk.ssh.sh renew >> $logFile
+    /home/admin/config.scripts/blesk.ssh.sh backup >> $logFile
     systemInitReboot=1
     /home/admin/_cache.sh set message "SSHRESET"
   else
@@ -503,38 +503,38 @@ if [ "${scenario}" != "ready" ] && [ "${baseimage}" = "raspios_arm64" ]; then
   ##################################
   # DISPLAY RESTORE (if needed)
 
-  if [ -f "/var/cache/raspiblitz/hdd-inspect/raspiblitz.conf" ]; then
+  if [ -f "/var/cache/raspiblesk/hdd-inspect/raspiblesk.conf" ]; then
 
-    echo "check that display class in raspiblitz.conf from HDD is different from as it is now in raspiblitz.info ..." >> $logFile
+    echo "check that display class in raspiblesk.conf from HDD is different from as it is now in raspiblesk.info ..." >> $logFile
   
-    # get display class value from raspiblitz.info
+    # get display class value from raspiblesk.info
     source <(cat ${infoFile} | grep "^displayClass=")
     infoFileDisplayClass="${displayClass}"
     echo "infoFileDisplayClass(${infoFileDisplayClass})" >> $logFile
 
-    # get display class value from raspiblitz.conf
-    source <(cat /var/cache/raspiblitz/hdd-inspect/raspiblitz.conf | grep "^displayClass=")
+    # get display class value from raspiblesk.conf
+    source <(cat /var/cache/raspiblesk/hdd-inspect/raspiblesk.conf | grep "^displayClass=")
     confFileDisplayClass="${displayClass}"
     echo "confFileDisplayClass(${confFileDisplayClass})" >> $logFile
 
     # check if values are different and need to change
     if [ "${confFileDisplayClass}" != "" ] && [ "${infoFileDisplayClass}" != "${displayClass}" ]; then
       echo "DISPLAY RESTORE - need to update displayClass from (${infoFileDisplayClass}) to (${confFileDisplayClass})'" >> ${logFile}
-      /home/admin/config.scripts/blitz.display.sh set-display ${confFileDisplayClass} >> ${logFile}
+      /home/admin/config.scripts/blesk.display.sh set-display ${confFileDisplayClass} >> ${logFile}
       systemInitReboot=1
     else
       echo "No DISPLAY RESTORE because no need to change" >> $logFile
     fi
 
   else
-    echo "No DISPLAY RESTORE because no /var/cache/raspiblitz/hdd-inspect/raspiblitz.conf" >> $logFile
+    echo "No DISPLAY RESTORE because no /var/cache/raspiblesk/hdd-inspect/raspiblesk.conf" >> $logFile
   fi
 
   ################################
   # UASP FIX
 
   /home/admin/_cache.sh set message "checking HDD"
-  source <(/home/admin/config.scripts/blitz.data.sh uasp-fix)
+  source <(/home/admin/config.scripts/blesk.data.sh uasp-fix)
   if [ "${error}" != "" ]; then
     echo "UASP FIX failed: ${error}" >> $logFile
     /home/admin/_cache.sh set state "errorUASP"
@@ -550,7 +550,7 @@ if [ "${scenario}" != "ready" ] && [ "${baseimage}" = "raspios_arm64" ]; then
 
   ################################
   # RaspberryPi 5 - Firmware Update (needs internet)
-  # https://github.com/raspiblitz/raspiblitz/issues/4359
+  # https://github.com/raspiblesk/raspiblesk/issues/4359
 
   echo "checking Firmware" >> $logFile
   /home/admin/_cache.sh set message "checking Firmware"
@@ -576,7 +576,7 @@ if [ "${scenario}" != "ready" ] && [ "${baseimage}" = "raspios_arm64" ]; then
 
   if [ "${systemInitReboot}" = "1" ]; then
     echo "Reboot" >> $logFile
-    cp ${logFile} /home/admin/raspiblitz.systeminit.log
+    cp ${logFile} /home/admin/raspiblesk.systeminit.log
     /home/admin/_cache.sh set state "reboot"
     sleep 8
     shutdown -r now
@@ -598,8 +598,8 @@ echo "Starting Bootstrap Setup Section: $( [ "${scenario}" != "ready" ] && echo 
 if [ "${scenario}" != "ready" ] ; then
 
   echo "## WHEN SETUP IS NEEDED " >> $logFile
-  echo "/home/admin/config.scripts/blitz.data.sh status -inspect (auto store to cache)" >> $logFile
-  source <(/home/admin/config.scripts/blitz.data.sh status -inspect)
+  echo "/home/admin/config.scripts/blesk.data.sh status -inspect (auto store to cache)" >> $logFile
+  source <(/home/admin/config.scripts/blesk.data.sh status -inspect)
 
   # when there are no partitions on any drive - signal all drives are clean 
   /home/admin/_cache.sh set system_setup_cleanDrives "0"
@@ -619,7 +619,7 @@ if [ "${scenario}" != "ready" ] ; then
   fi
 
   # TODO: GET INFO FROM OTHER IMPLEMENTATIONS & COMPARE AGAINST LOCAL - not just LND
-  # when migration check if for outdated btc, lnd, cln
+  # when migration check if for outdated glc, lnd, cln
   if [ "${scenario}" = "migration" ]; then 
     migrationMode="normal"
     if [ "${hddVersionLND}" != "" ]; then
@@ -635,9 +635,9 @@ if [ "${scenario}" != "ready" ] ; then
   /home/admin/_cache.sh set hddCandidate "${hddCandidate}"
   /home/admin/_cache.sh set hddGigaBytes "${storageSizeGB}"
   if [ "${storageBlockchainGB}" != "" ] && [ ${storageBlockchainGB} -ge 1 ]; then
-      /home/admin/_cache.sh set hddBlocksBitcoin "1"
+      /home/admin/_cache.sh set hddBlocksGlcoin "1"
   else
-      /home/admin/_cache.sh set hddBlocksBitcoin "0"
+      /home/admin/_cache.sh set hddBlocksGlcoin "0"
   fi
   /home/admin/_cache.sh set hddGotMigrationData "${hddGotMigrationData}"
   /home/admin/_cache.sh set hddVersionLND "${hddVersionLND}"
@@ -669,16 +669,16 @@ if [ "${scenario}" != "ready" ] ; then
     infoMessage="Unkonwn Setup Phase"
   fi
 
-  # check if raspiblitz.setup exists (from former system copy step)
-   if [ -f "/var/cache/raspiblitz/hdd-inspect/raspiblitz.setup" ]; then
+  # check if raspiblesk.setup exists (from former system copy step)
+   if [ -f "/var/cache/raspiblesk/hdd-inspect/raspiblesk.setup" ]; then
 
       # this is when booting from hdd after system copy
-      echo "INFO: 'raspiblitz.setup' exists - skip user wait loop" >> ${logFile}
-      cp -a /var/cache/raspiblitz/hdd-inspect/raspiblitz.setup ${setupFile}
+      echo "INFO: 'raspiblesk.setup' exists - skip user wait loop" >> ${logFile}
+      cp -a /var/cache/raspiblesk/hdd-inspect/raspiblesk.setup ${setupFile}
       state="waitprovision"
 
   else
-    echo "INFO: 'raspiblitz.setup' does not exist - wait for user config" >> ${logFile}
+    echo "INFO: 'raspiblesk.setup' does not exist - wait for user config" >> ${logFile}
     state="waitsetup"
     /home/admin/_cache.sh set state "${state}"
     /home/admin/_cache.sh set message "${infoMessage}"
@@ -704,11 +704,11 @@ if [ "${scenario}" != "ready" ] ; then
   done
   echo "## WAIT LOOP: DONE" >> ${logFile}
 
-  echo "/home/admin/config.scripts/blitz.data.sh status -inspect (auto store to cache)"
-  source <(/home/admin/config.scripts/blitz.data.sh status -inspect)
+  echo "/home/admin/config.scripts/blesk.data.sh status -inspect (auto store to cache)"
+  source <(/home/admin/config.scripts/blesk.data.sh status -inspect)
 
   # get the results from the SSH-UI or WEB-UI
-  echo "LOADING 'raspiblitz.setup' ..." >> ${logFile}
+  echo "LOADING 'raspiblesk.setup' ..." >> ${logFile}
   source ${setupFile}
 
   # overwrite recover by user choice
@@ -806,7 +806,7 @@ if [ "${scenario}" != "ready" ] ; then
     if [ ${#storageDevice} -gt 0 ] && [ ${#storageMountedPath} -eq 0 ]; then
       echo "STORAGE: ${setupCommand} STORAGE start" >> ${logFile}
       error=""
-      source <(/home/admin/config.scripts/blitz.data.sh ${setupCommand} STORAGE "${storageDevice}" "${combinedDataStorage}" "${createSystemPartion}")
+      source <(/home/admin/config.scripts/blesk.data.sh ${setupCommand} STORAGE "${storageDevice}" "${combinedDataStorage}" "${createSystemPartion}")
       if [ "${error}" != "" ]; then
         echo "FAIL: '${setupCommand} STORAGE' failed error(${error})" >> ${logFile}
         /home/admin/_cache.sh set state "error"
@@ -824,7 +824,7 @@ if [ "${scenario}" != "ready" ] ; then
     if [ ${#systemDevice} -gt 0 ] && [ "${systemDevice}" != "${storageDevice}" ] && [ "${bootFromStorage}" = "0" ] && [ ${#systemWarning} -eq 0 ]; then
       error=""
       echo "SYSTEM: ${setupCommand} SYSTEM start" >> ${logFile}
-      source <(/home/admin/config.scripts/blitz.data.sh ${setupCommand} SYSTEM "${systemDevice}")
+      source <(/home/admin/config.scripts/blesk.data.sh ${setupCommand} SYSTEM "${systemDevice}")
       if [ "${error}" != "" ]; then
         echo "FAIL: '${setupCommand} SYSTEM' failed error(${error})" >> ${logFile}
         /home/admin/_cache.sh set state "error"
@@ -846,7 +846,7 @@ if [ "${scenario}" != "ready" ] ; then
     if [ ${#dataDevice} -gt 0 ] && [ "${dataDevice}" != "${storageDevice}" ] && [ ${#dataWarning} -eq 0 ]; then
       error=""
       echo "DATA: ${setupCommand} DATA start" >> ${logFile}
-      source <(/home/admin/config.scripts/blitz.data.sh ${setupCommand} DATA "${dataDevice}")
+      source <(/home/admin/config.scripts/blesk.data.sh ${setupCommand} DATA "${dataDevice}")
       if [ "${error}" != "" ]; then
         echo "FAIL: '${setupCommand} DATA' failed error(${error})" >> ${logFile}
         /home/admin/_cache.sh set state "error"
@@ -876,7 +876,7 @@ if [ "${scenario}" != "ready" ] ; then
     if [ "${uploadMigration}" = "1" ]; then
       # trigger the 2nd setup loop
       state="waitsetup-extended"
-      source <(/home/admin/config.scripts/blitz.migration.sh status)
+      source <(/home/admin/config.scripts/blesk.migration.sh status)
       /home/admin/_cache.sh set "ui_migration_upload" "1"
       /home/admin/_cache.sh set "ui_migration_uploadUnix" "${uploadUnix}"
       /home/admin/_cache.sh set "ui_migration_uploadWin" "${uploadWin}"
@@ -914,7 +914,7 @@ if [ "${scenario}" != "ready" ] ; then
     echo "## 2nd WAIT LOOP: DONE" >> ${logFile}
 
     # detect possible uploaded migration file 
-    source <(/home/admin/config.scripts/blitz.migration.sh status)
+    source <(/home/admin/config.scripts/blesk.migration.sh status)
     if [ "${migrationFile}" != "" ]; then
       # wirite migration file to setup file
       echo "adding to ${setupFile} migrationFile(${migrationFile})" >> ${logFile}
@@ -962,7 +962,7 @@ if [ "${scenario}" != "ready" ] ; then
 
       echo "bootFromStorage(${bootFromStorage})" >> ${logFile}
       if [ "${bootFromStorage}" = "1" ]; then
-        /home/admin/config.scripts/blitz.data.sh copy-system "${storageDevice}" storage
+        /home/admin/config.scripts/blesk.data.sh copy-system "${storageDevice}" storage
         if [ $? -ne 0 ]; then
           echo "FAIL: copy-system (storage) failed" >> ${logFile}
           /home/admin/_cache.sh set state "error"
@@ -970,7 +970,7 @@ if [ "${scenario}" != "ready" ] ; then
           exit 1
         fi
       else
-        /home/admin/config.scripts/blitz.data.sh copy-system "${systemDevice}" system
+        /home/admin/config.scripts/blesk.data.sh copy-system "${systemDevice}" system
         if [ $? -ne 0 ]; then
           echo "FAIL: copy-system (system) failed" >> ${logFile}
           /home/admin/_cache.sh set state "error"
@@ -979,19 +979,19 @@ if [ "${scenario}" != "ready" ] ; then
         fi
       fi
 
-      # mark systemCopy as done in raspiblitz.setup
+      # mark systemCopy as done in raspiblesk.setup
       if ! sed -i "s/^systemCopy=.*/systemCopy=done/" "${setupFile}"; then
         echo "error='failed to update systemCopy in setupFile'" >> ${logFile}
         exit 1
       fi
 
       # put setupFile to new system (so after reboot it does not need to ask user again)
-      source <(/home/admin/config.scripts/blitz.data.sh status)
+      source <(/home/admin/config.scripts/blesk.data.sh status)
       mkdir -p /mnt/disk_data 2>/dev/null
       mount /dev/${dataPartition} /mnt/disk_data
-      echo "copy setupFile(${setupFile}) to /mnt/disk_data/app-data/raspiblitz.setup" >> ${logFile}
+      echo "copy setupFile(${setupFile}) to /mnt/disk_data/app-data/raspiblesk.setup" >> ${logFile}
       mkdir -p /mnt/disk_data/app-data 2>/dev/null
-      cp ${setupFile} /mnt/disk_data/app-data/raspiblitz.setup
+      cp ${setupFile} /mnt/disk_data/app-data/raspiblesk.setup
       if [ $? -ne 0 ]; then
         echo "FAIL: copy setupFile to new system failed" >> ${logFile}
         /home/admin/_cache.sh set state "error"
@@ -1018,11 +1018,11 @@ if [ "${scenario}" != "ready" ] ; then
       else
           # disable old system boot
           echo "# disable old system boot" >> ${logFile}
-          /home/admin/config.scripts/blitz.data.sh kill-boot ${installDevice} >> ${logFile}
+          /home/admin/config.scripts/blesk.data.sh kill-boot ${installDevice} >> ${logFile}
           if [ $? -eq 1 ]; then
-            echo "FAIL: blitz.data.sh kill-boot \"${installDevice}\" failed" >> ${logFile}
+            echo "FAIL: blesk.data.sh kill-boot \"${installDevice}\" failed" >> ${logFile}
             /home/admin/_cache.sh set state "error"
-            /home/admin/_cache.sh set message "blitz.data.sh kill-boot failed"
+            /home/admin/_cache.sh set message "blesk.data.sh kill-boot failed"
             exit 1
           fi
       fi
@@ -1057,18 +1057,18 @@ if [ "${scenario}" != "ready" ] ; then
   fi
 
   #############################################
-  # MIGRATION from old RaspiBlitz
+  # MIGRATION from old RaspiBlesk
   ############################################
 
   if [ "${hddMigration}" = "1" ]; then
-    echo "## MIGRATION from old RaspiBlitz via old HDD" >> ${logFile}
+    echo "## MIGRATION from old RaspiBlesk via old HDD" >> ${logFile}
     /home/admin/_cache.sh set state "hdd-migration"
     /home/admin/_cache.sh set message "${hddMigrateDeviceFrom} ${hddMigrateDeviceTo}"
-    /home/admin/config.scripts/blitz.data.sh migration hdd run "${hddMigrateDeviceFrom}" >> ${logFile}
+    /home/admin/config.scripts/blesk.data.sh migration hdd run "${hddMigrateDeviceFrom}" >> ${logFile}
     if [ $? -ne 0 ]; then
-      echo "FAIL: blitz.data.sh migration hdd run failed" >> ${logFile}
+      echo "FAIL: blesk.data.sh migration hdd run failed" >> ${logFile}
       /home/admin/_cache.sh set state "error"
-      /home/admin/_cache.sh set message "blitz.migration.sh migrate failed"
+      /home/admin/_cache.sh set message "blesk.migration.sh migrate failed"
       exit 1
     fi
     scenario="recovery"
@@ -1084,20 +1084,20 @@ if [ "${scenario}" != "ready" ] ; then
   echo "the provision process was started but did not finish yet" > /home/admin/provision.flag
 
   # perma mount drives/partitions
-  /home/admin/config.scripts/blitz.data.sh mount >> ${logFile}
+  /home/admin/config.scripts/blesk.data.sh mount >> ${logFile}
   if [ $? -eq 1 ]; then
-    echo "FAIL: blitz.data.sh mount failed" >> ${logFile}
+    echo "FAIL: blesk.data.sh mount failed" >> ${logFile}
     /home/admin/_cache.sh set state "error"
-    /home/admin/_cache.sh set message "blitz.data.sh mount failed"
+    /home/admin/_cache.sh set message "blesk.data.sh mount failed"
     exit 1
   fi
 
   # link directories together in /mnt/hdd (pre-provision)
-  /home/admin/config.scripts/blitz.data.sh link >> ${logFile}
+  /home/admin/config.scripts/blesk.data.sh link >> ${logFile}
   if [ $? -eq 1 ]; then
-    echo "FAIL: blitz.data.sh link failed" >> ${logFile}
+    echo "FAIL: blesk.data.sh link failed" >> ${logFile}
     /home/admin/_cache.sh set state "error"
-    /home/admin/_cache.sh set message "blitz.data.sh link failed"
+    /home/admin/_cache.sh set message "blesk.data.sh link failed"
     exit 1
   fi
 
@@ -1105,7 +1105,7 @@ if [ "${scenario}" != "ready" ] ; then
   # MIGRATION from uploaded migration file
   ############################################
 
-  # if migrationFile was uploaded (value from raspiblitz.setup) - now import
+  # if migrationFile was uploaded (value from raspiblesk.setup) - now import
   source ${setupFile}
   echo "# migrationFile(/mnt/disk_storage/temp/${migrationFile})" >> ${logFile}
   if [ "${migrationFile}" != "" ]; then
@@ -1115,18 +1115,18 @@ if [ "${scenario}" != "ready" ] ; then
     # unpack
     /home/admin/_cache.sh set message "Unpacking Migration Data"
     error=""
-    source <(/home/admin/config.scripts/blitz.migration.sh import "/mnt/disk_storage/temp/${migrationFile}")
+    source <(/home/admin/config.scripts/blesk.migration.sh import "/mnt/disk_storage/temp/${migrationFile}")
 
     # check for errors
     if [ "${error}" != "" ]; then 
-      /home/admin/config.scripts/blitz.error.sh _bootstrap.sh "migration-import-error" "blitz.migration.sh import exited with error" "/home/admin/config.scripts/blitz.migration.sh import ${migrationFile} --> ${error}" ${logFile}
+      /home/admin/config.scripts/blesk.error.sh _bootstrap.sh "migration-import-error" "blesk.migration.sh import exited with error" "/home/admin/config.scripts/blesk.migration.sh import ${migrationFile} --> ${error}" ${logFile}
       exit 1
     fi
 
-    # make sure a raspiblitz.conf exists after migration
-    confExists=$(ls /mnt/hdd/app-data/raspiblitz.conf 2>/dev/null | grep -c "raspiblitz.conf")
+    # make sure a raspiblesk.conf exists after migration
+    confExists=$(ls /mnt/hdd/app-data/raspiblesk.conf 2>/dev/null | grep -c "raspiblesk.conf")
     if [ "${confExists}" != "1" ]; then
-      /home/admin/config.scripts/blitz.error.sh _bootstrap.sh "migration-failed" "missing-config" "After runnign migration process - no raspiblitz.conf abvailable." ${logFile}
+      /home/admin/config.scripts/blesk.error.sh _bootstrap.sh "migration-failed" "missing-config" "After runnign migration process - no raspiblesk.conf abvailable." ${logFile}
       exit 1
     fi
 
@@ -1141,15 +1141,15 @@ if [ "${scenario}" != "ready" ] ; then
 
   if [ "${scenario}" = "setup" ]; then
     rm -f ${configFile}
-    echo "# CREATING raspiblitz.conf from setup file" >> ${logFile}
+    echo "# CREATING raspiblesk.conf from setup file" >> ${logFile}
     source /home/admin/_version.info
     source ${setupFile}
     touch ${configFile} >> ${logFile}
-    echo "# RASPIBLITZ CONFIG FILE" > ${configFile}
-    echo "raspiBlitzVersion='${codeVersion}'" >> ${configFile}
+    echo "# RASPIBLESK CONFIG FILE" > ${configFile}
+    echo "raspiBleskVersion='${codeVersion}'" >> ${configFile}
     echo "lcdrotate='1'" >> ${configFile}
     echo "lightning='${lightning}'" >> ${configFile}
-    echo "network='bitcoin'" >> ${configFile}
+    echo "network='glcoin'" >> ${configFile}
     echo "chain='main'" >> ${configFile}
     echo "hostname='${hostname}'" >> ${configFile}
     echo "runBehindTor='on'" >> ${configFile}
@@ -1185,31 +1185,31 @@ if [ "${scenario}" != "ready" ] ; then
   echo "# Sourcing ${setupFile} " >> ${logFile}
   source ${setupFile}
 
-  # make sure basic info is in raspiblitz.info
+  # make sure basic info is in raspiblesk.info
   /home/admin/_cache.sh set network "${network}"
   /home/admin/_cache.sh set chain "${chain}"
   /home/admin/_cache.sh set lightning "${lightning}"
 
-  # Bitcoin Mainnet
+  # Glcoin Mainnet
   if [ "${mainnet}" = "on" ] || [ "${chain}" = "main" ]; then
     echo "Provisioning ${network} Mainnet - run config script" >> ${logFile}
-    /home/admin/config.scripts/bitcoin.install.sh on mainnet >> ${logFile} 2>&1
+    /home/admin/config.scripts/glcoin.install.sh on mainnet >> ${logFile} 2>&1
   else
     echo "Provisioning ${network} Mainnet - not active" >> ${logFile}
   fi
 
-  # Bitcoin Testnet
+  # Glcoin Testnet
   if [ "${testnet}" = "on" ]; then
     echo "Provisioning ${network} Testnet - run config script" >> ${logFile}
-    /home/admin/config.scripts/bitcoin.install.sh on testnet >> ${logFile} 2>&1
+    /home/admin/config.scripts/glcoin.install.sh on testnet >> ${logFile} 2>&1
   else
     echo "Provisioning ${network} Testnet - not active" >> ${logFile}
   fi
 
-  # Bitcoin Signet
+  # Glcoin Signet
   if [ "${signet}" = "on" ]; then
     echo "Provisioning ${network} Signet - run config script" >> ${logFile}
-    /home/admin/config.scripts/bitcoin.install.sh on signet >> ${logFile} 2>&1
+    /home/admin/config.scripts/glcoin.install.sh on signet >> ${logFile} 2>&1
   else
     echo "Provisioning ${network} Signet - not active" >> ${logFile}
   fi
@@ -1224,7 +1224,7 @@ if [ "${scenario}" != "ready" ] ; then
       # only trigger an error message if the script hasnt itself triggered an error message already
       source <(/home/admin/_cache.sh get state)
       if [ "${state}" != "error" ]; then
-        /home/admin/config.scripts/blitz.error.sh _bootstrap.sh "provision-setup-exit" "unknown or syntax error on (${errorState}) _provision.setup.sh" "" ${logFile}
+        /home/admin/config.scripts/blesk.error.sh _bootstrap.sh "provision-setup-exit" "unknown or syntax error on (${errorState}) _provision.setup.sh" "" ${logFile}
       fi
       exit 1
     fi
@@ -1242,7 +1242,7 @@ if [ "${scenario}" != "ready" ] ; then
       # only trigger an error message if the script hasnt itself triggered an error message already
       source <(/home/admin/_cache.sh get state)
       if [ "${state}" != "error" ]; then
-        /home/admin/config.scripts/blitz.error.sh _bootstrap.sh "provision-migration-exit" "unknown or syntax error on (${errorState}) _provision.migration.sh" "" ${logFile}
+        /home/admin/config.scripts/blesk.error.sh _bootstrap.sh "provision-migration-exit" "unknown or syntax error on (${errorState}) _provision.migration.sh" "" ${logFile}
       fi
       exit 1
     fi
@@ -1258,7 +1258,7 @@ if [ "${scenario}" != "ready" ] ; then
       # only trigger an error message if the script hasnt itself triggered an error message already
       source <(/home/admin/_cache.sh get state)
       if [ "${state}" != "error" ]; then
-        /home/admin/config.scripts/blitz.error.sh _bootstrap.sh "provision-update-exit" "unknown or syntax error on (${errorState}) _provision.update.sh" "" ${logFile}
+        /home/admin/config.scripts/blesk.error.sh _bootstrap.sh "provision-update-exit" "unknown or syntax error on (${errorState}) _provision.update.sh" "" ${logFile}
       fi
       exit 1
     fi
@@ -1273,7 +1273,7 @@ if [ "${scenario}" != "ready" ] ; then
     # only trigger an error message if the script hasnt itself triggered an error message already
     source <(/home/admin/_cache.sh get state)
     if [ "${state}" != "error" ]; then
-      /home/admin/config.scripts/blitz.error.sh _bootstrap.sh "provision-exit" "unknown or syntax error on (${errorState}) _provision_.sh" "" ${logFile}
+      /home/admin/config.scripts/blesk.error.sh _bootstrap.sh "provision-exit" "unknown or syntax error on (${errorState}) _provision_.sh" "" ${logFile}
     fi
     exit 1
   fi
@@ -1285,25 +1285,25 @@ if [ "${scenario}" != "ready" ] ; then
 
   # delete provision in progress flag
   rm /home/admin/provision.flag
-  rm /mnt/hdd/app-data/raspiblitz.setup 2>/dev/null
+  rm /mnt/hdd/app-data/raspiblesk.setup 2>/dev/null
 
   # final relink of directories
-  /home/admin/config.scripts/blitz.data.sh link >> ${logFile}
+  /home/admin/config.scripts/blesk.data.sh link >> ${logFile}
   if [ $? -eq 1 ]; then
-    echo "FAIL: blitz.data.sh link failed (2)" >> ${logFile}
+    echo "FAIL: blesk.data.sh link failed (2)" >> ${logFile}
     /home/admin/_cache.sh set state "error"
-    /home/admin/_cache.sh set message "blitz.data.sh link failed (2)"
+    /home/admin/_cache.sh set message "blesk.data.sh link failed (2)"
     exit 1
   fi
 
   ###################################
   # Set Password A (in all cases)
   if [ "${passwordA}" = "" ]; then
-    /home/admin/config.scripts/blitz.error.sh _bootstrap.sh "missing-passworda-2" "missing passwordA(2) in (${setupFile})" "" ${logFile}
+    /home/admin/config.scripts/blesk.error.sh _bootstrap.sh "missing-passworda-2" "missing passwordA(2) in (${setupFile})" "" ${logFile}
     exit 1
   fi
   echo "# setting PASSWORD A" >> ${logFile}
-  /home/admin/config.scripts/blitz.passwords.sh set a "${passwordA}" >> ${logFile}
+  /home/admin/config.scripts/blesk.passwords.sh set a "${passwordA}" >> ${logFile}
 
   # mark provision process done
   /home/admin/_cache.sh set message "Provision Done"
@@ -1320,14 +1320,14 @@ if [ "${scenario}" != "ready" ] ; then
     sleep 2
     if [ ${loop_counter} -eq 30 ]; then
       echo "LOOP TAKES TOO LONG: Try deleting settings.json & force restart" >> $logFile
-      rm /mnt/hdd/app-storage/bitcoin/settings.json
-      systemctl restart bitcoind
+      rm /mnt/hdd/app-storage/glcoin/settings.json
+      systemctl restart glcoind
     fi
   done
 
   # one time add info on blockchain sync to chache
   source <(/home/admin/_cache.sh get chain)
-  source <(/home/admin/config.scripts/bitcoin.monitor.sh ${chain}net info)
+  source <(/home/admin/config.scripts/glcoin.monitor.sh ${chain}net info)
   /home/admin/_cache.sh set btc_default_blocks_data_kb "${btc_blocks_data_kb}"
 
   ###################################################
@@ -1351,20 +1351,20 @@ else
   ############################
 
   echo "# NORMAL START BOOTSTRAP" >> $logFile
-  source <(/home/admin/config.scripts/blitz.data.sh status)
+  source <(/home/admin/config.scripts/blesk.data.sh status)
 
   #################################
   # FIX BLOCKCHAINDATA OWNER (just in case)
-  # https://github.com/rootzoll/raspiblitz/issues/239#issuecomment-450887567
+  # https://github.com/rootzoll/raspiblesk/issues/239#issuecomment-450887567
   #################################
-  chown bitcoin:bitcoin -R /mnt/hdd/bitcoin 2>/dev/null
+  chown glcoin:glcoin -R /mnt/hdd/glcoin 2>/dev/null
 
   #################################
   # FIX BLOCKING FILES (just in case)
-  # https://github.com/rootzoll/raspiblitz/issues/1901#issue-774279088
-  # https://github.com/rootzoll/raspiblitz/issues/1836#issue-755342375
-  rm -f /mnt/hdd/bitcoin/bitcoind.pid 2>/dev/null
-  rm -f /mnt/hdd/bitcoin/.lock 2>/dev/null
+  # https://github.com/rootzoll/raspiblesk/issues/1901#issue-774279088
+  # https://github.com/rootzoll/raspiblesk/issues/1836#issue-755342375
+  rm -f /mnt/hdd/glcoin/glcoind.pid 2>/dev/null
+  rm -f /mnt/hdd/glcoin/.lock 2>/dev/null
 
   ################################
   # DELETE LOG & LOCK FILES
@@ -1372,12 +1372,12 @@ else
   # LND and Blockchain Errors will be still in systemd journals
 
   # limit debug.log to 10MB on start - see #3872
-  if [ $(grep -c "shrinkdebugfile=" < /mnt/hdd/app-data/bitcoin/bitcoin.conf) -eq 0 ];then
-    echo "shrinkdebugfile=1" | tee -a /mnt/hdd/app-data/bitcoin/bitcoin.conf
+  if [ $(grep -c "shrinkdebugfile=" < /mnt/hdd/app-data/glcoin/glcoin.conf) -eq 0 ];then
+    echo "shrinkdebugfile=1" | tee -a /mnt/hdd/app-data/glcoin/glcoin.conf
   fi
-  # /mnt/hdd/app-data/lnd/logs/bitcoin/mainnet/lnd.log
+  # /mnt/hdd/app-data/lnd/logs/glcoin/mainnet/lnd.log
   rm /mnt/hdd/app-data/lnd/logs/${network}/${chain}net/lnd.log 2>/dev/null
-  # https://github.com/rootzoll/raspiblitz/issues/1700
+  # https://github.com/rootzoll/raspiblesk/issues/1700
   rm /mnt/storage/app-storage/electrs/db/mainnet/LOCK 2>/dev/null
 
   ####################################
@@ -1385,11 +1385,11 @@ else
   ####################################
   if [ ${#storagePartition} -gt 0 ] && [ ${#storageUnusedSpacePercent} -gt 0 ] && [ ${storageUnusedSpacePercent} != "0" ]; then
     echo "# EXPANDING STORAGE PARTITION" >> $logFile
-    /home/admin/config.scripts/blitz.data.sh expand ${storagePartition} >> ${logFile}
+    /home/admin/config.scripts/blesk.data.sh expand ${storagePartition} >> ${logFile}
   fi
   if [ ${#dataPartition} -gt 0 ] && [ "${combinedDataStorage}" = "0" ] && [ ${#dataUnusedSpacePercent} -gt 0 ] && [ ${dataUnusedSpacePercent} != "0" ]; then
     echo "# EXPANDING DATA PARTITION" >> $logFile
-    /home/admin/config.scripts/blitz.data.sh expand ${dataPartition} >> ${logFile}
+    /home/admin/config.scripts/blesk.data.sh expand ${dataPartition} >> ${logFile}
   fi
 
 fi
@@ -1402,8 +1402,8 @@ echo "# BOOSTRAP IN EVERY SITUATION" >> $logFile
 /home/admin/_cache.sh set setupPhase "starting"
 
 # make sure all is linked correctly
-echo "blitz.data.sh link" >> $logFile
-/home/admin/config.scripts/blitz.data.sh link >> ${logFile}
+echo "blesk.data.sh link" >> $logFile
+/home/admin/config.scripts/blesk.data.sh link >> ${logFile}
 
 # load data from config file fresh
 echo "load configfile data" >> $logFile
@@ -1416,18 +1416,18 @@ if [ ${configWifiExists} -eq 1 ]; then
   cp /etc/wpa_supplicant/wpa_supplicant.conf /mnt/hdd/app-data/wpa_supplicant.conf
 fi
 
-# always copy the latest display setting (maybe just in raspiblitz.info) to raspiblitz.conf
+# always copy the latest display setting (maybe just in raspiblesk.info) to raspiblesk.conf
 if [ "${displayClass}" != "" ]; then
-  /home/admin/config.scripts/blitz.conf.sh set displayClass ${displayClass}
+  /home/admin/config.scripts/blesk.conf.sh set displayClass ${displayClass}
 fi
 if [ "${displayType}" != "" ]; then
-  /home/admin/config.scripts/blitz.conf.sh set displayType ${displayType}
+  /home/admin/config.scripts/blesk.conf.sh set displayType ${displayType}
 fi
 
-# correct blitzapi config value
-blitzApiRunning=$(ls /etc/systemd/system/blitzapi.service 2>/dev/null | grep -c "blitzapi.service")
-if [ "${blitzapi}" = "" ] && [ ${blitzApiRunning} -eq 1 ]; then
-  /home/admin/config.scripts/blitz.conf.sh set blitzapi "on"
+# correct bleskapi config value
+blitzApiRunning=$(ls /etc/systemd/system/bleskapi.service 2>/dev/null | grep -c "bleskapi.service")
+if [ "${bleskapi}" = "" ] && [ ${blitzApiRunning} -eq 1 ]; then
+  /home/admin/config.scripts/blesk.conf.sh set bleskapi "on"
 fi
 
 # make sure users have latest credentials (if lnd is on)
@@ -1440,7 +1440,7 @@ fi
 
 # mount optional backup device
 if [ "${localBackupDeviceUUID}" != "" ] && [ "${localBackupDeviceUUID}" != "off" ]; then
-  /home/admin/config.scripts/blitz.backupdevice.sh mount >> $logFile
+  /home/admin/config.scripts/blesk.backupdevice.sh mount >> $logFile
 fi
 
 #####################################
@@ -1457,11 +1457,11 @@ fi
 ####################
 # FORCE UASP FLAG
 ####################
-# if uasp.force flag was set on sd card - now move into raspiblitz.conf
+# if uasp.force flag was set on sd card - now move into raspiblesk.conf
 if [ -f "${raspi_bootdir}/uasp.force" ]; then
-  /home/admin/config.scripts/blitz.conf.sh set forceUasp "on"
+  /home/admin/config.scripts/blesk.conf.sh set forceUasp "on"
   rm ${raspi_bootdir}/uasp.force* >> $logFile
-  echo "DONE forceUasp=on recorded in raspiblitz.conf" >> $logFile
+  echo "DONE forceUasp=on recorded in raspiblesk.conf" >> $logFile
 fi
 
 ######################################
@@ -1477,7 +1477,7 @@ else
   chown admin:admin /mnt/hdd/app-data/subscriptions
 fi
 
-# make sure that bitcoin service is active
+# make sure that glcoin service is active
 systemctl enable ${network}d
 
 # make sure setup/provision is marked as done
@@ -1500,7 +1500,7 @@ fi
 
 # notify about (re)start if activated
 source <(/home/admin/_cache.sh get hostname)
-/home/admin/config.scripts/blitz.notify.sh send "RaspiBlitz '${hostname}' (re)started" >> $logFile
+/home/admin/config.scripts/blesk.notify.sh send "RaspiBlesk '${hostname}' (re)started" >> $logFile
 
 echo "DONE BOOTSTRAP" >> $logFile
 exit 0

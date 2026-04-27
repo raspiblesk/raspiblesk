@@ -3,12 +3,12 @@
 
 Vagrant.configure('2') do |config|
 
-  config.vm.box = 'rootzoll/raspiblitz'
+  config.vm.box = 'rootzoll/raspiblesk'
 
   config.vm.network "private_network", type: "dhcp"
 
   config.ssh.username = 'admin'
-  config.ssh.password = 'raspiblitz'
+  config.ssh.password = 'raspiblesk'
   config.ssh.insert_key = true
 
   config.vm.disk :disk, size: '16GB', primary: true

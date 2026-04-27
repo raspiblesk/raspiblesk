@@ -91,7 +91,7 @@ if [ "$1" == "mainnet" ] || [ "$1" == "testnet" ] || [ "$1" == "signet" ]; then
       echo "# OK - restart/reboot needed for: ${netprefix}lnd.service"
 
       # set system status
-      /home/admin/config.scripts/blitz.conf.sh set ln_lnd_${lndChain}_sync_initial_done 0 /home/admin/raspiblitz.info
+      /home/admin/config.scripts/blesk.conf.sh set ln_lnd_${lndChain}_sync_initial_done 0 /home/admin/raspiblesk.info
       source <(/home/admin/_cache.sh get chain lightning)
       if [ "${lndChain}" == "${chain}net" ] && [ "${lightning}" == "lnd" ]; then
         /home/admin/_cache.sh set ln_default_sync_initial_done 0
@@ -138,11 +138,11 @@ if [ ${mode} = "lnd-export" ]; then
   fileowner="admin"
 
   # add lnd version info into lnd dir (to detect needed updates later)
-  lndVersion=$(sudo -u bitcoin lncli getinfo 2>/dev/null | jq -r ".version" | cut -d ' ' -f1)
+  lndVersion=$(sudo -u glcoin lncli getinfo 2>/dev/null | jq -r ".version" | cut -d ' ' -f1)
   sudo rm /mnt/hdd/app-data/lnd/version.info 2>/dev/null
   echo "${lndVersion}" > /home/admin/lnd.version.info
   sudo mv /home/admin/lnd.version.info /mnt/hdd/app-data/lnd/version.info
-  sudo chown bitcoin:bitcoin /mnt/hdd/app-data/lnd/version.info
+  sudo chown glcoin:glcoin /mnt/hdd/app-data/lnd/version.info
 
   # stop LND
   echo "# Stopping lnd..."
@@ -170,7 +170,7 @@ if [ ${mode} = "lnd-export" ]; then
   fi
 
   # if a backup device is connected (and has enogh free space) copy it there
-  source <(/home/admin/config.scripts/blitz.backupdevice.sh status)
+  source <(/home/admin/config.scripts/blesk.backupdevice.sh status)
   if [ $isMounted == 1 ]; then
 
     # get free space in bytes from backup device
@@ -226,7 +226,7 @@ if [ ${mode} = "lnd-export-gui" ]; then
   echo "Use command: stat lnd-rescue-*.tar.gz"
   echo
   echo "BEWARE: Your Lightning node is now stopped. It's safe to backup the data and"
-  echo "restore it on a fresh RaspiBlitz. But once this Lightning node gets started"
+  echo "restore it on a fresh RaspiBlesk. But once this Lightning node gets started"
   echo "again or rebooted, it's not advised to restore the backup file because"
   echo "it would contain outdated channel data and can lead to loss of channel funds."
   exit 0
@@ -262,10 +262,10 @@ if [ ${mode} = "lnd-import" ]; then
   # unpack zip
   echo "# restoring LND data from ${filename} ..."
   sudo tar -xf ${filename} -C / 1>/dev/null
-  sudo chown -R bitcoin:bitcoin /mnt/hdd/app-data/lnd 1>/dev/null
+  sudo chown -R glcoin:glcoin /mnt/hdd/app-data/lnd 1>/dev/null
 
   # lnd version of LND rescue file (thats packed as extra info in the file)
-  # its included since RaspiBlitz v1.7.1 /mnt/hdd/app-data/lnd/version.info
+  # its included since RaspiBlesk v1.7.1 /mnt/hdd/app-data/lnd/version.info
   # this can happen if someone uses the manual LND update and then uploads to an old default LND 
   # if so just signal this in the output (but also this file might be empty, when LND was dead)
   
@@ -295,13 +295,13 @@ if [ ${mode} = "lnd-import-gui" ]; then
 
   # determine password info based on scenario
   if [ "${scenario}" == "setup" ]; then
-    passwordInfo="password 'raspiblitz'"
+    passwordInfo="password 'raspiblesk'"
   else
     passwordInfo="your Password A"
   fi
 
   # get defaultUploadPath, localIP, etc
-  source <(sudo /home/admin/config.scripts/blitz.upload.sh prepare-upload)
+  source <(sudo /home/admin/config.scripts/blesk.upload.sh prepare-upload)
 
   filename=""
   while [ "${filename}" == "" ]
@@ -325,7 +325,7 @@ if [ ${mode} = "lnd-import-gui" ]; then
       read key
 
       # check upload (will return filename or error)
-      source <(sudo /home/admin/config.scripts/blitz.upload.sh check-upload lnd-rescue)
+      source <(sudo /home/admin/config.scripts/blesk.upload.sh check-upload lnd-rescue)
       if [ "${filename}" != "" ]; then
         echo "OK - File found: ${filename}"
         echo "PRESS ENTER to continue."
@@ -369,10 +369,10 @@ if [ ${mode} = "lnd-import-gui" ]; then
   fi
 
   # in production now start restoring LND data based on file
-  source /mnt/hdd/app-data/raspiblitz.conf
+  source /mnt/hdd/app-data/raspiblesk.conf
   
   # ask security question before deleting old wallet
-  echo "WARNING: This will delete/overwrite the LND state/funds of this RaspiBlitz."
+  echo "WARNING: This will delete/overwrite the LND state/funds of this RaspiBlesk."
   echo
   echo "Write the word 'override' and press ENTER to CONTINUE:"
   read securityInput
@@ -404,9 +404,9 @@ fi
 if [ ${mode} = "scb-export" ]; then
 
   # get file info
-  source /mnt/hdd/app-data/raspiblitz.conf
+  source /mnt/hdd/app-data/raspiblesk.conf
   echo "filename='/mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/channel.backup'"
-  echo "fileuser='bitcoin'"
+  echo "fileuser='glcoin'"
 
   # localip
   source <(/home/admin/config.scripts/internet.sh status local)
@@ -431,7 +431,7 @@ if [ ${mode} = "scb-export-gui" ]; then
   echo ""
   echo "Use password A to authenticate file transfer."
   echo
-  echo "NOTE: Use this file when setting up a fresh RaspiBlitz by choosing" 
+  echo "NOTE: Use this file when setting up a fresh RaspiBlesk by choosing" 
   echo "option OLD WALLET and then SCB+SEED -> Seed & channel.backup file" 
   echo "Will just recover on-chain & channel-funds, but closing all channels" 
   exit 0
@@ -483,13 +483,13 @@ if [ ${mode} = "scb-import-gui" ]; then
 
   # determine password info based on scenario
   if [ "${scenario}" == "setup" ]; then
-    passwordInfo="password 'raspiblitz'"
+    passwordInfo="password 'raspiblesk'"
   else
     passwordInfo="your Password A"
   fi
 
   # get defaultUploadPath, localIP, etc
-  source <(sudo /home/admin/config.scripts/blitz.upload.sh prepare-upload)
+  source <(sudo /home/admin/config.scripts/blesk.upload.sh prepare-upload)
 
   filename=""
   while [ "${filename}" == "" ]
@@ -501,7 +501,7 @@ if [ ${mode} = "scb-import-gui" ]; then
       echo "**********************************"
       echo
       echo "If you have the channel.backup file on your laptop or on"
-      echo "another server you can now upload it to the RaspiBlitz."
+      echo "another server you can now upload it to the RaspiBlesk."
       echo
       echo "To make upload open a new terminal and change,"
       echo "into the directory where your lnd-rescue file is and"
@@ -513,7 +513,7 @@ if [ ${mode} = "scb-import-gui" ]; then
       read key
 
       # check upload (will return filename or error)
-      source <(sudo /home/admin/config.scripts/blitz.upload.sh check-upload scb)
+      source <(sudo /home/admin/config.scripts/blesk.upload.sh check-upload scb)
       if [ "${filename}" != "" ]; then
         echo "OK - File found: ${filename}"
         echo "PRESS ENTER to continue."
@@ -588,7 +588,7 @@ if [ ${mode} = "seed-export-gui" ]; then
 fi
 
 # Results will be stored on memory cache:
-# /var/cache/raspiblitz/seed-import.results
+# /var/cache/raspiblesk/seed-import.results
 if [ ${mode} = "seed-import-gui" ]; then
 
   # fake seed 24 words for testing input:
@@ -602,9 +602,9 @@ if [ ${mode} = "seed-import-gui" ]; then
   fi
 
   # prepare seed result file
-  sudo rm /var/cache/raspiblitz/seed-import.results 2>/dev/null
-  sudo touch /var/cache/raspiblitz/seed-import.results
-  sudo chown admin:admin /var/cache/raspiblitz/seed-import.results
+  sudo rm /var/cache/raspiblesk/seed-import.results 2>/dev/null
+  sudo touch /var/cache/raspiblesk/seed-import.results
+  sudo chown admin:admin /var/cache/raspiblesk/seed-import.results
 
   # input loop for seed words
   wordsCorrect=0
@@ -612,14 +612,14 @@ if [ ${mode} = "seed-import-gui" ]; then
     do
 
       # prepare temp file 
-      sudo rm /var/cache/raspiblitz/.seed.tmp 2>/dev/null
-      sudo touch /var/cache/raspiblitz/.seed.tmp
-      sudo chown admin:admin /var/cache/raspiblitz/.seed.tmp
+      sudo rm /var/cache/raspiblesk/.seed.tmp 2>/dev/null
+      sudo touch /var/cache/raspiblesk/.seed.tmp
+      sudo chown admin:admin /var/cache/raspiblesk/.seed.tmp
 
       # dialog to enter
-      dialog --backtitle "RaspiBlitz - Recover from LND seed" --inputbox "Please enter/paste the SEED WORD LIST:\n(just the words, separated by spaces, in correct order as numbered)" 9 78 2>/var/cache/raspiblitz/.seed.tmp
-      wordstring=$(cat /var/cache/raspiblitz/.seed.tmp | sed 's/[^a-zA-Z0-9 ]//g')
-      sudo shred -u /var/cache/raspiblitz/.seed.tmp 2>/dev/null
+      dialog --backtitle "RaspiBlesk - Recover from LND seed" --inputbox "Please enter/paste the SEED WORD LIST:\n(just the words, separated by spaces, in correct order as numbered)" 9 78 2>/var/cache/raspiblesk/.seed.tmp
+      wordstring=$(cat /var/cache/raspiblesk/.seed.tmp | sed 's/[^a-zA-Z0-9 ]//g')
+      sudo shred -u /var/cache/raspiblesk/.seed.tmp 2>/dev/null
       echo "processing ..."
       
       # check correct number of words
@@ -660,12 +660,12 @@ During wallet creation its an option to set an extra password
 to protect the seed words. Most users did not set this.
   " 11 65
   if [ $? -eq 1 ]; then
-    sudo rm /var/cache/raspiblitz/.pass.tmp 2>/dev/null
-    sudo touch /var/cache/raspiblitz/.pass.tmp
-    sudo chown admin:admin /var/cache/raspiblitz/.pass.tmp
-    sudo /home/admin/config.scripts/blitz.password.sh set x "Enter extra Password D" /var/cache/raspiblitz/.pass.tmp empty-allowed
-    passwordD=$(sudo cat /var/cache/raspiblitz/.pass.tmp)
-    sudo shred -u /var/cache/raspiblitz/.pass.tmp 2>/dev/null
+    sudo rm /var/cache/raspiblesk/.pass.tmp 2>/dev/null
+    sudo touch /var/cache/raspiblesk/.pass.tmp
+    sudo chown admin:admin /var/cache/raspiblesk/.pass.tmp
+    sudo /home/admin/config.scripts/blesk.password.sh set x "Enter extra Password D" /var/cache/raspiblesk/.pass.tmp empty-allowed
+    passwordD=$(sudo cat /var/cache/raspiblesk/.pass.tmp)
+    sudo shred -u /var/cache/raspiblesk/.pass.tmp 2>/dev/null
   fi
 
   # writing result file data

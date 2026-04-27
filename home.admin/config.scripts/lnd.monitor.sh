@@ -21,15 +21,15 @@ fi
 # base directory of lnd
 lndHomeDir="/mnt/hdd/app-data/lnd"
 
-# set based on network type (using own mapping to be able to run without calling sudo -u bitcoin)
+# set based on network type (using own mapping to be able to run without calling sudo -u glcoin)
 if [ "$1" == "mainnet" ]; then
-  lndcli_alias="/usr/local/bin/lncli -n=mainnet --rpcserver=localhost:10009 --macaroonpath=${lndHomeDir}/data/chain/bitcoin/mainnet/readonly.macaroon --tlscertpath=${lndHomeDir}/tls.cert"
+  lndcli_alias="/usr/local/bin/lncli -n=mainnet --rpcserver=localhost:10009 --macaroonpath=${lndHomeDir}/data/chain/glcoin/mainnet/readonly.macaroon --tlscertpath=${lndHomeDir}/tls.cert"
   netprefix=""
 elif [ "$1" == "testnet" ]; then
-  lndcli_alias="/usr/local/bin/lncli -n=testnet --rpcserver=localhost:11009 --macaroonpath=${lndHomeDir}/data/chain/bitcoin/testnet/readonly.macaroon --tlscertpath=${lndHomeDir}/tls.cert"
+  lndcli_alias="/usr/local/bin/lncli -n=testnet --rpcserver=localhost:11009 --macaroonpath=${lndHomeDir}/data/chain/glcoin/testnet/readonly.macaroon --tlscertpath=${lndHomeDir}/tls.cert"
   netprefix="t"
 elif [ "$1" == "signet" ]; then
-  lndcli_alias="/usr/local/bin/lncli -n=signet --rpcserver=localhost:13009 --macaroonpath=${lndHomeDir}/data/chain/bitcoin/signet/readonly.macaroon --tlscertpath=${lndHomeDir}/tls.cert"
+  lndcli_alias="/usr/local/bin/lncli -n=signet --rpcserver=localhost:13009 --macaroonpath=${lndHomeDir}/data/chain/glcoin/signet/readonly.macaroon --tlscertpath=${lndHomeDir}/tls.cert"
   netprefix="s"
 else
   echo "error='not supported net'"
@@ -59,16 +59,16 @@ if [ "$2" = "status" ]; then
     if [ ${lnd_locked} -eq 0 ]; then
       # test connection - record win & fail info
       randStr=$(echo "$RANDOM")
-      rm /var/cache/raspiblitz/.lnd-${randStr}.out 2>/dev/null
-      rm /var/cache/raspiblitz/.lnd-${randStr}.error 2>/dev/null
-      touch /var/cache/raspiblitz/.lnd-${randStr}.out
-      touch /var/cache/raspiblitz/.lnd-${randStr}.error
+      rm /var/cache/raspiblesk/.lnd-${randStr}.out 2>/dev/null
+      rm /var/cache/raspiblesk/.lnd-${randStr}.error 2>/dev/null
+      touch /var/cache/raspiblesk/.lnd-${randStr}.out
+      touch /var/cache/raspiblesk/.lnd-${randStr}.error
       echo "# $lndcli_alias getinfo"
-      $lndcli_alias getinfo 1>/var/cache/raspiblitz/.lnd-${randStr}.out 2>/var/cache/raspiblitz/.lnd-${randStr}.error
-      winData=$(cat /var/cache/raspiblitz/.lnd-${randStr}.out 2>/dev/null)
-      failData=$(cat /var/cache/raspiblitz/.lnd-${randStr}.error 2>/dev/null)
-      rm /var/cache/raspiblitz/.lnd-${randStr}.out
-      rm /var/cache/raspiblitz/.lnd-${randStr}.error
+      $lndcli_alias getinfo 1>/var/cache/raspiblesk/.lnd-${randStr}.out 2>/var/cache/raspiblesk/.lnd-${randStr}.error
+      winData=$(cat /var/cache/raspiblesk/.lnd-${randStr}.out 2>/dev/null)
+      failData=$(cat /var/cache/raspiblesk/.lnd-${randStr}.error 2>/dev/null)
+      rm /var/cache/raspiblesk/.lnd-${randStr}.out
+      rm /var/cache/raspiblesk/.lnd-${randStr}.error
 
       # check for errors
       if [ "${failData}" != "" ]; then
@@ -151,7 +151,7 @@ if [ "$2" = "info" ]; then
   fi
 
   # raw data demo:
-  # sudo /usr/local/bin/lncli -n=mainnet --rpcserver=localhost:10009 --macaroonpath=/mnt/hdd/app-data/lnd/data/chain/bitcoin/mainnet/readonly.macaroon --tlscertpath=/mnt/hdd/app-data/lnd/tls.cert getinfo
+  # sudo /usr/local/bin/lncli -n=mainnet --rpcserver=localhost:10009 --macaroonpath=/mnt/hdd/app-data/lnd/data/chain/glcoin/mainnet/readonly.macaroon --tlscertpath=/mnt/hdd/app-data/lnd/tls.cert getinfo
 
   # get data
   ln_getInfo=$($lndcli_alias getinfo 2>/dev/null)
@@ -240,8 +240,8 @@ if [ "$2" = "wallet" ]; then
   fi
 
   # raw data demo:
-  # /usr/local/bin/lncli -n=mainnet --rpcserver=localhost:10009 --macaroonpath=/mnt/hdd/app-data/lnd/data/chain/bitcoin/mainnet/readonly.macaroon --tlscertpath=/mnt/hdd/app-data/lnd/tls.cert walletbalance
-  # /usr/local/bin/lncli -n=mainnet --rpcserver=localhost:10009 --macaroonpath=/mnt/hdd/app-data/lnd/data/chain/bitcoin/mainnet/readonly.macaroon --tlscertpath=/mnt/hdd/app-data/lnd/tls.cert channelbalance
+  # /usr/local/bin/lncli -n=mainnet --rpcserver=localhost:10009 --macaroonpath=/mnt/hdd/app-data/lnd/data/chain/glcoin/mainnet/readonly.macaroon --tlscertpath=/mnt/hdd/app-data/lnd/tls.cert walletbalance
+  # /usr/local/bin/lncli -n=mainnet --rpcserver=localhost:10009 --macaroonpath=/mnt/hdd/app-data/lnd/data/chain/glcoin/mainnet/readonly.macaroon --tlscertpath=/mnt/hdd/app-data/lnd/tls.cert channelbalance
   # get data
   ln_walletbalance=$($lndcli_alias walletbalance 2>/dev/null)
   if [ "${ln_walletbalance}" == "" ]; then
@@ -304,7 +304,7 @@ if [ "$2" = "channels" ]; then
   fi
 
   # raw data demo:
-  # sudo /usr/local/bin/lncli -n=mainnet --rpcserver=localhost:10009 --macaroonpath=/mnt/hdd/app-data/lnd/data/chain/bitcoin/mainnet/readonly.macaroon --tlscertpath=/mnt/hdd/app-data/lnd/tls.cert listchannels
+  # sudo /usr/local/bin/lncli -n=mainnet --rpcserver=localhost:10009 --macaroonpath=/mnt/hdd/app-data/lnd/data/chain/glcoin/mainnet/readonly.macaroon --tlscertpath=/mnt/hdd/app-data/lnd/tls.cert listchannels
 
   # get data
   ln_channels=$($lndcli_alias listchannels 2>/dev/null)
@@ -329,7 +329,7 @@ fi
 if [ "$2" = "fees" ]; then
 
 # raw data demo:
-# sudo /usr/local/bin/lncli -n=mainnet --rpcserver=localhost:10009 --macaroonpath=/mnt/hdd/app-data/lnd/data/chain/bitcoin/mainnet/readonly.macaroon --tlscertpath=/mnt/hdd/app-data/lnd/tls.cert feereport
+# sudo /usr/local/bin/lncli -n=mainnet --rpcserver=localhost:10009 --macaroonpath=/mnt/hdd/app-data/lnd/data/chain/glcoin/mainnet/readonly.macaroon --tlscertpath=/mnt/hdd/app-data/lnd/tls.cert feereport
 
   # quick if not running
   if [ "${lnd_running}" == "0" ]; then

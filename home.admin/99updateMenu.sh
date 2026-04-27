@@ -1,18 +1,18 @@
 #!/bin/bash
  
-# load raspiblitz config data
+# load raspiblesk config data
 source /home/admin/_version.info
-source /home/admin/raspiblitz.info
-source /mnt/hdd/app-data/raspiblitz.conf 2>/dev/null
+source /home/admin/raspiblesk.info
+source /mnt/hdd/app-data/raspiblesk.conf 2>/dev/null
 
 ## PROCEDURES
 
 release()
 {
-  whiptail --title "Update Instructions" --yes-button "Not Now" --no-button "Start Update" --yesno "To update your RaspiBlitz to a new version:
+  whiptail --title "Update Instructions" --yes-button "Not Now" --no-button "Start Update" --yesno "To update your RaspiBlesk to a new version:
 
 - Download the new SD card image to your laptop:
-  https://github.com/rootzoll/raspiblitz
+  https://github.com/rootzoll/raspiblesk
 - Flash that SD card image to a new SD card (best)
   or override old SD card after shutdown (fallback)
 - Choose 'Start Update' below.
@@ -27,7 +27,7 @@ Do you want to start the Update now?
   if [ "${lightning}" != "" ]; then
 
     whiptail --title "Lightning Data Backup" --yes-button "Download Backup" --no-button "Skip" --yesno "
-Before we start the RaspiBlitz Update process,
+Before we start the RaspiBlesk Update process,
 its recommended to make a backup of all your Lightning
 Channel Data and download that file to your laptop.
 
@@ -74,12 +74,12 @@ Do you want to download Lightning Data Backup now?
     fi
   fi
 
-  whiptail --title "READY TO UPDATE?" --yes-button "START UPDATE" --no-button "Cancel" --yesno "If you start the update: The RaspiBlitz will power down.
+  whiptail --title "READY TO UPDATE?" --yes-button "START UPDATE" --no-button "Cancel" --yesno "If you start the update: The RaspiBlesk will power down.
 Once the LCD is white and no LEDs are blinking anymore:
 
-- Remove the Power from RaspiBlitz
+- Remove the Power from RaspiBlesk
 - Exchange the old with the new SD card
-- Connect Power back to the RaspiBlitz
+- Connect Power back to the RaspiBlesk
 - Login again per SSH or WebUI
 
 Do you have the SD card with the new version image ready
@@ -88,7 +88,7 @@ and do you WANT TO START UPDATE NOW?
 
   if [ $? -eq 1 ]; then
     dialog --title " Update Canceled " --msgbox "
-OK. RaspiBlitz will NOT update now.
+OK. RaspiBlesk will NOT update now.
       " 7 39
     sudo systemctl start lnd 2>/dev/null
     sudo systemctl start lightningd 2>/dev/null
@@ -101,19 +101,19 @@ OK. RaspiBlitz will NOT update now.
 
 patchNotice()
 {
-  whiptail --title "Patching Notice" --yes-button "Dont Patch" --no-button "Patch Menu" --yesno "This is the possibility to patch your RaspiBlitz:
+  whiptail --title "Patching Notice" --yes-button "Dont Patch" --no-button "Patch Menu" --yesno "This is the possibility to patch your RaspiBlesk:
 It means it will sync the program code with the
 GitHub repo for your version branch v${codeVersion}.
 
 This can be useful if there are important updates
 in between releases to fix severe bugs. It can also
-be used to sync your own code with your RaspiBlitz
+be used to sync your own code with your RaspiBlesk
 if you are developing on your own GitHub Repo.
 
-BUT BEWARE: This means RaspiBlitz will contact GitHub,
+BUT BEWARE: This means RaspiBlesk will contact GitHub,
 hotfix the code and might compromise your security.
 
-Do you want to Patch your RaspiBlitz now?
+Do you want to Patch your RaspiBlesk now?
       " 18 58
   if [ $? -eq 0 ]; then
     exit 0
@@ -124,10 +124,10 @@ patch()
 {
 
   # get sync info
-  source <(sudo /home/admin/config.scripts/blitz.github.sh info)
+  source <(sudo /home/admin/config.scripts/blesk.github.sh info)
 
   # Patch Options
-  OPTIONS=(PATCH "Patch/Sync RaspiBlitz with GitHub Repo" \
+  OPTIONS=(PATCH "Patch/Sync RaspiBlesk with GitHub Repo" \
            REPO "Change GitHub Repo to sync with" \
            BRANCH "Change GitHub Branch to sync with" \
            PR "Checkout a PullRequest to test"
@@ -141,15 +141,15 @@ patch()
       echo
       echo "#######################################################"
       echo "### UPDATE BLITZ --> SCRIPTS (code)"
-      /home/admin/config.scripts/blitz.github.sh -run
+      /home/admin/config.scripts/blesk.github.sh -run
       echo
       echo "#######################################################"
       echo "### UPDATE BLITZ --> API"
-      sudo /home/admin/config.scripts/blitz.web.api.sh update-code
+      sudo /home/admin/config.scripts/blesk.web.api.sh update-code
       echo
       echo "#######################################################"
       echo "### UPDATE BLITZ --> WEBUI"
-      sudo /home/admin/config.scripts/blitz.web.ui.sh update
+      sudo /home/admin/config.scripts/blesk.web.ui.sh update
       sleep 5
       whiptail --title " Patching/Syncing " --yes-button "Reboot" --no-button "Skip Reboot" --yesno "  OK patching/syncing done.
 
@@ -160,7 +160,7 @@ patch()
       if [ $? -eq 0 ]; then
         clear
         echo "REBOOT .."
-        sudo /home/admin/config.scripts/blitz.shutdown.sh reboot
+        sudo /home/admin/config.scripts/blesk.shutdown.sh reboot
         sleep 8
         exit 1
       else
@@ -171,13 +171,13 @@ patch()
     REPO)
       clear
       echo "..."
-      newGitHubUser=$(whiptail --inputbox "\nPlease enter the GitHub USERNAME of the forked RaspiBlitz Repo?" 10 38 ${activeGitHubUser} --title "Change Sync Repo" 3>&1 1>&2 2>&3)
+      newGitHubUser=$(whiptail --inputbox "\nPlease enter the GitHub USERNAME of the forked RaspiBlesk Repo?" 10 38 ${activeGitHubUser} --title "Change Sync Repo" 3>&1 1>&2 2>&3)
       exitstatus=$?
       if [ $exitstatus = 0 ]; then
         newGitHubUser=$(echo "${newGitHubUser}" | cut -d " " -f1)
         echo "--> " ${newGitHubUser}
         error=""
-        source <(sudo -u admin /home/admin/config.scripts/blitz.github.sh ${activeBranch} ${newGitHubUser})
+        source <(sudo -u admin /home/admin/config.scripts/blesk.github.sh ${activeBranch} ${newGitHubUser})
         if [ ${#error} -gt 0 ]; then
           whiptail --title "ERROR" --msgbox "${error}" 8 30
         fi
@@ -188,13 +188,13 @@ patch()
     BRANCH)
       clear
       echo "..."
-      newGitHubBranch=$(whiptail --inputbox "\nPlease enter the GitHub BRANCH of the RaspiBlitz Repo '${activeGitHubUser}'?" 10 38 ${activeBranch} --title "Change Sync Branch" 3>&1 1>&2 2>&3)
+      newGitHubBranch=$(whiptail --inputbox "\nPlease enter the GitHub BRANCH of the RaspiBlesk Repo '${activeGitHubUser}'?" 10 38 ${activeBranch} --title "Change Sync Branch" 3>&1 1>&2 2>&3)
       exitstatus=$?
       if [ $exitstatus = 0 ]; then
         newGitHubBranch=$(echo "${newGitHubBranch}" | cut -d " " -f1)
         echo "--> " $newGitHubBranch
         error=""
-        source <(sudo -u admin /home/admin/config.scripts/blitz.github.sh ${newGitHubBranch})
+        source <(sudo -u admin /home/admin/config.scripts/blesk.github.sh ${newGitHubBranch})
         if [ ${#error} -gt 0 ]; then
           whiptail --title "ERROR" --msgbox "${error}" 8 30
         fi
@@ -205,20 +205,20 @@ patch()
     PR)
       clear
       echo "..."
-      pullRequestID=$(whiptail --inputbox "\nPlease enter the NUMBER of the PullRequest on RaspiBlitz Repo '${activeGitHubUser}'?" 10 46 --title "Checkout PullRequest ID" 3>&1 1>&2 2>&3)
+      pullRequestID=$(whiptail --inputbox "\nPlease enter the NUMBER of the PullRequest on RaspiBlesk Repo '${activeGitHubUser}'?" 10 46 --title "Checkout PullRequest ID" 3>&1 1>&2 2>&3)
       exitstatus=$?
       if [ $exitstatus = 0 ]; then
         pullRequestID=$(echo "${pullRequestID}" | cut -d " " -f1)
         echo "# --> " $pullRequestID
-        cd /home/admin/raspiblitz
+        cd /home/admin/raspiblesk
         git fetch origin pull/${pullRequestID}/head:pr${pullRequestID}
         error=""
-        source <(sudo -u admin /home/admin/config.scripts/blitz.github.sh pr${pullRequestID})
+        source <(sudo -u admin /home/admin/config.scripts/blesk.github.sh pr${pullRequestID})
         if [ ${#error} -gt 0 ]; then
           whiptail --title "ERROR" --msgbox "${error}" 8 30
         else
           echo "# update installs .."
-          /home/admin/config.scripts/blitz.github.sh -justinstall
+          /home/admin/config.scripts/blesk.github.sh -justinstall
         fi
       fi
       exit 0
@@ -280,7 +280,7 @@ Consider rebooting later manually if encountering any problems.
         if [ $? -eq 0 ]; then
           clear
           echo "# REBOOT .."
-          sudo /home/admin/config.scripts/blitz.shutdown.sh reboot
+          sudo /home/admin/config.scripts/blesk.shutdown.sh reboot
           sleep 8
           exit 1
         else
@@ -324,7 +324,7 @@ Consider rebooting later manually if encountering any problems.
         if [ $? -eq 0 ]; then
           clear
           echo "# REBOOT .."
-          sudo /home/admin/config.scripts/blitz.shutdown.sh reboot
+          sudo /home/admin/config.scripts/blesk.shutdown.sh reboot
           sleep 8
           exit 1
         else
@@ -409,22 +409,22 @@ Do you really want to update Core Lightning now?
   esac
 }
 
-bitcoinUpdate() {
-  # get bitcoin info
-  source <(sudo -u admin /home/admin/config.scripts/bitcoin.update.sh info)
+glcoinUpdate() {
+  # get glcoin info
+  source <(sudo -u admin /home/admin/config.scripts/glcoin.update.sh info)
 
-  # bitcoin update options
+  # glcoin update options
   OPTIONS=()
-  if [ ${bitcoinUpdateInstalled} -eq 0 ]; then
-    OPTIONS+=(TESTED "Optional Bitcoin Core update to ${bitcoinVersion}")
+  if [ ${glcoinUpdateInstalled} -eq 0 ]; then
+    OPTIONS+=(TESTED "Optional Glcoin Core update to ${glcoinVersion}")
   fi
-  if [ $installedVersion != $bitcoinLatestVersion ]&&[ ${bitcoinVersion} != ${bitcoinLatestVersion} ];then
-    OPTIONS+=(RECKLESS "Untested Bitcoin Core update to ${bitcoinLatestVersion}")
+  if [ $installedVersion != $glcoinLatestVersion ]&&[ ${glcoinVersion} != ${glcoinLatestVersion} ];then
+    OPTIONS+=(RECKLESS "Untested Glcoin Core update to ${glcoinLatestVersion}")
   fi
-  OPTIONS+=(CUSTOM "Update Bitcoin Core to a chosen version")
+  OPTIONS+=(CUSTOM "Update Glcoin Core to a chosen version")
   CHOICE=$(dialog --clear \
                 --backtitle "" \
-                --title "Bitcoin Core Update Options" \
+                --title "Glcoin Core Update Options" \
                 --ok-label "Select" \
                 --cancel-label "Back" \
                 --menu "" \
@@ -433,18 +433,18 @@ bitcoinUpdate() {
 
   case $CHOICE in
     TESTED)
-      if [ ${bitcoinUpdateInstalled} -eq 1 ]; then
+      if [ ${glcoinUpdateInstalled} -eq 1 ]; then
         whiptail --title "ALREADY INSTALLED" \
-        --msgbox "The Bitcoin Core version ${bitcoinUpdateVersion} is already installed." 8 30
+        --msgbox "The Glcoin Core version ${glcoinUpdateVersion} is already installed." 8 30
         exit 0
       fi
-      whiptail --title "OPTIONAL Bitcoin Core update" --yes-button "Cancel" --no-button "Update" \
-      --yesno "Info on updating to Bitcoin Core v${bitcoinVersion}:
+      whiptail --title "OPTIONAL Glcoin Core update" --yes-button "Cancel" --no-button "Update" \
+      --yesno "Info on updating to Glcoin Core v${glcoinVersion}:
 
-This Bitcoin Core version was tested on this system.
+This Glcoin Core version was tested on this system.
 Will verify the binary checksum and signature.
 
-Do you really want to update Bitcoin Core now?
+Do you really want to update Glcoin Core now?
       " 12 58
       if [ $? -eq 0 ]; then
         echo "# cancel update"
@@ -453,100 +453,100 @@ Do you really want to update Bitcoin Core now?
 
       error=""
       warn=""
-      sudo -u admin /home/admin/config.scripts/bitcoin.update.sh tested || {
-        whiptail --title "ERROR" --msgbox "bitcoin.update.sh failed
+      sudo -u admin /home/admin/config.scripts/glcoin.update.sh tested || {
+        whiptail --title "ERROR" --msgbox "glcoin.update.sh failed
 
 It was called at $(readlink -f "${BASH_SOURCE[0]}"):${LINENO}
 Consider running that manually to debug " 10 80
         exit 0
       }
       whiptail \
-        --title " Bitcoin Core update " \
+        --title " Glcoin Core update " \
         --yes-button "Reboot" \
         --no-button "Skip Reboot" \
         --yesno \
-"OK Bitcoin Core update is done.
+"OK Glcoin Core update is done.
 
 By default a reboot is advised.
       " 9 40
       if [ $? -eq 0 ]; then
         clear
         echo "# REBOOT .."
-        sudo /home/admin/config.scripts/blitz.shutdown.sh reboot
+        sudo /home/admin/config.scripts/blesk.shutdown.sh reboot
         sleep 8
         exit 1
       else
         echo "# SKIP REBOOT"
-        echo "# starting the bitcoind.service .."
-        sudo systemctl start bitcoind
+        echo "# starting the glcoind.service .."
+        sudo systemctl start glcoind
         exit 0
       fi
       sleep 8
       ;;
     RECKLESS)
-      whiptail --title "UNTESTED Bitcoin Core update to ${bitcoinLatestVersion}" --yes-button "Cancel" \
-      --no-button "Update" --yesno "Using the 'RECKLESS' Bitcoin Core update will grab
-the latest stable Bitcoin Core release published on the Bitcoin Core GitHub page.
+      whiptail --title "UNTESTED Glcoin Core update to ${glcoinLatestVersion}" --yes-button "Cancel" \
+      --no-button "Update" --yesno "Using the 'RECKLESS' Glcoin Core update will grab
+the latest stable Glcoin Core release published on the Glcoin Core GitHub page.
 
-This Bitcoin Core version was NOT tested on this system.
+This Glcoin Core version was NOT tested on this system.
 Will verify the binary checksum and signature.
 
-Do you really want to update Bitcoin Core now?
+Do you really want to update Glcoin Core now?
       " 16 58
       if [ $? -eq 0 ]; then
         echo "# cancel update"
         exit 0
       fi
-      sudo -u admin /home/admin/config.scripts/bitcoin.update.sh reckless
+      sudo -u admin /home/admin/config.scripts/glcoin.update.sh reckless
       if [ $? -ne 0 ]; then
-        whiptail --title "ERROR" --msgbox "Bitcoin Core update failed" 8 40
+        whiptail --title "ERROR" --msgbox "Glcoin Core update failed" 8 40
       else
         whiptail \
-          --title " Bitcoin Core update " \
+          --title " Glcoin Core update " \
           --yes-button "Reboot" \
           --no-button "Skip Reboot" \
           --yesno \
-"OK Bitcoin Core update is done.
+"OK Glcoin Core update is done.
 
 By default a reboot is advised.
         " 9 40
         if [ $? -eq 0 ]; then
           clear
           echo "REBOOT .."
-          sudo /home/admin/config.scripts/blitz.shutdown.sh reboot
+          sudo /home/admin/config.scripts/blesk.shutdown.sh reboot
           sleep 8
           exit 1
         else
           echo "# SKIP REBOOT"
-          echo "# starting the bitcoind.service .."
-          sudo systemctl start bitcoind
+          echo "# starting the glcoind.service .."
+          sudo systemctl start glcoind
           exit 0
         fi
       fi
       ;;
     CUSTOM)
-      if ! sudo -u admin /home/admin/config.scripts/bitcoin.update.sh custom; then
+      if ! sudo -u admin /home/admin/config.scripts/glcoin.update.sh custom; then
         exit 1
       else
         whiptail \
-          --title " Bitcoin Core update " \
+          --title " Glcoin Core update " \
           --yes-button "Reboot" \
           --no-button "Skip Reboot" \
           --yesno \
-"OK Bitcoin Core update is done.
+"OK Glcoin Core update is done.
 
 By default a reboot is advised.
         " 9 40
         if [ $? -eq 0 ]; then
           clear
           echo "# REBOOT .."
-          sudo /home/admin/config.scripts/blitz.shutdown.sh reboot
+          sudo /home/admin/config.scripts/blesk.shutdown.sh reboot
           sleep 8
           exit 1
         else
           echo "# SKIP REBOOT"
-          echo "# starting the bitcoind.service .."
-          sudo systemctl start bitcoind
+          echo "# starting the glcoind.service .."
+          sudo systemctl start glcoind
           exit 0
         fi
       fi
@@ -563,9 +563,9 @@ fi
 # Basic Options Menu
 WIDTH=55
 OPTIONS=()
-OPTIONS+=(RELEASE "RaspiBlitz Release Update/Recovery")
-OPTIONS+=(PATCH "Patch RaspiBlitz v${codeVersion}")
-OPTIONS+=(BITCOIN "Bitcoin Core Update Options")
+OPTIONS+=(RELEASE "RaspiBlesk Release Update/Recovery")
+OPTIONS+=(PATCH "Patch RaspiBlesk v${codeVersion}")
+OPTIONS+=(GLCOIN "Glcoin Core Update Options")
 
 if [ "${lightning}" == "lnd" ] || [ "${lnd}" == "on" ]; then
   OPTIONS+=(LND "Interim LND Update Options")
@@ -649,8 +649,8 @@ case $CHOICE in
   CL)
     cl
     ;;
-  BITCOIN)
-    bitcoinUpdate
+  GLCOIN)
+    glcoinUpdate
     ;;
   BOS)
     /home/admin/config.scripts/bonus.bos.sh update

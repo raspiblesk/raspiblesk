@@ -1,0 +1,25 @@
+--- a/src/config.rs
++++ b/src/config.rs
+@@ -100,7 +100,12 @@ impl FromStr for BitcoinNetwork {
+     type Err = <Network as FromStr>::Err;
+
+     fn from_str(string: &str) -> std::result::Result<Self, Self::Err> {
+-        Network::from_str(string).map(BitcoinNetwork)
++        match string {
++            // Glcoin has the same block/tx structure as Bitcoin mainnet.
++            // Map here so the rest of electrs sees Network::Bitcoin.
++            "glcoin" => Ok(BitcoinNetwork(Network::Bitcoin)),
++            s => Network::from_str(s).map(BitcoinNetwork),
++        }
+     }
+ }
+
+@@ -109,7 +114,7 @@ impl ::configure_me::parse_arg::ParseArgFromStr for BitcoinNetwork {
+     fn describe_type<W: fmt::Write>(mut writer: W) -> fmt::Result {
+         write!(
+             writer,
+-            "either 'bitcoin', 'testnet', 'testnet4', 'regtest' or 'signet'"
++            "either 'bitcoin', 'testnet', 'testnet4', 'regtest', 'signet' or 'glcoin'"
+         )
+     }
+ }

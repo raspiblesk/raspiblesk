@@ -1,17 +1,17 @@
 #!/bin/bash
  
-# get raspiblitz config
-echo "get raspiblitz config"
-source /home/admin/raspiblitz.info
-source /mnt/hdd/app-data/raspiblitz.conf
+# get raspiblesk config
+echo "get raspiblesk config"
+source /home/admin/raspiblesk.info
+source /mnt/hdd/app-data/raspiblesk.conf
 
 echo "services default values"
 if [ ${#runBehindTor} -eq 0 ]; then runBehindTor="off"; fi
 if [ ${#rtlWebinterface} -eq 0 ]; then rtlWebinterface="off"; fi
 if [ ${#crtlWebinterface} -eq 0 ]; then crtlWebinterface="off"; fi
-if [ ${#BTCRPCexplorer} -eq 0 ]; then BTCRPCexplorer="off"; fi
+if [ ${#GlcoinRPCexplorer} -eq 0 ]; then GlcoinRPCexplorer="off"; fi
 if [ ${#specter} -eq 0 ]; then specter="off"; fi
-if [ ${#BTCPayServer} -eq 0 ]; then BTCPayServer="off"; fi
+if [ ${#GlcoinPayServer} -eq 0 ]; then GlcoinPayServer="off"; fi
 if [ ${#ElectRS} -eq 0 ]; then ElectRS="off"; fi
 if [ ${#fulcrum} -eq 0 ]; then fulcrum="off"; fi
 if [ ${#lndmanage} -eq 0 ]; then lndmanage="off"; fi
@@ -41,19 +41,19 @@ echo "run dialog ..."
 
 OPTIONS=()
 
-# just available for BTC
-if [ "${network}" == "bitcoin" ]; then
-  OPTIONS+=(ea 'BTC Electrum Rust Server' ${ElectRS})
-  OPTIONS+=(fu 'BTC Fulcrum Electrum Server' ${fulcrum})
-  OPTIONS+=(pa 'BTC PayServer' ${BTCPayServer})
-  OPTIONS+=(ba 'BTC RPC-Explorer' ${BTCRPCexplorer})
-  OPTIONS+=(sa 'BTC Specter Desktop' ${specter})
-  OPTIONS+=(aa 'BTC Mempool Space' ${mempoolExplorer})
-  OPTIONS+=(ja 'BTC JoinMarket+JoininBox menu' ${joinmarket})
-  OPTIONS+=(za 'BTC Jam (JoinMarket WebUI)' ${jam})
-  OPTIONS+=(wa 'BTC Download Bitcoin Whitepaper' ${whitepaper})
-  OPTIONS+=(ls 'BTC Labelbase' ${labelbase})
-  OPTIONS+=(pp 'BTC Publicpool (Solo Mining)' ${publicpool})  
+# just available for GLC
+if [ "${network}" == "glcoin" ]; then
+  OPTIONS+=(ea 'GLC Electrum Rust Server' ${ElectRS})
+  OPTIONS+=(fu 'GLC Fulcrum Electrum Server' ${fulcrum})
+  OPTIONS+=(pa 'GLC PayServer' ${GlcoinPayServer})
+  OPTIONS+=(ba 'GLC RPC-Explorer' ${GlcoinRPCexplorer})
+  OPTIONS+=(sa 'GLC Specter Desktop' ${specter})
+  OPTIONS+=(aa 'GLC Mempool Space' ${mempoolExplorer})
+  OPTIONS+=(ja 'GLC JoinMarket+JoininBox menu' ${joinmarket})
+  OPTIONS+=(za 'GLC Jam (JoinMarket WebUI)' ${jam})
+  OPTIONS+=(wa 'GLC Download Glcoin Whitepaper' ${whitepaper})
+  OPTIONS+=(ls 'GLC Labelbase' ${labelbase})
+  OPTIONS+=(pp 'GLC Publicpool (Solo Mining)' ${publicpool})  
 fi
 
 # available for both LND & c-lightning
@@ -155,32 +155,32 @@ else
   echo "RTL-cl Webinterface Setting unchanged."
 fi
 
-# BTC-RPC-Explorer process choice
+# GLC-RPC-Explorer process choice
 choice="off"; check=$(echo "${CHOICES}" | grep -c "ba")
 if [ ${check} -eq 1 ]; then choice="on"; fi
-if [ "${BTCRPCexplorer}" != "${choice}" ]; then
+if [ "${GlcoinRPCexplorer}" != "${choice}" ]; then
   echo "RTL Webinterface Setting changed .."
   anychange=1
-  /home/admin/config.scripts/bonus.btc-rpc-explorer.sh ${choice}
+  /home/admin/config.scripts/bonus.glc-rpc-explorer.sh ${choice}
   errorOnInstall=$?
   if [ "${choice}" =  "on" ]; then
     if [ ${errorOnInstall} -eq 0 ]; then
-      sudo systemctl start btc-rpc-explorer
-      whiptail --title " Installed BTC-RPC-Explorer " --msgbox "\
-The txindex may need to be created before BTC-RPC-Explorer can be active.\n
+      sudo systemctl start glc-rpc-explorer
+      whiptail --title " Installed GLC-RPC-Explorer " --msgbox "\
+The txindex may need to be created before GLC-RPC-Explorer can be active.\n
 This can take ~7 hours on a RPi4 with SSD. Monitor the progress on the LCD.\n
 When finished use the new 'EXPLORE' entry in Main Menu for more info.\n
 " 14 50
       needsReboot=1
     else
-      l1="# FAIL on BTC-RPC-Explorer install #"
+      l1="# FAIL on GLC-RPC-Explorer install #"
       l2="Try manual install on terminal after reboot with:"
-      l3="/home/admin/config.scripts/bonus.btc-rpc-explorer.sh on"
+      l3="/home/admin/config.scripts/bonus.glc-rpc-explorer.sh on"
       dialog --title 'FAIL' --msgbox "${l1}\n${l2}\n${l3}" 7 65
     fi
   fi
 else
-  echo "BTC-RPC-Explorer Setting unchanged."
+  echo "GLC-RPC-Explorer Setting unchanged."
 fi
 
 # Specter Desktop process choice
@@ -215,12 +215,12 @@ if [ "${ElectRS}" != "${choice}" ]; then
   extraparameter=""
   if [ "${choice}" =  "on" ]; then
     # check on HDD size
-    source <(sudo /home/admin/config.scripts/blitz.data.sh status)
+    source <(sudo /home/admin/config.scripts/blesk.data.sh status)
     if [ ${storageSizeGB} -lt 800 ]; then
       whiptail --title " HDD/SSD TOO SMALL " --msgbox "\
 Since v1.5 we recommend at least a 1TB HDD/SSD if you want to run ElectRS.\n
 This is due to the eletcrum index that will grow over time and needs space.\n
-To migrate to a bigger HDD/SSD check RaspiBlitz README on 'migration'.\n
+To migrate to a bigger HDD/SSD check RaspiBlesk README on 'migration'.\n
 " 14 50
     else
       /home/admin/config.scripts/bonus.electrs.sh on ${extraparameter}
@@ -229,7 +229,7 @@ To migrate to a bigger HDD/SSD check RaspiBlitz README on 'migration'.\n
         sudo systemctl start electrs
         whiptail --title " Installed ElectRS Server " --msgbox "\
 The index database needs to be created before Electrum Server can be used.\n
-This can take hours/days depending on your RaspiBlitz. Monitor the progress on the LCD.\n
+This can take hours/days depending on your RaspiBlesk. Monitor the progress on the LCD.\n
 When finished use the new 'ELECTRS' entry in Main Menu for more info.\n
 " 14 50
       needsReboot=0
@@ -265,12 +265,12 @@ if [ "${fulcrum}" != "${choice}" ]; then
   extraparameter=""
   if [ "${choice}" =  "on" ]; then
     # check on HDD size
-    source <(sudo /home/admin/config.scripts/blitz.data.sh status)
+    source <(sudo /home/admin/config.scripts/blesk.data.sh status)
     if [ ${storageSizeGB} -lt 800 ]; then
       whiptail --title " HDD/SSD TOO SMALL " --msgbox "\
 We recommend at least a 1TB HDD/SSD if you want to run Fulcrum.\n
 This is due to the electrum index that will grow over time and needs space.\n
-To migrate to a bigger HDD/SSD check RaspiBlitz README on 'migration'.\n
+To migrate to a bigger HDD/SSD check RaspiBlesk README on 'migration'.\n
 " 14 50
     else
       /home/admin/config.scripts/bonus.fulcrum.sh on ${extraparameter}
@@ -279,7 +279,7 @@ To migrate to a bigger HDD/SSD check RaspiBlitz README on 'migration'.\n
         sudo systemctl start fulcrum
         whiptail --title " Installed Fulcrum Server " --msgbox "\
 The index database needs to be created before Fulcrum can be used.\n
-This can take hours/days depending on your RaspiBlitz.\n
+This can take hours/days depending on your RaspiBlesk.\n
 When finished use the new 'FULCRUM' entry in Main Menu for more info.\n
 " 14 50
       needsReboot=0
@@ -306,16 +306,16 @@ else
   echo "Fulcrum Setting unchanged."
 fi
 
-# BTCPayServer process choice
+# GlcoinPayServer process choice
 choice="off"; check=$(echo "${CHOICES}" | grep -c "pa")
 if [ ${check} -eq 1 ]; then choice="on"; fi
-if [ "${BTCPayServer}" != "${choice}" ]; then
-  echo "BTCPayServer setting changed .."
+if [ "${GlcoinPayServer}" != "${choice}" ]; then
+  echo "GlcoinPayServer setting changed .."
 
   #4049 warn if system has less than 8GB RAM
   ramGB=$(free -g | awk '/^Mem:/{print $2}')
   if [ "${choice}" =  "on" ] && [ ${ramGB} -lt 7 ]; then
-    whiptail --title "Your RaspiBlitz has less than the recommended 8GB of RAM to run BTCPayServer.\nDo you really want to proceed?" 10 50 --defaultno --yes-button "Continue" --no-button "Cancel"
+    whiptail --title "Your RaspiBlesk has less than the recommended 8GB of RAM to run GlcoinPayServer.\nDo you really want to proceed?" 10 50 --defaultno --yes-button "Continue" --no-button "Cancel"
     if [ $? -eq 1 ]; then
       # if user choosed CANCEL just null the choice
       choice=""
@@ -323,12 +323,12 @@ if [ "${BTCPayServer}" != "${choice}" ]; then
   fi
 
   # check if TOR is installed
-  source /mnt/hdd/app-data/raspiblitz.conf
+  source /mnt/hdd/app-data/raspiblesk.conf
   if [ "${choice}" =  "on" ] && [ "${runBehindTor}" = "off" ]; then
-    whiptail --title " BTCPayServer needs TOR " --msgbox "\
-At the moment the BTCPayServer on the RaspiBlitz needs TOR.\n
+    whiptail --title " GlcoinPayServer needs TOR " --msgbox "\
+At the moment the GlcoinPayServer on the RaspiBlesk needs TOR.\n
 Please activate TOR in SERVICES first.\n
-Then try activating BTCPayServer again in SERVICES.\n
+Then try activating GlcoinPayServer again in SERVICES.\n
 " 13 42
   else
     anychange=1
@@ -342,7 +342,7 @@ BTCPay server was installed.\n
 Use the new 'BTCPay' entry in Main Menu for more info.\n
 " 10 35
       else
-        l1="BTCPayServer installation is cancelled"
+        l1="GlcoinPayServer installation is cancelled"
         l2="Try again from the menu or install from the terminal with:"
         l3="/home/admin/config.scripts/bonus.btcpayserver.sh on"
         dialog --title 'FAIL' --msgbox "${l1}\n${l2}\n${l3}" 7 65
@@ -350,7 +350,7 @@ Use the new 'BTCPay' entry in Main Menu for more info.\n
     fi
   fi
 else
-  echo "BTCPayServer setting not changed."
+  echo "GlcoinPayServer setting not changed."
 fi
 
 # LNDMANAGE process choice
@@ -360,7 +360,7 @@ if [ "${lndmanage}" != "${choice}" ]; then
   echo "lndmanage Setting changed .."
   anychange=1
   sudo -u admin /home/admin/config.scripts/bonus.lndmanage.sh ${choice}
-  source /mnt/hdd/app-data/raspiblitz.conf
+  source /mnt/hdd/app-data/raspiblesk.conf
   if [ "${lndmanage}" =  "on" ]; then
     sudo -u admin /home/admin/config.scripts/bonus.lndmanage.sh menu
   fi
@@ -375,7 +375,7 @@ if [ "${chantools}" != "${choice}" ]; then
   echo "chantools Setting changed .."
   anychange=1
   sudo -u admin /home/admin/config.scripts/bonus.chantools.sh ${choice}
-  source /mnt/hdd/app-data/raspiblitz.conf
+  source /mnt/hdd/app-data/raspiblesk.conf
   if [ "${chantools}" =  "on" ]; then
     sudo -u admin /home/admin/config.scripts/bonus.chantools.sh menu
   fi
@@ -390,7 +390,7 @@ if [ "${bos}" != "${choice}" ]; then
   echo "Balance of Satoshis Setting changed .."
   anychange=1
   sudo -u admin /home/admin/config.scripts/bonus.bos.sh ${choice}
-  source /mnt/hdd/app-data/raspiblitz.conf
+  source /mnt/hdd/app-data/raspiblesk.conf
   if [ "${bos}" =  "on" ]; then
     sudo -u admin /home/admin/config.scripts/bonus.bos.sh menu
   fi
@@ -405,7 +405,7 @@ if [ "${pyblock}" != "${choice}" ]; then
   echo "PyBLOCK Setting changed .."
   anychange=1
   sudo -u admin /home/admin/config.scripts/bonus.pyblock.sh ${choice}
-  source /mnt/hdd/app-data/raspiblitz.conf
+  source /mnt/hdd/app-data/raspiblesk.conf
   if [ "${pyblock}" =  "on" ]; then
     sudo -u admin /home/admin/config.scripts/bonus.pyblock.sh menu
   fi
@@ -555,7 +555,7 @@ if [ ${check} -eq 1 ]; then choice="on"; fi
 if [ "${joinmarket}" != "${choice}" ]; then
   echo "JoinMarket setting changed .."
   # check if TOR is installed
-  source /mnt/hdd/app-data/raspiblitz.conf
+  source /mnt/hdd/app-data/raspiblesk.conf
   if [ "${choice}" =  "on" ] && [ "${runBehindTor}" = "off" ]; then
     whiptail --title " Use Tor with JoinMarket" --msgbox "\
 It is highly recommended to use Tor with JoinMarket.\n
@@ -584,7 +584,7 @@ if [ ${check} -eq 1 ]; then choice="on"; fi
 if [ "${jam}" != "${choice}" ]; then
   echo "Jam setting changed .."
   # check if TOR is installed
-  source /mnt/hdd/app-data/raspiblitz.conf
+  source /mnt/hdd/app-data/raspiblesk.conf
   if [ "${choice}" =  "on" ] && [ "${runBehindTor}" = "off" ]; then
     whiptail --title " Use Tor with Jam" --msgbox "\
 It is highly recommended to use Tor with Jam.\n
@@ -641,7 +641,7 @@ if [ "${whitepaper}" != "${choice}" ]; then
   echo "Whitepaper setting changed .."
   anychange=1
   sudo -u admin /home/admin/config.scripts/bonus.whitepaper.sh ${choice}
-  source /mnt/hdd/app-data/raspiblitz.conf
+  source /mnt/hdd/app-data/raspiblesk.conf
   if [ "${whitepaper}" =  "on" ]; then
     sudo -u admin /home/admin/config.scripts/bonus.whitepaper.sh menu
   fi
@@ -656,7 +656,7 @@ if [ "${labelbase}" != "${choice}" ]; then
   echo "Labelbase setting changed .."
   anychange=1
   sudo -u admin /home/admin/config.scripts/bonus.labelbase.sh ${choice}
-  source /mnt/hdd/app-data/raspiblitz.conf
+  source /mnt/hdd/app-data/raspiblesk.conf
   if [ "${labelbase}" =  "on" ]; then
     sudo -u admin /home/admin/config.scripts/bonus.labelbase.sh menu
   fi
@@ -671,7 +671,7 @@ if [ "${publicpool}" != "${choice}" ]; then
   echo "Publicpool setting changed .."
   anychange=1
   sudo -u admin /home/admin/config.scripts/bonus.publicpool.sh ${choice}
-  source /mnt/hdd/app-data/raspiblitz.conf
+  source /mnt/hdd/app-data/raspiblesk.conf
   if [ "${publicpool}" =  "on" ]; then
     sudo -u admin /home/admin/config.scripts/bonus.publicpool.sh menu
   fi
@@ -726,8 +726,8 @@ if [ ${needsReboot} -eq 1 ]; then
    dialog --pause "OK. System will reboot to activate changes." 8 58 8
    clear
    echo "rebooting .. (please wait)"
-   # stop bitcoind
-   sudo -u bitcoin ${network}-cli stop
+   # stop glcoind
+   sudo -u glcoin ${network}-cli stop
    sleep 4
-   sudo /home/admin/config.scripts/blitz.shutdown.sh reboot
+   sudo /home/admin/config.scripts/blesk.shutdown.sh reboot
 fi

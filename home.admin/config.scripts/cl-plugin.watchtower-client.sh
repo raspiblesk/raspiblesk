@@ -15,7 +15,7 @@ fi
 echo "# cl-plugin.watchtower-client.sh $*"
 
 source <(/home/admin/config.scripts/network.aliases.sh getvars cl $2)
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 plugin="watchtower-client"
 pkg_dependencies="libssl-dev"
 
@@ -50,34 +50,34 @@ fi
 if [ "$1" = "on" ]; then
 
   # rust for rust-teos, includes rustfmt
-  sudo -u bitcoin curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs |
-    sudo -u bitcoin sh -s -- -y
+  sudo -u glcoin curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs |
+    sudo -u glcoin sh -s -- -y
 
   #Cleanup existing
-  if [ -d "/home/bitcoin/cl-plugins-available/plugins/${plugin}/" ]; then
-    sudo rm -rf "/home/bitcoin/cl-plugins-available/plugins/${plugin}/"
+  if [ -d "/home/glcoin/cl-plugins-available/plugins/${plugin}/" ]; then
+    sudo rm -rf "/home/glcoin/cl-plugins-available/plugins/${plugin}/"
   fi
 
-  if [ -d "/home/bitcoin/cl-plugins-available/rust-teos/" ]; then
-    sudo rm -rf "/home/bitcoin/cl-plugins-available/rust-teos/"
+  if [ -d "/home/glcoin/cl-plugins-available/rust-teos/" ]; then
+    sudo rm -rf "/home/glcoin/cl-plugins-available/rust-teos/"
   fi
 
   #Clone source repository
-  cd /home/bitcoin/cl-plugins-available || exit 1
-  sudo -u bitcoin git clone https://github.com/talaia-labs/rust-teos.git
+  cd /home/glcoin/cl-plugins-available || exit 1
+  sudo -u glcoin git clone https://github.com/talaia-labs/rust-teos.git
 
   #Install additional dependencies
   sudo apt-get install -y ${pkg_dependencies} >/dev/null
 
   #Compile
-  cd /home/bitcoin/cl-plugins-available/rust-teos || exit 1
-  sudo -u bitcoin /home/bitcoin/.cargo/bin/cargo install --locked --path watchtower-plugin \
-    --target-dir /home/bitcoin/cl-plugins-available/${plugin} || exit 1
+  cd /home/glcoin/cl-plugins-available/rust-teos || exit 1
+  sudo -u glcoin /home/glcoin/.cargo/bin/cargo install --locked --path watchtower-plugin \
+    --target-dir /home/glcoin/cl-plugins-available/${plugin} || exit 1
 
   #Symlink to enable
-  if [ ! -L /home/bitcoin/${netprefix}cl-plugins-enabled/${plugin} ]; then
-    echo "Running: sudo -u bitcoin ln -s /home/bitcoin/cl-plugins-available/${plugin}/release/${plugin} /home/bitcoin/${netprefix}cl-plugins-enabled/${plugin}"
-    sudo -u bitcoin ln -s /home/bitcoin/cl-plugins-available/${plugin}/release/${plugin} /home/bitcoin/${netprefix}cl-plugins-enabled/${plugin}
+  if [ ! -L /home/glcoin/${netprefix}cl-plugins-enabled/${plugin} ]; then
+    echo "Running: sudo -u glcoin ln -s /home/glcoin/cl-plugins-available/${plugin}/release/${plugin} /home/glcoin/${netprefix}cl-plugins-enabled/${plugin}"
+    sudo -u glcoin ln -s /home/glcoin/cl-plugins-available/${plugin}/release/${plugin} /home/glcoin/${netprefix}cl-plugins-enabled/${plugin}
   fi
 
   #check if toronly node, then add watchtower proxy config to CL
@@ -92,8 +92,8 @@ if [ "$1" = "on" ]; then
     fi
   fi
 
-  # setting value in raspiblitz.conf
-  /home/admin/config.scripts/blitz.conf.sh set ${netprefix}clWatchtowerClient "on"
+  # setting value in raspiblesk.conf
+  /home/admin/config.scripts/blesk.conf.sh set ${netprefix}clWatchtowerClient "on"
 
   source <(/home/admin/_cache.sh get state)
   if [ "${state}" == "ready" ]; then
@@ -105,7 +105,7 @@ fi
 
 if [ "$1" = off ]; then
   # delete symlink
-  sudo rm -rf /home/bitcoin/${netprefix}cl-plugins-enabled/${plugin}
+  sudo rm -rf /home/glcoin/${netprefix}cl-plugins-enabled/${plugin}
 
   echo "# Restart the ${netprefix}lightningd.service to deactivate ${plugin}"
   sudo systemctl restart ${netprefix}lightningd
@@ -113,12 +113,12 @@ if [ "$1" = off ]; then
   # purge
   if [ "$(echo "$@" | grep -c purge)" -gt 0 ]; then
     echo "# Delete plugin and source code"
-    sudo rm -rf /home/bitcoin/cl-plugins-available/rust-teos*
-    sudo rm -rf /home/bitcoin/cl-plugins-available/${plugin}
+    sudo rm -rf /home/glcoin/cl-plugins-available/rust-teos*
+    sudo rm -rf /home/glcoin/cl-plugins-available/${plugin}
   fi
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set ${netprefix}clWatchtowerClient "off"
+  /home/admin/config.scripts/blesk.conf.sh set ${netprefix}clWatchtowerClient "off"
   echo "# watchtower-client was uninstalled for ${CHAIN}"
 
 fi

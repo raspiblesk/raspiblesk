@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This script allows users to sign a message from a specific Bitcoin address
+# This script allows users to sign a message from a specific Glcoin address
 # either by generating a new address or using an existing one.
 
 # Ask if a new address should be generated or an existing one should be entered
@@ -33,7 +33,7 @@ if [ "$generate_new" == "y" ]; then
 else
     # 1.b. Check if the manually entered address is valid
     read -p "Enter the existing address: " address
-    if ! bitcoin-cli validateaddress "$address" | grep -q "isvalid\": true"; then
+    if ! glcoin-cli validateaddress "$address" | grep -q "isvalid\": true"; then
         echo "Error: The entered address is not valid."
         exit 1
     fi

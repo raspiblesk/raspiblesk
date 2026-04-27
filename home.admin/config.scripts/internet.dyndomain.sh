@@ -12,8 +12,8 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
 fi
 
 ## get system configs
-source /home/admin/raspiblitz.info 2>/dev/null
-source /mnt/hdd/app-data/raspiblitz.conf 2>/dev/null
+source /home/admin/raspiblesk.info 2>/dev/null
+source /mnt/hdd/app-data/raspiblesk.conf 2>/dev/null
 
 # GETTING STATUS
 if [ "$1" = "status" ]; then
@@ -122,10 +122,10 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   # so first remove dynUpdateUrl from config and then add fresh as new line at the end
 
   # remove line & write fresh
-  /home/admin/config.scripts/blitz.conf.sh set dynDomain "${dynDomain}"
+  /home/admin/config.scripts/blesk.conf.sh set dynDomain "${dynDomain}"
 
   # remove line & write fresh
-  /home/admin/config.scripts/blitz.conf.sh set dynUpdateUrl "${dynUpdateUrl}"
+  /home/admin/config.scripts/blesk.conf.sh set dynUpdateUrl "${dynUpdateUrl}"
 
   # make sure dyndomain is added to lnd config file (just edits the config file)
   sudo /home/admin/config.scripts/lnd.tlscert.sh domain-add ${dynDomain}
@@ -152,9 +152,9 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
 
   echo "# switching DynamicDNS OFF"
 
-  # removing values in raspiblitz config
-  /home/admin/config.scripts/blitz.conf.sh delete dynUpdateUrl
-  /home/admin/config.scripts/blitz.conf.sh delete dynDomain
+  # removing values in raspiblesk config
+  /home/admin/config.scripts/blesk.conf.sh delete dynUpdateUrl
+  /home/admin/config.scripts/blesk.conf.sh delete dynDomain
 
   # lnd.conf: remove domain tls entries
   sudo /home/admin/config.scripts/lnd.tlscert.sh domain-remove ALL

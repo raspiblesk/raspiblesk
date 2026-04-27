@@ -3,10 +3,10 @@
 
 # get basic system information
 # these are the same set of infos the WebGUI dialog/controler has
-source /home/admin/raspiblitz.info 2>/dev/null
+source /home/admin/raspiblesk.info 2>/dev/null
 
 # get values from cache
-source <(/home/admin/_cache.sh get codeVersion codeRelease internet_localip blitzapi hdd_used_info system_temp_celsius)
+source <(/home/admin/_cache.sh get codeVersion codeRelease internet_localip bleskapi hdd_used_info system_temp_celsius)
 
 # 1st PARAMETER: eventID
 # fixed ID string for a certain event
@@ -24,8 +24,8 @@ contentWords=($2)
 contentString=$2
 
 # get progress if available
-progresstype=$(head -n 1 /var/cache/raspiblitz/temp/progress.txt 2>/dev/null)
-progress=$(tail -n 1 /var/cache/raspiblitz/temp/progress.txt 2>/dev/null)
+progresstype=$(head -n 1 /var/cache/raspiblesk/temp/progress.txt 2>/dev/null)
+progress=$(tail -n 1 /var/cache/raspiblesk/temp/progress.txt 2>/dev/null)
 
 # 3rd PARAMETER (optional): Place of display - could be "lcd" or "ssh" (defalt)
 mode=$3
@@ -53,7 +53,7 @@ backtitle="${codeVersion}-${codeRelease} ${eventID} ${internet_localip} ${temp_i
 if [ "${eventID}" == "starting" ] || [ "${eventID}" == "system-init" ]; then
 
     dialog --backtitle "${backtitle}" --cr-wrap --infobox "
-Starting RaspiBlitz
+Starting RaspiBlesk
 Please wait ...
 " 6 24
 
@@ -113,7 +113,7 @@ ${contentString}
 
 Please report to the Raspiblitz GitHub
 CTRL+C to exit to terminal for commands:
-cat raspiblitz.log --> see error log
+cat raspiblesk.log --> see error log
 off --> shutdown system
 " 11 50
 
@@ -127,7 +127,7 @@ Upgrade/Recover/Provision
 ---> ${contentString}
 
 Exit to Terminal: Press CTRL+c
-Follow Logs: tail -f ./raspiblitz.log
+Follow Logs: tail -f ./raspiblesk.log
 " 9 42
 
     else
@@ -179,7 +179,7 @@ elif [ "${eventID}" == "inconsistentsystem" ]; then
 PLEASE START WITH A FRESH SD CARD IMAGE
 ---------------------------------------
 Cut power & remove sd card and then
-flash a fresh RaspiBlitz image on it.
+flash a fresh RaspiBlesk image on it.
 " 8 45
 
 elif [ "${eventID}" == "waitsetup" ] && [ "${mode}" == "lcd" ]; then
@@ -187,35 +187,35 @@ elif [ "${eventID}" == "waitsetup" ] && [ "${mode}" == "lcd" ]; then
     if [ "${setupPhase}" == "setup" ] || [ "${setupPhase}" == "update" ] || [ "${setupPhase}" == "recovery" ] || [ "${setupPhase}" == "migration" ]; then
 
         # get values from cache
-        source <(/home/admin/_cache.sh get system_ram_gb hddGigaBytes hddBlocksBitcoin hddBlocksLitecoin setupPhase)
+        source <(/home/admin/_cache.sh get system_ram_gb hddGigaBytes hddBlocksGlcoin hddBlocksLitecoin setupPhase)
 
         # custom backtitle for this dialog
-        backtitle="RaspiBlitz ${codeVersion}-${codeRelease}"
+        backtitle="RaspiBlesk ${codeVersion}-${codeRelease}"
 
         # display if RAM size
         backtitle="${backtitle} / ${system_ram_gb}GB RAM"
 
         # display if HDD conatains blockhain or not
-        if [ "${hddBlocksBitcoin}" == "1" ]; then
+        if [ "${hddBlocksGlcoin}" == "1" ]; then
             backtitle="${backtitle} / ${hddGigaBytes}GB (pre-synced)"
         else
             backtitle="${backtitle} / ${hddGigaBytes}GB HDD"
         fi
 
         # custom welcomeline for this dialog
-        welcomeline="Your RaspiBlitz is ready for Setup"
+        welcomeline="Your RaspiBlesk is ready for Setup"
         if [ "${setupPhase}" == "update" ]; then
-            welcomeline="RaspiBlitz is ready for Update"
+            welcomeline="RaspiBlesk is ready for Update"
         fi
         if [ "${setupPhase}" == "recovery" ]; then
-            welcomeline="RaspiBlitz is ready for Recovery"
+            welcomeline="RaspiBlesk is ready for Recovery"
         fi
         if [ "${setupPhase}" == "migration" ]; then
-            welcomeline="Ready for migration to RaspiBlitz"
+            welcomeline="Ready for migration to RaspiBlesk"
         fi
 
         browserline="Login thru SSH to setup ..."
-        if [ "${blitzapi}" == "on" ]; then
+        if [ "${bleskapi}" == "on" ]; then
             browserline="browser:  http://${internet_localip}"
         fi
 
@@ -226,20 +226,20 @@ ${welcomeline}
 ------------------------------------
 ${browserline}
 terminal: ssh admin@${internet_localip}
-password: raspiblitz
+password: raspiblesk
 " 9 41
 
     else
 
         # custom backtitle for this dialog
-        backtitle="RaspiBlitz ${codeVersion} / ${setupPhase}"
+        backtitle="RaspiBlesk ${codeVersion} / ${setupPhase}"
 
         # on all other cases (add info message)
         dialog --backtitle "${backtitle}" --cr-wrap --infobox "
 Login for Maintenance:
 ---> ${contentString}
 ssh admin@${internet_localip}
-Use password: raspiblitz
+Use password: raspiblesk
 " 8 41
     fi
 

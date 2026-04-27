@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # deprecated May 2024
-# see or comment on: https://github.com/raspiblitz/raspiblitz/issues/2558
+# see or comment on: https://github.com/raspiblesk/raspiblesk/issues/2558
 
 # https://github.com/stakwork/sphinx-relay
 
@@ -16,7 +16,7 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
   echo "bonus.sphinxrelay.sh github sync"
   exit 1
 fi
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 
 # show info menu
 if [ "$1" = "menu" ]; then
@@ -52,7 +52,7 @@ if [ "$1" = "menu" ]; then
     --no-button "Other Options" \
     --yesno "\nYou can connect Sphinx App over Tor. Its build in for iOS and on Android you need to use it together with the Orbot App." 10 72
     if [ "$?" != "1" ]; then
-      /home/admin/config.scripts/blitz.conf.sh set sphinxrelay_connection "tor"
+      /home/admin/config.scripts/blesk.conf.sh set sphinxrelay_connection "tor"
       echo "Please wait (+1min) ... restarting sphinx relay to use tor"
       sudo systemctl restart sphinxrelay
       sleep 60
@@ -121,7 +121,7 @@ MAINMENU > SUBSCRIBE > IP2TOR > SPHINX"
     text="${text}\nUnknown Connection!"
   fi
 
-  text="${text}\n\nUse 'Connect App' to pair Sphinx App with RaspiBlitz."
+  text="${text}\n\nUse 'Connect App' to pair Sphinx App with RaspiBlesk."
 
   whiptail --title " SPHINX RELAY " --yes-button "Connect App" --no-button "Back" --yesno "${text}" 15 76
   response=$?
@@ -155,7 +155,7 @@ ${publicURL}"
   fi
 
   # check that at least one channel is open
-  openChannels=$(sudo -u bitcoin lncli listchannels | grep -c "channel_point")
+  openChannels=$(sudo -u glcoin lncli listchannels | grep -c "channel_point")
   if [ "${openChannels}" == "0" ]; then
     whiptail --title " Warning " --msgbox "You need at least one open channel to the lightning network for sphinx to work." 10 32
     exit 0
@@ -166,11 +166,11 @@ ${publicURL}"
   fi
 
   # show qr code on LCD & console
-  sudo /home/admin/config.scripts/blitz.display.sh qr "${connectionCode}"
+  sudo /home/admin/config.scripts/blesk.display.sh qr "${connectionCode}"
 	whiptail --title " Connect App with Sphinx Relay " \
 	  --yes-button "Done" \
 		--no-button "Show QR Code" \
-		--yesno "Open the Sphinx Chat app & scan the QR code displayed on the LCD. If you dont have a RaspiBlitz with LCD choose 'Show QR Code'.\n
+		--yesno "Open the Sphinx Chat app & scan the QR code displayed on the LCD. If you dont have a RaspiBlesk with LCD choose 'Show QR Code'.\n
 The connection string can also be copied if needed: ${connectionCode}\n
 ${extraPairInfo}" 17 76
 	  if [ $? -eq 1 ]; then
@@ -182,7 +182,7 @@ ${extraPairInfo}" 17 76
       read key
 	  fi
 
-  sudo /home/admin/config.scripts/blitz.display.sh hide
+  sudo /home/admin/config.scripts/blesk.display.sh hide
   exit 0
 fi
 
@@ -247,7 +247,7 @@ if [ "$1" = "status" ]; then
 
   # check for LetsEnryptDomain for DynDns
   error=""
-  source <(/home/admin/config.scripts/blitz.subscriptions.ip2tor.py ip-by-tor $publicIP)
+  source <(/home/admin/config.scripts/blesk.subscriptions.ip2tor.py ip-by-tor $publicIP)
   publicDomain="${domain}"
   if [ ${#error} -eq 0 ]; then
     echo "publicDomain='${publicDomain}'"
@@ -268,7 +268,7 @@ if [ "$1" = "status" ]; then
   error=""
   ip2torIP=""
   ip2torPort=""
-  source <(/home/admin/config.scripts/blitz.subscriptions.ip2tor.py ip-by-tor $toraddress)
+  source <(/home/admin/config.scripts/blesk.subscriptions.ip2tor.py ip-by-tor $toraddress)
   if [ ${#error} -eq 0 ]; then
     ip2torIP="${ip}"
     ip2torPort="${port}"
@@ -279,12 +279,12 @@ if [ "$1" = "status" ]; then
     # check for LetsEnryptDomain on IP2TOR
     ip2torDomain=""
     error=""
-    source <(/home/admin/config.scripts/blitz.subscriptions.letsencrypt.py domain-by-ip $ip)
+    source <(/home/admin/config.scripts/blesk.subscriptions.letsencrypt.py domain-by-ip $ip)
     if [ ${#error} -eq 0 ]; then
       ip2torDomain="${domain}"
       echo "ip2torDomain='${ip2torDomain}'"
       # by default the relay gives a 404 .. so just test of no HTTP code at all comes back
-      httpcode=$(/home/admin/config.scripts/blitz.subscriptions.letsencrypt.py subscription-detail ${domain} ${port} | jq -r ".https_response")
+      httpcode=$(/home/admin/config.scripts/blesk.subscriptions.letsencrypt.py subscription-detail ${domain} ${port} | jq -r ".https_response")
       if [ "${httpcode}" = "0" ]; then
         echo "ip2torWarn='Not able to get HTTPS response.'"
       fi
@@ -449,7 +449,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     echo ""
 
     # Hidden Service if Tor is active
-    source /mnt/hdd/app-data/raspiblitz.conf
+    source /mnt/hdd/app-data/raspiblesk.conf
     if [ "${runBehindTor}" = "on" ]; then
       # make sure to keep in sync with tor.network.sh script
       /home/admin/config.scripts/tor.onion-service.sh sphinxrelay 80 3302 443 3303
@@ -527,7 +527,7 @@ EOF
   sudo systemctl reload nginx
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set sphinxrelay "on"
+  /home/admin/config.scripts/blesk.conf.sh set sphinxrelay "on"
 
   exit 0
 fi
@@ -543,7 +543,7 @@ if [ "$1" = "update" ]; then
   /home/admin/config.scripts/bonus.sphinxrelay.sh on
 
   #cd /home/sphinxrelay/sphinx-relay/
-  ## https://github.com/stakwork/sphinx-relay/blob/master/docs/raspiblitz_deployment.md#fast-method
+  ## https://github.com/stakwork/sphinx-relay/blob/master/docs/raspiblesk_deployment.md#fast-method
   #echo "# Stashing the config"
   #if [ $(sudo -u sphinxrelay git stash 2>&1 | grep -c "Please tell me who you are") -gt 0 ]; then
   #  sudo -u sphinxrelay git config user.email "you@example.com"
@@ -587,8 +587,8 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   echo "# deleteData(${deleteData})"
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set sphinxrelay "off"
-  /home/admin/config.scripts/blitz.conf.sh delete sphinxrelay_connection
+  /home/admin/config.scripts/blesk.conf.sh set sphinxrelay "off"
+  /home/admin/config.scripts/blesk.conf.sh delete sphinxrelay_connection
   
   # remove nginx symlinks
   sudo rm -f /etc/nginx/sites-enabled/sphinxrelay_ssl.conf

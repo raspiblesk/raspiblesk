@@ -11,7 +11,7 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
   exit 1
 fi
 
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 
 # show info menu
 if [ "$1" = "menu" ]; then
@@ -24,14 +24,14 @@ if [ "$1" = "menu" ]; then
 
   whiptail --title " squeaknode " --msgbox "${text}" 16 69
 
-  /home/admin/config.scripts/blitz.display.sh hide
+  /home/admin/config.scripts/blesk.display.sh hide
   echo "please wait ..."
   exit 0
 fi
 
 # add default value to raspi config if needed
-if ! grep -Eq "^squeaknode=" /mnt/hdd/app-data/raspiblitz.conf; then
-  echo "squeaknode=off" >> /mnt/hdd/app-data/raspiblitz.conf
+if ! grep -Eq "^squeaknode=" /mnt/hdd/app-data/raspiblesk.conf; then
+  echo "squeaknode=off" >> /mnt/hdd/app-data/raspiblesk.conf
 fi
 
 # status
@@ -126,7 +126,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
 
     # Prepare configs
     RPCHOST="localhost"
-    RPCPORT="8332"
+    RPCPORT="1617"
     RPCUSER=$(sudo cat /mnt/hdd/app-data/${network}/${network}.conf | grep rpcuser | cut -c 9-)
     PASSWORD_B=$(sudo cat /mnt/hdd/app-data/${network}/${network}.conf | grep rpcpassword | cut -c 13-)
 
@@ -152,11 +152,11 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     echo "# preparing env file"
     sudo rm /home/squeaknode/squeaknode/.env 2>/dev/null
     sudo -u squeaknode touch /home/squeaknode/squeaknode/.env
-    sudo bash -c "echo 'SQUEAKNODE_BITCOIN_RPC_HOST=${RPCHOST}' >> /home/squeaknode/squeaknode/.env"
-    sudo bash -c "echo 'SQUEAKNODE_BITCOIN_RPC_PORT=${RPCPORT}' >> /home/squeaknode/squeaknode/.env"
-    sudo bash -c "echo 'SQUEAKNODE_BITCOIN_RPC_USER=${RPCUSER}' >> /home/squeaknode/squeaknode/.env"
-    sudo bash -c "echo 'SQUEAKNODE_BITCOIN_RPC_PASS=${PASSWORD_B}' >> /home/squeaknode/squeaknode/.env"
-    sudo bash -c "echo 'SQUEAKNODE_BITCOIN_ZEROMQ_HASHBLOCK_PORT=${ZEROMQ_HASHBLOCK_PORT}' >> /home/squeaknode/squeaknode/.env"
+    sudo bash -c "echo 'SQUEAKNODE_GLCOIN_RPC_HOST=${RPCHOST}' >> /home/squeaknode/squeaknode/.env"
+    sudo bash -c "echo 'SQUEAKNODE_GLCOIN_RPC_PORT=${RPCPORT}' >> /home/squeaknode/squeaknode/.env"
+    sudo bash -c "echo 'SQUEAKNODE_GLCOIN_RPC_USER=${RPCUSER}' >> /home/squeaknode/squeaknode/.env"
+    sudo bash -c "echo 'SQUEAKNODE_GLCOIN_RPC_PASS=${PASSWORD_B}' >> /home/squeaknode/squeaknode/.env"
+    sudo bash -c "echo 'SQUEAKNODE_GLCOIN_ZEROMQ_HASHBLOCK_PORT=${ZEROMQ_HASHBLOCK_PORT}' >> /home/squeaknode/squeaknode/.env"
     sudo bash -c "echo 'SQUEAKNODE_LND_HOST=${LNDHOST}' >> /home/squeaknode/squeaknode/.env"
     sudo bash -c "echo 'SQUEAKNODE_LND_RPC_PORT=${LNDRPCPORT}' >> /home/squeaknode/squeaknode/.env"
     sudo bash -c "echo 'SQUEAKNODE_LND_TLS_CERT_PATH=' >> /home/squeaknode/squeaknode/.env"
@@ -164,7 +164,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     sudo bash -c "echo 'SQUEAKNODE_TOR_PROXY_IP=localhost' >> /home/squeaknode/squeaknode/.env"
     sudo bash -c "echo 'SQUEAKNODE_TOR_PROXY_PORT=9050' >> /home/squeaknode/squeaknode/.env"
     sudo bash -c "echo 'SQUEAKNODE_WEBADMIN_ENABLED=true' >> /home/squeaknode/squeaknode/.env"
-    sudo bash -c "echo 'SQUEAKNODE_WEBADMIN_USERNAME=raspiblitz' >> /home/squeaknode/squeaknode/.env"
+    sudo bash -c "echo 'SQUEAKNODE_WEBADMIN_USERNAME=raspiblesk' >> /home/squeaknode/squeaknode/.env"
     sudo bash -c "echo 'SQUEAKNODE_WEBADMIN_PASSWORD=pass' >> /home/squeaknode/squeaknode/.env"
     sudo bash -c "echo 'SQUEAKNODE_NODE_NETWORK=${chain}net' >> /home/squeaknode/squeaknode/.env"
     sudo bash -c "echo 'SQUEAKNODE_NODE_MAX_SQUEAKS=${MAX_SQUEAKS}' >> /home/squeaknode/squeaknode/.env"
@@ -206,8 +206,8 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
 
 [Unit]
 Description=squeaknode
-Wants=bitcoind.service
-After=bitcoind.service
+Wants=glcoind.service
+After=glcoind.service
 
 [Service]
 EnvironmentFile=/home/squeaknode/squeaknode/.env
@@ -232,7 +232,7 @@ EOF
 
     sudo systemctl enable squeaknode
 
-    source /home/admin/raspiblitz.info
+    source /home/admin/raspiblesk.info
     if [ "${state}" == "ready" ]; then
       echo "# OK - squeaknode service is enabled, system is on ready so starting squeaknode service"
       sudo systemctl start squeaknode
@@ -245,10 +245,10 @@ EOF
   fi
 
   # setting value in raspi blitz config
-  sudo sed -i "s/^squeaknode=.*/squeaknode=on/g" /mnt/hdd/app-data/raspiblitz.conf
+  sudo sed -i "s/^squeaknode=.*/squeaknode=on/g" /mnt/hdd/app-data/raspiblesk.conf
 
   # Hidden Service if Tor is active
-  source /mnt/hdd/app-data/raspiblitz.conf
+  source /mnt/hdd/app-data/raspiblesk.conf
   exit 0
 fi
 
@@ -271,7 +271,7 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   echo "# deleteData(${deleteData})"
 
   # setting value in raspi blitz config
-  sudo sed -i "s/^squeaknode=.*/squeaknode=off/g" /mnt/hdd/app-data/raspiblitz.conf
+  sudo sed -i "s/^squeaknode=.*/squeaknode=off/g" /mnt/hdd/app-data/raspiblesk.conf
 
   # Hidden Service if Tor is active
   if [ "${runBehindTor}" = "on" ]; then

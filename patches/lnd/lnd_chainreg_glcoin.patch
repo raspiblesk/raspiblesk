@@ -1,0 +1,100 @@
+--- a/chainreg/chainregistry.go
++++ b/chainreg/chainregistry.go
+@@ -1,6 +1,7 @@
+ // chainreg/chainregistry.go — apply to LND 0.19.x
+ // Adds Glcoin as a recognised chain alongside Bitcoin.
+ //
++// Requires: patched btcd with chaincfg.GlcoinMainNetParams (see btcd_glcoin_params.go)
+ // After patching, lnd.conf [Glcoin] section works correctly.
+
+--- a/chainreg/chainregistry.go (excerpt — find the activeNetParams assignment block)
++++ b/chainreg/chainregistry.go
+
+ // In the function that sets activeNetParams based on cfg.Bitcoin.MainNet /
+ // cfg.Bitcoin.TestNet3 / cfg.Bitcoin.RegTest / cfg.Bitcoin.SigNet, add a
+ // parallel block for Glcoin.  In LND 0.19.x this is typically inside
+ // function RegisterChain() or initChainControl().
+ //
+ // ---- LOCATE this block (around line 200-350 in chainregistry.go) ----
+ //
+ //   switch registeredChains.PrimaryChain() {
+ //   case bitcoinChain:
+ //       ...
+ //   }
+ //
+ // ---- ADD the following case ----
+
++	case glcoinChain:
++		if cfg.Glcoin.MainNet {
++			registeredChains.RegisterChain(
++				glcoinChain,
++				&lnwire.BitcoinSigHash{},
++			)
++			activeNetParams = GlcoinMainNetParams
++		}
++		if cfg.Glcoin.TestNet3 {
++			activeNetParams = GlcoinTestNet3Params
++		}
++		if cfg.Glcoin.RegTest {
++			activeNetParams = GlcoinRegTestParams
++		}
++		if cfg.Glcoin.SigNet {
++			activeNetParams = GlcoinSigNetParams
++		}
+
+ // ---- In the same file, near the top where chain constants are defined ----
+ //
+ //   const (
+ //       bitcoinChain  = ...
+ //   )
+ //
+ // ---- ADD ----
++	glcoinChain = "glcoin"
+
+ // ---- Add Glcoin net params variables (before RegisterChain func) ----
+
++// GlcoinMainNetParams wraps btcd's GlcoinMainNetParams for use in LND.
++var GlcoinMainNetParams = BitcoinNetParams{
++	Params:            &chaincfg.GlcoinMainNetParams,
++	RpcPort:           "1617",
++	CoinType:          1337,
++	WitnessActivation: 1,
++}
++
++var GlcoinTestNet3Params = BitcoinNetParams{
++	Params:            &chaincfg.GlcoinTestNet3Params,
++	RpcPort:           "11617",
++	CoinType:          1,
++	WitnessActivation: 1,
++}
++
++var GlcoinRegTestParams = BitcoinNetParams{
++	Params:            &chaincfg.GlcoinRegTestParams,
++	RpcPort:           "41617",
++	CoinType:          1,
++	WitnessActivation: 1,
++}
++
++var GlcoinSigNetParams = BitcoinNetParams{
++	Params:            &chaincfg.GlcoinSigNetParams,
++	RpcPort:           "31617",
++	CoinType:          1,
++	WitnessActivation: 1,
++}
+
+ // ---- In lnd/config.go, find the Bitcoin config struct and add a parallel Glcoin one ----
+ //
+ //   type BitcoinConfig struct { ... }
+ //   var Bitcoin = &BitcoinConfig{}
+ //
+ // ---- ADD ----
++// GlcoinConfig mirrors BitcoinConfig for the Glcoin chain.
++type GlcoinConfig struct {
++	Active   bool `long:"active"   description:"If set, the Glcoin chain will be used."`
++	MainNet  bool `long:"mainnet"  description:"Use Glcoin's main network."`
++	TestNet3 bool `long:"testnet"  description:"Use Glcoin's test network."`
++	RegTest  bool `long:"regtest"  description:"Use regtest."`
++	SigNet   bool `long:"signet"   description:"Use signet."`
++	Node     string `long:"node"   description:"The blockchain interface to use." choice:"glcoind" choice:"neutrino" default:"glcoind"`
++	// ... mirror remaining fields from BitcoinConfig
++}

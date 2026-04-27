@@ -18,9 +18,9 @@ fi
 # make sure commandline tool is available
 sudo apt-get install -y qrencode 1>/dev/null 2>/dev/null
 
-# load raspiblitz config data
-source /home/admin/raspiblitz.info
-source /mnt/hdd/app-data/raspiblitz.conf
+# load raspiblesk config data
+source /home/admin/raspiblesk.info
+source /mnt/hdd/app-data/raspiblesk.conf
 
 #### PARAMETER
 
@@ -37,7 +37,7 @@ fi
 ip2torREST_IP=""
 ip2torREST_PORT=""
 error=""
-source <(/home/admin/config.scripts/blitz.subscriptions.ip2tor.py subscription-by-service LND-REST-API)
+source <(/home/admin/config.scripts/blesk.subscriptions.ip2tor.py subscription-by-service LND-REST-API)
 if [ ${#error} -eq 0 ]; then
   echo "# using ip2torREST: IP(${ip}) PORT(${port})"
   ip2torREST_IP="${ip}"
@@ -46,7 +46,7 @@ fi
 ip2torGRPC_IP=""
 ip2torGRPC_PORT=""
 error=""
-source <(/home/admin/config.scripts/blitz.subscriptions.ip2tor.py subscription-by-service LND-GRPC-API)
+source <(/home/admin/config.scripts/blesk.subscriptions.ip2tor.py subscription-by-service LND-GRPC-API)
 if [ ${#error} -eq 0 ]; then
   echo "# using ip2torGRPC: IP(${ip}) PORT(${port})"
   ip2torGRPC_IP="${ip}"
@@ -142,7 +142,7 @@ else
   exit 1
 fi
 
-#### ADAPT PARAMETERS BASED RASPIBLITZ CONFIG
+#### ADAPT PARAMETERS BASED RASPIBLESK CONFIG
 
 # get the local IP as default host
 if [ ${#host} -eq 0 ]; then
@@ -219,7 +219,7 @@ if [ "$3" == "key-value" ]; then
 fi
 
 # display qr code image on LCD
-sudo /home/admin/config.scripts/blitz.display.sh qr "${lndconnect}"
+sudo /home/admin/config.scripts/blesk.display.sh qr "${lndconnect}"
 
 # show pairing info dialog
 msg=""
@@ -229,7 +229,7 @@ fi
 if [ ${#usingIP2TOR} -gt 0 ] && [ ${forceTOR} -eq 0 ]; then
   msg="Your IP2TOR bridge '${usingIP2TOR}' is used for this connection.\n\n"
 fi
-msg="You should now see the pairing QR code on the RaspiBlitz LCD.\n\n${msg}${connectInfo}\n\nIf your RaspiBlitz has no LCD use <Console QRcode>"
+msg="You should now see the pairing QR code on the RaspiBlesk LCD.\n\n${msg}${connectInfo}\n\nIf your RaspiBlesk has no LCD use <Console QRcode>"
 whiptail --backtitle "Connecting Mobile Wallet" \
 	 --title "Pairing by QR code" \
 	 --yes-button "Continue" \
@@ -246,7 +246,7 @@ if [ $? -eq 1 ]; then
 fi
 
 # clean up
-sudo /home/admin/config.scripts/blitz.display.sh hide
+sudo /home/admin/config.scripts/blesk.display.sh hide
 
 echo "------------------------------"
 echo "If the connection was not working:"
@@ -257,5 +257,5 @@ if [ $(echo "${host}" | grep -c '192.168') -gt 0 ]; then
   echo "- Check that your WIFI devices can talk to the LAN devices on your router (deactivate IP isolation or guest mode)."
 fi
 echo "- try to refresh the TLS & macaroons: Main Menu 'EXPORT > 'RESET'"
-echo "- check issues: https://github.com/rootzoll/raspiblitz/issues"
+echo "- check issues: https://github.com/rootzoll/raspiblesk/issues"
 echo ""

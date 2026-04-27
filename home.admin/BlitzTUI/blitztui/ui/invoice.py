@@ -52,7 +52,7 @@ class Ui_DialogSelectInvoice(object):
         self.label_2 = QtWidgets.QLabel(DialogSelectInvoice)
         self.label_2.setGeometry(QtCore.QRect(0, 0, 47, 318))
         self.label_2.setText("")
-        self.label_2.setPixmap(QtGui.QPixmap(":/RaspiBlitz/images/RaspiBlitz_Logo_Main_270.png"))
+        self.label_2.setPixmap(QtGui.QPixmap(":/RaspiBlesk/images/RaspiBlesk_Logo_Main_270.png"))
         self.label_2.setScaledContents(True)
         self.label_2.setObjectName("label_2")
 

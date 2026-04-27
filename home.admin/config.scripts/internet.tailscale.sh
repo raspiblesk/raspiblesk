@@ -61,8 +61,8 @@ if [ "$1" = "on" ]; then
   sudo systemctl enable tailscaled
   sudo systemctl start tailscaled
 
-  # setting value in raspiblitz config
-  /home/admin/config.scripts/blitz.conf.sh set tailscale on
+  # setting value in raspiblesk config
+  /home/admin/config.scripts/blesk.conf.sh set tailscale on
 
   echo "# Grace period for Tailscale to start ... 10 seconds"
   sleep 10
@@ -106,8 +106,8 @@ if [ "$1" = "off" ]; then
     echo "# Tailscale data is preserved on the disk (if exist)"
   fi
 
-  # setting value in raspiblitz config
-  /home/admin/config.scripts/blitz.conf.sh set tailscale off
+  # setting value in raspiblesk config
+  /home/admin/config.scripts/blesk.conf.sh set tailscale off
 
   echo "# Removed Tailscale"
   exit 0
@@ -132,7 +132,7 @@ if [ "$1" = "status" ]; then
   # get login URL if needed
   login_url=""
   if [ "$backend_state" = "NeedsLogin" ]; then
-    login_url=$(sudo timeout 3s tailscale login --nickname RaspiBlitz 2>&1 | grep https:// | awk '{$1=$1; print}')
+    login_url=$(sudo timeout 3s tailscale login --nickname RaspiBlesk 2>&1 | grep https:// | awk '{$1=$1; print}')
   fi
   echo "login_url=${login_url}"
 
@@ -156,7 +156,7 @@ if [ "$1" = "menu" ]; then
     do
 
       # get tailscale login URL
-      login_url=$(sudo timeout 3s sudo tailscale login --nickname RaspiBlitz 2>&1 | grep https:// | awk '{$1=$1; print}')
+      login_url=$(sudo timeout 3s sudo tailscale login --nickname RaspiBlesk 2>&1 | grep https:// | awk '{$1=$1; print}')
       if [ -z "$login_url" ]; then
         echo "# Error getting login URL"
         sleep 3
@@ -164,7 +164,7 @@ if [ "$1" = "menu" ]; then
       fi
 
       # ask user to login
-      if (whiptail --title "Tailscale Login Needed" --yes-button "Test Login" --no-button "Cancel Login" --yesno "To connect your RaspiBlitz with Tailscale open the following Url in your browser:\n${login_url}\n\nIf you connected this device to Tailscale successfully, choose 'Test Login'" 0 0); then
+      if (whiptail --title "Tailscale Login Needed" --yes-button "Test Login" --no-button "Cancel Login" --yesno "To connect your RaspiBlesk with Tailscale open the following Url in your browser:\n${login_url}\n\nIf you connected this device to Tailscale successfully, choose 'Test Login'" 0 0); then
         # check if tailscale is now logged in
         status=$(sudo tailscale status --json 2>/dev/null)
         backend_state=$(echo "$status" | jq -r '.BackendState' 2>/dev/null)
@@ -184,7 +184,7 @@ if [ "$1" = "menu" ]; then
     exit 0
   else
     echo "# Tailscale state is '${backend_state}'"
-    whiptail --msgbox "Tailscale state on RaspiBlitz is '${backend_state}'.\n\nFor details login with '${login_name}' to Tailscale service:\nhttps://login.tailscale.com\n\nOr use the command in the terminal:\nsudo tailscale status" 0 0
+    whiptail --msgbox "Tailscale state on RaspiBlesk is '${backend_state}'.\n\nFor details login with '${login_name}' to Tailscale service:\nhttps://login.tailscale.com\n\nOr use the command in the terminal:\nsudo tailscale status" 0 0
   fi
   exit 0
 fi

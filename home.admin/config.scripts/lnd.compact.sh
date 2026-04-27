@@ -18,7 +18,7 @@ fi
 # check if HDD/SSD has enough space to run compaction (at least again the size as the channel.db at the moment)
 channelDBsizeKB=$(sudo ls -l --block-size=K /mnt/hdd/app-data/lnd/data/graph/mainnet/channel.db | cut -d " " -f5 | tr -dc '0-9')
 echo "# channelDBsizeKB(${channelDBsizeKB})"
-source <(sudo /home/admin/config.scripts/blitz.data.sh status)
+source <(sudo /home/admin/config.scripts/blesk.data.sh status)
 echo "# hddDataFreeKB(${dataFreeKB})"
 if [ "${channelDBsizeKB}" != "" ] && [ "${dataFreeKB}" != "" ] && [ ${dataFreeKB} -lt ${channelDBsizeKB} ]; then
   echo "error='HDD/SSD/NVMe free space is too low to run LND compact'"
@@ -52,12 +52,12 @@ sudo systemctl stop lnd
 sudo touch /home/admin/lnd.db.bolt.auto-compact.log
 sudo chmod 777 /home/admin/lnd.db.bolt.auto-compact.log
 echo "# Run LND with --db.bolt.auto-compact"
-sudo -u bitcoin /usr/local/bin/lnd --configfile=/mnt/hdd/app-data/lnd/lnd.conf --db.bolt.auto-compact --db.bolt.auto-compact-min-age=0 > /home/admin/lnd.db.bolt.auto-compact.log &
+sudo -u glcoin /usr/local/bin/lnd --configfile=/mnt/hdd/app-data/lnd/lnd.conf --db.bolt.auto-compact --db.bolt.auto-compact-min-age=0 > /home/admin/lnd.db.bolt.auto-compact.log &
 
 echo "# Compacting channel.db, this can take a long time"
 
 counter=0
-while [ $(sudo -u bitcoin lncli state 2>&1 | grep -c "connection refused") -gt 0 ]; do
+while [ $(sudo -u glcoin lncli state 2>&1 | grep -c "connection refused") -gt 0 ]; do
   echo
   echo "# Waiting for LND to start "
   echo "# Checking again in 10 seconds (${counter})"
@@ -76,7 +76,7 @@ while [ $(sudo -u bitcoin lncli state 2>&1 | grep -c "connection refused") -gt 0
 done
 
 counter=0
-while [ $(sudo -u bitcoin lncli state | grep -c "WAITING_TO_START") -gt 0 ]; do
+while [ $(sudo -u glcoin lncli state | grep -c "WAITING_TO_START") -gt 0 ]; do
   echo
   echo "# Compacting channel.db, this can take a long time"
   echo "# Checking again in a minute (${counter})"
@@ -94,9 +94,9 @@ while [ $(sudo -u bitcoin lncli state | grep -c "WAITING_TO_START") -gt 0 ]; do
 done
 
 echo "# LND state:"
-sudo -u bitcoin lncli state
+sudo -u glcoin lncli state
 
-sudo -u bitcoin pkill lnd 2>/dev/null
+sudo -u glcoin pkill lnd 2>/dev/null
 
 echo
 echo "# Finished compacting."

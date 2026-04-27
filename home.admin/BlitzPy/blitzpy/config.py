@@ -185,12 +185,12 @@ class BaseConfig(object):
             print("[INFO] Keys or Aliases not found: None")
 
 
-class RaspiBlitzConfig(BaseConfig):
-    def __init__(self, abs_path="/mnt/hdd/app-data/raspiblitz.conf"):
+class RaspiBleskConfig(BaseConfig):
+    def __init__(self, abs_path="/mnt/hdd/app-data/raspiblesk.conf"):
         super().__init__()
         self.abs_path = abs_path
 
-        # default values for RaspiBlitz Configuration
+        # default values for RaspiBlesk Configuration
         self.auto_nat_discovery = BoolSetting('autoNatDiscovery', default=False)
         self.auto_pilot = BoolSetting('autoPilot', default=False)
         self.auto_unlock = BoolSetting('autoUnlock', default=False)
@@ -203,21 +203,21 @@ class RaspiBlitzConfig(BaseConfig):
         self.lcd_rotate = BoolSetting('lcdrotate', default=False)
         self.lnd_address = StrSetting('lndAddress')
         self.lnd_port = StrSetting('lndPort')
-        self.network = StrSetting('network', default='bitcoin')
+        self.network = StrSetting('network', default='glcoin')
         self.public_ip = StrSetting('publicIP')
         self.rtl_web_interface = BoolSetting('rtlWebinterface', default=False)
         self.run_behind_tor = BoolSetting('runBehindTor', default=False)
         self.ssh_tunnel = StrSetting('sshtunnel')
         self.touchscreen = BoolSetting('touchscreen', default=False)
-        self.version = StrSetting('raspiBlitzVersion')
+        self.version = StrSetting('raspiBleskVersion')
         self.lnbits = BoolSetting('LNBits', aliases=['LNbits', 'lnbits'], default=False)
 
-class RaspiBlitzInfo(BaseConfig):
-    def __init__(self, abs_path="/home/admin/raspiblitz.info"):
+class RaspiBleskInfo(BaseConfig):
+    def __init__(self, abs_path="/home/admin/raspiblesk.info"):
         super().__init__()
         self.abs_path = abs_path
 
-        # default values for RaspiBlitz Info
+        # default values for RaspiBlesk Info
         self.base_image = StrSetting('base_image')
         self.chain = StrSetting('chain')
         self.message = StrSetting('message')
@@ -228,11 +228,11 @@ class RaspiBlitzInfo(BaseConfig):
 
 
 def main():
-    rb_cfg = RaspiBlitzConfig()
+    rb_cfg = RaspiBleskConfig()
     if os.path.exists(rb_cfg.abs_path):
         rb_cfg.reload()
 
-        print("====================\n= RaspiBlitzConfig =\n====================")
+        print("====================\n= RaspiBleskConfig =\n====================")
         print("auto_nat_discovery: \t\t{}".format(rb_cfg.auto_nat_discovery))
         print("auto_pilot: \t\t\t{}".format(rb_cfg.auto_pilot))
         print("auto_unlock: \t\t\t{}".format(rb_cfg.auto_unlock))
@@ -254,11 +254,11 @@ def main():
         print("version: \t\t\t{}".format(rb_cfg.version))
         print("")
 
-    rb_info = RaspiBlitzInfo()
+    rb_info = RaspiBleskInfo()
     if os.path.exists(rb_info.abs_path):
         rb_info.reload()
 
-        print("==================\n= RaspiBlitzInfo =\n==================")
+        print("==================\n= RaspiBleskInfo =\n==================")
         print("state: \t\t{}".format(rb_info.state))
         print("")
 

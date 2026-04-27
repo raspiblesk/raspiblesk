@@ -2,7 +2,7 @@
 #
 
 ###############################################################################
-#   File:   getraspiblitzipinfo.sh
+#   File:   getraspibleskipinfo.sh
 #   Date:   2021-04-19
 ###############################################################################
 
@@ -13,7 +13,7 @@ debugLevel=0
 writeMemoryfile=1
 
 # if "logFile" points to an existing file => logging enabled
-logFile=/var/cache/raspiblitz/raspiblitzipinfo.log
+logFile=/var/cache/raspiblesk/raspibleskipinfo.log
 
 
 # get the ISO timestamp for log output
@@ -33,13 +33,13 @@ if [ -f "${logFile}" ]; then echo " "  >> ${logFile} ;fi
 # create the indexed array "origin" an fill it
 # this also creates the "Enumeration"
 #   0       <=>     publicIP
-#   1       <=>     bitcoind
+#   1       <=>     glcoind
 #   2       <=>     lnd
 #   3       <=>     IPv6
 #   4       <=>     IPv4
 #
 declare -a origin
-origin=(publicIP bitcoind lnd IPv6 IPv4)
+origin=(publicIP glcoind lnd IPv6 IPv4)
 #
 #if [ -f "${logFile}" ]; then for i in $( seq 0 4 ); do printf "%s: origin[ %d ] = %s\n" "$sts" "$i" "${origin[ $i ]}"  >> ${logFile}       ;done ;fi
 #if [ -f "${logFile}" ]; then echo " "  >> ${logFile} ;fi
@@ -54,18 +54,18 @@ declare -a has_changed
 
 
 # load local config (but should also work if not available)
-source /mnt/hdd/app-data/raspiblitz.conf 2>/dev/null
+source /mnt/hdd/app-data/raspiblesk.conf 2>/dev/null
 
 
 
 # get the "public IP addresses" from various sources/origins
 #   [0]     ->   publicIP    (remove square barckets in case of IPv6)
-#   [1]     ->   bitcoind
+#   [1]     ->   glcoind
 #   [2]     ->   lnd
 #   [3]     ->   IPv6 at local network interface (eth0 or wlan0)
 #   [4]     ->   IPv4 at local network interface (eth0 or wlan0)
 ip_addr_curr[0]=$(echo "${publicIP}" | tr -d '[]')
-ip_addr_curr[1]=$(/usr/local/bin/bitcoin-cli  -conf=/mnt/hdd/app-data/bitcoin/bitcoin.conf  getnetworkinfo | jq -r ".localaddresses[0].address" 2>/dev/null)
+ip_addr_curr[1]=$(/usr/local/bin/glcoin-cli  -conf=/mnt/hdd/app-data/glcoin/glcoin.conf  getnetworkinfo | jq -r ".localaddresses[0].address" 2>/dev/null)
 ip_addr_curr[2]=$(/usr/local/bin/lncli  --lnddir=/mnt/hdd/app-data/lnd  getinfo | jq -r ".uris[0]" 2>/dev/null | cut -d'@' -f2 | rev | cut -d':' -f2- | rev | tr -d '[]')
 ip_addr_curr[3]=$(ip -o -6 address show scope global up dev ${networkDevice} 2>/dev/null | cut -d'/' -f1 | awk '/inet6/{print $4}' | head -n 1)
 ip_addr_curr[4]=$(ip -o -4 address show scope global up dev ${networkDevice} 2>/dev/null | cut -d'/' -f1 | awk '/inet/{print $4}' | head -n 1)
@@ -77,7 +77,7 @@ if [ ${debugLevel} -gt 10 ]; then for i in $( seq 0 4 ); do printf "  %2d: %-10s
 
 
 # get the values from a prior run, that file will not be changes as long as all the values stay the same
-memoryFile=/var/cache/raspiblitz/raspiblitzipinfo.out
+memoryFile=/var/cache/raspiblesk/raspibleskipinfo.out
 source ${memoryFile} 2>/dev/null
 
 # prepare to count the changes
@@ -161,7 +161,7 @@ if [ ${changes} -gt 0 ]; then
     if [ ${writeMemoryfile} -eq 1 ]; then
         # truncate file and write header
         echo "#############################################################"        >   ${memoryFile}
-        echo "# RaspiBlitz IP address memory file."                                 >>  ${memoryFile}
+        echo "# RaspiBlesk IP address memory file."                                 >>  ${memoryFile}
         echo "# created by script: ${0}"                                            >>  ${memoryFile}
         echo "#############################################################"        >>  ${memoryFile}
         echo " "                                                                    >>  ${memoryFile}
@@ -183,7 +183,7 @@ if [ ${changes} -gt 0 ]; then
         echo "writeMemoryfile=off      =>  show changes"
         echo ""
         echo "#############################################################"
-        echo "# RaspiBlitz IP address memory file."
+        echo "# RaspiBlesk IP address memory file."
         echo "# created by script: ${0}"
         echo "#############################################################"
         echo " "
@@ -203,7 +203,7 @@ fi
 
 # now create the output for the telegraf "[[inputs.exec]]" section in influx-line-format
 #
-# 2021-04-19: rename measurement: "raspiblitz_ip_info" -> "ipinfo"
+# 2021-04-19: rename measurement: "raspiblesk_ip_info" -> "ipinfo"
 #
 # measurement:  ipinfo
 #

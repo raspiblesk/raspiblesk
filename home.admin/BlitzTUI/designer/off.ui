@@ -35,7 +35,7 @@
     <string/>
    </property>
    <property name="pixmap">
-    <pixmap>:/RaspiBlitz/images/RaspiBlitz_Logo_Main_rotate.png</pixmap>
+    <pixmap>:/RaspiBlesk/images/RaspiBlesk_Logo_Main_rotate.png</pixmap>
    </property>
    <property name="scaledContents">
     <bool>true</bool>
@@ -57,7 +57,7 @@
     <string/>
    </property>
    <property name="pixmap">
-    <pixmap resource="../resources.qrc">:/RaspiBlitz/images/RaspiBlitz_Logo_Main_270.png</pixmap>
+    <pixmap resource="../resources.qrc">:/RaspiBlesk/images/RaspiBlesk_Logo_Main_270.png</pixmap>
    </property>
    <property name="scaledContents">
     <bool>true</bool>
@@ -85,7 +85,7 @@
     <string notr="true"/>
    </property>
    <property name="text">
-    <string>Shutdown RaspiBlitz?</string>
+    <string>Shutdown RaspiBlesk?</string>
    </property>
    <property name="alignment">
     <set>Qt::AlignHCenter|Qt::AlignTop</set>

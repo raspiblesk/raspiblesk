@@ -16,20 +16,20 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
-# set based on network type (using own mapping to be able to run without calling sudo -u bitcoin)
+# set based on network type (using own mapping to be able to run without calling sudo -u glcoin)
 if [ "$1" == "mainnet" ]; then
-  clConfigDir="/home/bitcoin/.lightning"
-  lightningcli_alias="/usr/local/bin/lightning-cli --lightning-dir=/home/bitcoin/.lightning --conf=${clConfigDir}/config"
-  blockchainHeightKey="btc_mainnet_blocks_verified"
+  clConfigDir="/home/glcoin/.lightning"
+  lightningcli_alias="/usr/local/bin/lightning-cli --lightning-dir=/home/glcoin/.lightning --conf=${clConfigDir}/config"
+  blockchainHeightKey="glc_mainnet_blocks_verified"
   netprefix=""
 elif [ "$1" == "testnet" ]; then
-  clConfigDir="/home/bitcoin/.lightning/testnet"
-  lightningcli_alias="/usr/local/bin/lightning-cli --lightning-dir=/home/bitcoin/.lightning --conf=${clConfigDir}/config"
-  blockchainHeightKey="btc_testnet_blocks_verified"
+  clConfigDir="/home/glcoin/.lightning/testnet"
+  lightningcli_alias="/usr/local/bin/lightning-cli --lightning-dir=/home/glcoin/.lightning --conf=${clConfigDir}/config"
+  blockchainHeightKey="glc_testnet_blocks_verified"
   netprefix="t"
 elif [ "$1" == "signet" ]; then
-  clConfigDir="/home/bitcoin/.lightning/signet"
-  lightningcli_alias="/usr/local/bin/lightning-cli --lightning-dir=/home/bitcoin/.lightning --conf=${clConfigDir}/config"
+  clConfigDir="/home/glcoin/.lightning/signet"
+  lightningcli_alias="/usr/local/bin/lightning-cli --lightning-dir=/home/glcoin/.lightning --conf=${clConfigDir}/config"
   blockchainHeightKey="btc_signet_blocks_verified"
   netprefix="s"
 else
@@ -56,12 +56,12 @@ if [ "$2" = "status" ]; then
     # check if error because wallet is locked
     # the next release will have soecific error code for decryption  error
     # https://github.com/ElementsProject/lightning/pull/4908
-    source /mnt/hdd/app-data/raspiblitz.conf
+    source /mnt/hdd/app-data/raspiblesk.conf
     # password file is on the disk if encrypted and auto-unlock is enabled
     passwordFile="/dev/shm/.${netprefix}cl.pw"
-    if grep -Eq "${netprefix}clEncryptedHSM=on" /mnt/hdd/app-data/raspiblitz.conf; then
-      if grep -Eq "${netprefix}clAutoUnlock=on" /mnt/hdd/app-data/raspiblitz.conf; then
-        passwordFile=/home/bitcoin/.${netprefix}cl.pw
+    if grep -Eq "${netprefix}clEncryptedHSM=on" /mnt/hdd/app-data/raspiblesk.conf; then
+      if grep -Eq "${netprefix}clAutoUnlock=on" /mnt/hdd/app-data/raspiblesk.conf; then
+        passwordFile=/home/glcoin/.${netprefix}cl.pw
       fi
     fi
     clError=$(sudo journalctl -n5 -u ${netprefix}lightningd)
@@ -89,16 +89,16 @@ if [ "$2" = "status" ]; then
 
     # test connection - record win & fail info
     randStr=$(echo "$RANDOM")
-    rm /var/cache/raspiblitz/.cl-${randStr}.out 2>/dev/null
-    rm /var/cache/raspiblitz/.cl-${randStr}.error 2>/dev/null
-    touch /var/cache/raspiblitz/.cl-${randStr}.out
-    touch /var/cache/raspiblitz/.cl-${randStr}.error
+    rm /var/cache/raspiblesk/.cl-${randStr}.out 2>/dev/null
+    rm /var/cache/raspiblesk/.cl-${randStr}.error 2>/dev/null
+    touch /var/cache/raspiblesk/.cl-${randStr}.out
+    touch /var/cache/raspiblesk/.cl-${randStr}.error
     echo "# ${lightningcli_alias} getinfo"
-    $lightningcli_alias getinfo 1>/var/cache/raspiblitz/.cl-${randStr}.out 2>/var/cache/raspiblitz/.cl-${randStr}.error
-    winData=$(cat /var/cache/raspiblitz/.cl-${randStr}.out 2>/dev/null)
-    failData=$(cat /var/cache/raspiblitz/.cl-${randStr}.error 2>/dev/null)
-    rm /var/cache/raspiblitz/.cl-${randStr}.out
-    rm /var/cache/raspiblitz/.cl-${randStr}.error
+    $lightningcli_alias getinfo 1>/var/cache/raspiblesk/.cl-${randStr}.out 2>/var/cache/raspiblesk/.cl-${randStr}.error
+    winData=$(cat /var/cache/raspiblesk/.cl-${randStr}.out 2>/dev/null)
+    failData=$(cat /var/cache/raspiblesk/.cl-${randStr}.error 2>/dev/null)
+    rm /var/cache/raspiblesk/.cl-${randStr}.out
+    rm /var/cache/raspiblesk/.cl-${randStr}.error
 
     # check for errors
     if [ "${failData}" != "" ]; then
@@ -154,10 +154,10 @@ fi
 if [ "$2" = "info" ]; then
 
   # raw data demo:
-  # sudo /usr/local/bin/lightning-cli --lightning-dir=/home/bitcoin/.lightning --conf=/home/bitcoin/.lightning/config getinfo
+  # sudo /usr/local/bin/lightning-cli --lightning-dir=/home/glcoin/.lightning --conf=/home/glcoin/.lightning/config getinfo
 
   # getinfo
-  command="sudo -u bitcoin $lightningcli_alias getinfo"
+  command="sudo -u glcoin $lightningcli_alias getinfo"
   ln_getInfo=$(${command} 2>/dev/null)
   if [ "${ln_getInfo}" == "" ]; then
     echo "command='${command}'"
@@ -166,7 +166,7 @@ if [ "$2" = "info" ]; then
   fi
 
   # listpeers
-  command="sudo -u bitcoin $lightningcli_alias listpeers"
+  command="sudo -u glcoin $lightningcli_alias listpeers"
   ln_listpeers=$(${command} 2>/dev/null)
   if [ "${ln_listpeers}" == "" ]; then
     echo "command='${command}'"
@@ -216,7 +216,7 @@ if [ "$2" = "info" ]; then
   cl_recovery_mode="${recoverymode}"
   cl_recovery_done="0"
   if [ "${cl_recovery_mode}" == "1" ]; then
-    scanning=$(echo "${ln_getInfo}" | grep "warning_lightningd_sync" | grep "Still loading latest blocks from bitcoind." -c)
+    scanning=$(echo "${ln_getInfo}" | grep "warning_lightningd_sync" | grep "Still loading latest blocks from glcoind." -c)
     if [ "${cl_recovery_mode}" == "1" ] && [ "${scanning}" == "0" ] && [ "${cl_sync_chain}" == "1" ]; then
       cl_recovery_done="1"
     fi
@@ -247,10 +247,10 @@ fi
 if [ "$2" = "wallet" ]; then
 
   # raw data demo:
-  # /usr/local/bin/lightning-cli --lightning-dir=/home/bitcoin/.lightning --conf=/home/bitcoin/.lightning/config listfunds
+  # /usr/local/bin/lightning-cli --lightning-dir=/home/glcoin/.lightning --conf=/home/glcoin/.lightning/config listfunds
 
   # get data
-  command="sudo -u bitcoin $lightningcli_alias listfunds"
+  command="sudo -u glcoin $lightningcli_alias listfunds"
   cl_listfunds=$(${command} 2>/dev/null)
   if [ "${cl_listfunds}" == "" ]; then
     echo "command='${command}'"

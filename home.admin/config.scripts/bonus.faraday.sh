@@ -23,9 +23,9 @@ PGPcheck="15E7ECF257098A4EF91655EB4CA7FE54A6213C91"
 mode="$1"
 
 # GATHER DATA
-source /home/admin/raspiblitz.info
+source /home/admin/raspiblesk.info
 source <(/home/admin/_cache.sh get state)
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 
 # setting download directory
 downloadDir="/home/admin/download"
@@ -213,10 +213,10 @@ User=faraday
 WorkingDirectory=/home/faraday/
 ExecStart=/home/faraday/bin/faraday \
 #--network=${chain}net
-#--connect_bitcoin \
-#--bitcoin.host=127.0.0.1:8332 \
-#--bitcoin.user=raspibolt \
-#--bitcoin.password=PASSWORD_B
+#--connect_glcoin \
+#--glcoin.host=127.0.0.1:8332 \
+#--glcoin.user=raspibolt \
+#--glcoin.password=PASSWORD_B
 Restart=always
 TimeoutSec=120
 RestartSec=30
@@ -243,8 +243,8 @@ WantedBy=multi-user.target
   sudo mkdir /home/faraday/.faraday/${chain}net
   sudo chown -R faraday:faraday /home/faraday/.faraday
 
-  echo "# flag in raspiblitz config"
-  /home/admin/config.scripts/blitz.conf.sh set faraday "on"
+  echo "# flag in raspiblesk config"
+  /home/admin/config.scripts/blesk.conf.sh set faraday "on"
 
   echo "# OK Faraday is installed"
   echo "# please 'restart' for clean creation of faraday tls/macaroons"
@@ -266,7 +266,7 @@ if [ "${mode}" = "off" ] || [ "${mode}" = "0" ]; then
   sudo userdel -r -f faraday
 
   echo "# modify config file"
-  /home/admin/config.scripts/blitz.conf.sh set faraday "off"
+  /home/admin/config.scripts/blesk.conf.sh set faraday "off"
 
   exit 1
 

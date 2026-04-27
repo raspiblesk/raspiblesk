@@ -1,10 +1,10 @@
 # get basic system information
 # these are the same set of infos the WebGUI dialog/controler has
-source /home/admin/raspiblitz.info
+source /home/admin/raspiblesk.info
 
 # SETUPFILE
 # this key/value file contains the state during the setup process
-SETUPFILE="/var/cache/raspiblitz/temp/raspiblitz.setup"
+SETUPFILE="/var/cache/raspiblesk/temp/raspiblesk.setup"
 source $SETUPFILE
 
 # flags for sub dialogs after choice
@@ -14,7 +14,7 @@ enterSEED=0
 OPTIONS=()
 OPTIONS+=(NEW "Setup a brand new Lightning Node (DEFAULT)")
 OPTIONS+=(OLD "I had an old Node I want to recover/restore")
-CHOICE=$(dialog --backtitle "RaspiBlitz" --clear --title "Core Lightning Setup" --menu "Core Lightning Data & Wallet" 11 60 6 "${OPTIONS[@]}" 2>&1 >/dev/tty)
+CHOICE=$(dialog --backtitle "RaspiBlesk" --clear --title "Core Lightning Setup" --menu "Core Lightning Data & Wallet" 11 60 6 "${OPTIONS[@]}" 2>&1 >/dev/tty)
 
 if [ "${CHOICE}" == "NEW" ]; then
 
@@ -38,7 +38,7 @@ elif [ "${CHOICE}" == "OLD" ]; then
     OPTIONS=()
     OPTIONS+=(CLRESCUE "CL tar.gz-Backupfile (BEST)")
     OPTIONS+=(ONLYSEED "Only Seed Word List (FALLBACK)")
-    CHOICESUB=$(dialog --backtitle "RaspiBlitz" --clear --title "RECOVER CL DATA & WALLET" --menu "Data you have to recover from?" 11 60 6 "${OPTIONS[@]}" 2>&1 >/dev/tty)
+    CHOICESUB=$(dialog --backtitle "RaspiBlesk" --clear --title "RECOVER CL DATA & WALLET" --menu "Data you have to recover from?" 11 60 6 "${OPTIONS[@]}" 2>&1 >/dev/tty)
 
     if [ "${CHOICESUB}" == "CLRESCUE" ]; then
 
@@ -98,7 +98,7 @@ fi
 if [ ${uploadRESCUE} -eq 1 ]; then
 
   # run upload dialog and get result
-  _temp="/var/cache/raspiblitz/temp/.temp.tmp"
+  _temp="/var/cache/raspiblesk/temp/.temp.tmp"
   clear
   /home/admin/config.scripts/cl.backup.sh cl-import-gui setup $_temp
   source $_temp 2>/dev/null
@@ -121,7 +121,7 @@ fi
 if [ ${enterSEED} -eq 1 ]; then
 
   # start seed input and get results
-  _temp="/var/cache/raspiblitz/.temp.tmp"
+  _temp="/var/cache/raspiblesk/.temp.tmp"
   /home/admin/config.scripts/cl.backup.sh seed-import-gui $_temp
   source $_temp 2>/dev/null
   sudo rm $_temp 2>/dev/null

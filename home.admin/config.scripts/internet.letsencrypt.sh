@@ -10,7 +10,7 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ "$1" = "-help" ];
   exit 1
 fi
 
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 
 # make sure /mnt/hdd/app-data exists
 if ! [ -d /mnt/hdd/app-data ]; then
@@ -164,7 +164,7 @@ function refresh_certs_with_nginx() {
       fi
 
       # check if there is a LetsEncrypt Subscription for this domain
-      details=$(/home/admin/config.scripts/blitz.subscriptions.letsencrypt.py subscription-detail $FQDN)
+      details=$(/home/admin/config.scripts/blesk.subscriptions.letsencrypt.py subscription-detail $FQDN)
       if [ $(echo "${details}" | grep -c "error=") -eq 0 ] && [ ${#details} -gt 10 ]; then
 
         echo "# details(${details})"
@@ -248,8 +248,8 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   if [ ${ACME_IS_INSTALLED} -eq 0 ]; then
     echo "*** INSTALLING Let's Encrypt Client 'acme.sh' ***"
 
-    # setting value in RaspiBlitz config
-    /home/admin/config.scripts/blitz.conf.sh set letsencrypt "on"
+    # setting value in RaspiBlesk config
+    /home/admin/config.scripts/blesk.conf.sh set letsencrypt "on"
 
     address="$2"
     if [ "$2" == "enter-email" ]; then
@@ -418,8 +418,8 @@ elif [ "$1" = "0" ] || [ "$1" = "off" ]; then
   if [ ${ACME_IS_INSTALLED} -eq 1 ]; then
     echo "*** UNINSTALLING Let's Encrypt Client 'acme.sh' ***"
 
-    # setting value in RaspiBlitz config
-    /home/admin/config.scripts/blitz.conf.sh set letsencrypt "off"
+    # setting value in RaspiBlesk config
+    /home/admin/config.scripts/blesk.conf.sh set letsencrypt "off"
 
     "${ACME_INSTALL_HOME}/acme.sh" --uninstall \
       --home "${ACME_INSTALL_HOME}" \

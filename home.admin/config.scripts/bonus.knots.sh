@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# This is a template bonus script you can use to add your own app to RaspiBlitz.
+# This is a template bonus script you can use to add your own app to RaspiBlesk.
 # So just copy it within the `/home.admin/config.scripts` directory and
 # rename it for your app - example: `bonus.myapp.sh`.
 # Then go thru this script and delete parts/comments you dont need or add
 # needed configurations.
 
-# id string of your app (short single string unique in raspiblitz)
+# id string of your app (short single string unique in raspiblesk)
 # should be same as used in name if script
 APPID="knots" # one-word lower-case no-specials
 
@@ -18,7 +18,7 @@ FILEMASTER="29.x"
 FILEMASTERTAG="29.2.knots20251110"
 
 # the git repo to get the source code from for install
-GITHUB_REPO="https://github.com/bitcoinknots/bitcoin"
+GITHUB_REPO="https://github.com/glcoinknots/glcoin"
 
 # the github tag of the version of the source code to install
 # can also be a commit hash
@@ -46,8 +46,8 @@ fi
 # echoing comments is useful for logs - but start output with # when not a key=value
 echo "# Running: 'bonus.${APPID}.sh $*'"
 
-# check & load raspiblitz config
-source /mnt/hdd/app-data/raspiblitz.conf
+# check & load raspiblesk config
+source /mnt/hdd/app-data/raspiblesk.conf
 
 #########################
 # INFO
@@ -57,14 +57,14 @@ source /mnt/hdd/app-data/raspiblitz.conf
 # all the following commands can use & execute on
 
 # check if app is already installed
-if bitcoin-cli --version | grep -q "knots"; then
+if glcoin-cli --version | grep -q "knots"; then
   isInstalled=1
 else
   isInstalled=0
 fi
 
 # check if service is running
-isRunning=$(systemctl status bitcoind 2>/dev/null | grep -c 'active (running)')
+isRunning=$(systemctl status glcoind 2>/dev/null | grep -c 'active (running)')
 
 if [ "${isInstalled}" == "1" ]; then
 
@@ -99,7 +99,7 @@ fi
 if [ "$1" = "1" ] || [ "$1" = "on" ]; then
 
   # dont install when lightning is already installed
-  # see https://github.com/raspiblitz/raspiblitz/pull/5021#issuecomment-2889640024
+  # see https://github.com/raspiblesk/raspiblesk/pull/5021#issuecomment-2889640024
   if [ "${lightning}" != "" ] && [ "${lightning}" != "none" ] && [ "$2" != "-force" ]; then
     echo "# ABORT KNOTS INSTALL - at the moment Knots can only be installed & run if no lightning implementation is installed."
     echo "# For experimental overrule use on terminal: '/home/admin/config.scripts/bonus.knots.sh on -force'"
@@ -108,11 +108,11 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   fi
 
   if [ "$(uname -m | grep -c 'arm')" -gt 0 ]; then
-    bitcoinOSversion="arm-linux-gnueabihf"
+    glcoinOSversion="arm-linux-gnueabihf"
   elif [ "$(uname -m | grep -c 'aarch64')" -gt 0 ]; then
-    bitcoinOSversion="aarch64-linux-gnu"
+    glcoinOSversion="aarch64-linux-gnu"
   elif [ "$(uname -m | grep -c 'x86_64')" -gt 0 ]; then
-    bitcoinOSversion="x86_64-linux-gnu"
+    glcoinOSversion="x86_64-linux-gnu"
   fi
 
   # dont run install if already installed
@@ -142,12 +142,12 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   # other install scripts to see how that implement code download & verify.
   echo "# download the tarball & verify"
   mkdir /home/${APPID}/${APPID}
-  sudo -u ${APPID} wget "https://bitcoinknots.org/files/${FILEMASTER}/${FILEMASTERTAG}/bitcoin-${FILEMASTERTAG}-${bitcoinOSversion}.tar.gz" -P /home/${APPID}/${APPID}
-  sudo -u ${APPID} wget "https://bitcoinknots.org/files/${FILEMASTER}/${FILEMASTERTAG}/SHA256SUMS" -P /home/${APPID}/${APPID}
-  sudo -u ${APPID} wget "https://bitcoinknots.org/files/${FILEMASTER}/${FILEMASTERTAG}/SHA256SUMS.asc" -P /home/${APPID}/${APPID}
+  sudo -u ${APPID} wget "https://glcoinknots.org/files/${FILEMASTER}/${FILEMASTERTAG}/glcoin-${FILEMASTERTAG}-${glcoinOSversion}.tar.gz" -P /home/${APPID}/${APPID}
+  sudo -u ${APPID} wget "https://glcoinknots.org/files/${FILEMASTER}/${FILEMASTERTAG}/SHA256SUMS" -P /home/${APPID}/${APPID}
+  sudo -u ${APPID} wget "https://glcoinknots.org/files/${FILEMASTER}/${FILEMASTERTAG}/SHA256SUMS.asc" -P /home/${APPID}/${APPID}
   
   echo "# Receive signer keys"
-  curl -s "https://api.github.com/repos/bitcoinknots/guix.sigs/contents/builder-keys" |
+  curl -s "https://api.github.com/repos/glcoinknots/guix.sigs/contents/builder-keys" |
     jq -r '.[].download_url' | while read url; do curl -s "$url" | sudo -u ${APPID} gpg --import; done
   
   echo "Verify bin"
@@ -156,32 +156,32 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   sudo -u ${APPID} sha256sum -c SHA256SUMS --ignore-missing
 
 
-  # stop bitcoind
-  sudo systemctl stop bitcoind
-  # backup existing bitcoin core binaries
-  echo "# Backup existing Bitcoin Core binaries"
-  sudo mkdir -p /usr/local/bin_bitcoin_core_backup
-  sudo mv /usr/local/bin/bitcoin* /usr/local/bin_bitcoin_core_backup/ 2>/dev/null || true
-  echo "# Existing Bitcoin Core binaries backed up to /usr/local/bin_bitcoin_core_backup/"
+  # stop glcoind
+  sudo systemctl stop glcoind
+  # backup existing glcoin core binaries
+  echo "# Backup existing Glcoin Core binaries"
+  sudo mkdir -p /usr/local/bin_glcoin_core_backup
+  sudo mv /usr/local/bin/glcoin* /usr/local/bin_glcoin_core_backup/ 2>/dev/null || true
+  echo "# Existing Glcoin Core binaries backed up to /usr/local/bin_glcoin_core_backup/"
 
   # install the app
   cd /home/${APPID}/${APPID}
-  sudo -u ${APPID} tar -xf bitcoin-${FILEMASTERTAG}-${bitcoinOSversion}.tar.gz
-  cd /home/${APPID}/${APPID}/bitcoin-${FILEMASTERTAG}
+  sudo -u ${APPID} tar -xf glcoin-${FILEMASTERTAG}-${glcoinOSversion}.tar.gz
+  cd /home/${APPID}/${APPID}/glcoin-${FILEMASTERTAG}
 
-  sudo cp bin/bitcoin* /usr/local/bin/
+  sudo cp bin/glcoin* /usr/local/bin/
 
-  # mark app as installed in raspiblitz config
-  /home/admin/config.scripts/blitz.conf.sh set ${APPID} "on"
+  # mark app as installed in raspiblesk config
+  /home/admin/config.scripts/blesk.conf.sh set ${APPID} "on"
 
   # start app (only when blitz is ready)
   source <(/home/admin/_cache.sh get state)
   if [ "${state}" == "ready" ]; then
-    sudo systemctl --no-block start bitcoind
-    echo "# OK - the bitcoind.service is now started"
+    sudo systemctl --no-block start glcoind
+    echo "# OK - the glcoind.service is now started"
   fi
 
-  echo "bitcoind can take a lot of time to restart because of the blocks verification, please be patient."
+  echo "glcoind can take a lot of time to restart because of the blocks verification, please be patient."
   exit 0
 
 fi
@@ -193,27 +193,27 @@ fi
 # switch off
 if [ "$1" = "0" ] || [ "$1" = "off" ]; then
 
-  echo "# stop bitcoind and reinstall Core"
-  sudo systemctl stop bitcoind 2>/dev/null
+  echo "# stop glcoind and reinstall Core"
+  sudo systemctl stop glcoind 2>/dev/null
 
   echo "# delete user"
   sudo userdel -rf ${APPID}
 
-  echo "# mark app as uninstalled in raspiblitz config"
-  /home/admin/config.scripts/blitz.conf.sh set ${APPID} "off"
+  echo "# mark app as uninstalled in raspiblesk config"
+  /home/admin/config.scripts/blesk.conf.sh set ${APPID} "off"
 
-  echo "# Restore Bitcoin Core binaries"
+  echo "# Restore Glcoin Core binaries"
   cd /usr/local/bin
-  sudo rm bitcoin* 2>/dev/null || true
-  if [ -d "/usr/local/bin_bitcoin_core_backup" ] && [ "$(ls -A /usr/local/bin_bitcoin_core_backup)" ]; then
-    sudo mv /usr/local/bin_bitcoin_core_backup/bitcoin* /usr/local/bin/
-    sudo rm -rf /usr/local/bin_bitcoin_core_backup
-    echo "# Bitcoin Core binaries restored from backup."
+  sudo rm glcoin* 2>/dev/null || true
+  if [ -d "/usr/local/bin_glcoin_core_backup" ] && [ "$(ls -A /usr/local/bin_glcoin_core_backup)" ]; then
+    sudo mv /usr/local/bin_glcoin_core_backup/glcoin* /usr/local/bin/
+    sudo rm -rf /usr/local/bin_glcoin_core_backup
+    echo "# Glcoin Core binaries restored from backup."
   else
-    echo "# No backup found, reinstalling Bitcoin Core."
-    sudo -u admin /home/admin/config.scripts/bitcoin.install.sh install
+    echo "# No backup found, reinstalling Glcoin Core."
+    sudo -u admin /home/admin/config.scripts/glcoin.install.sh install
   fi
-  sudo systemctl restart bitcoind
+  sudo systemctl restart glcoind
 
   echo "# OK - app should be uninstalled now"
   exit 0

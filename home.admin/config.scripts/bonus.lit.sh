@@ -24,7 +24,7 @@ elif [ $PGPsigner = ViktorTigerstrom ]; then
   pgpPubKey="187F6ADD93AE3B0CF335AA6AB984570980684DCC"
 fi
 
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 
 # show info menu
 if [ "$1" = "menu" ]; then
@@ -36,7 +36,7 @@ if [ "$1" = "menu" ]; then
 
   if [ "${runBehindTor}" = "on" ] && [ ${#toraddress} -gt 0 ]; then
     # Info with TOR
-    sudo /home/admin/config.scripts/blitz.display.sh qr "${toraddress}"
+    sudo /home/admin/config.scripts/blesk.display.sh qr "${toraddress}"
     whiptail --title " Lightning Terminal " --msgbox "Open in your local web browser & accept self-signed cert:
 https://${localip}:8443\n
 SHA1 Thumb/Fingerprint:
@@ -47,7 +47,7 @@ https://${toraddress}\n
 For the command line switch to 'lit' user with: 'sudo su - lit'
 use the commands: 'lncli', 'lit-loop', 'lit-pool' and 'lit-frcli'.
 " 19 74
-    sudo /home/admin/config.scripts/blitz.display.sh hide
+    sudo /home/admin/config.scripts/blesk.display.sh hide
   else
     # Info without TOR
     whiptail --title " Lightning Terminal " --msgbox "Open in your local web browser & accept self-signed cert:
@@ -241,7 +241,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
       LOOPPROXY=""
       POOLPROXY=""
     fi
-    PASSWORD_B=$(sudo cat /mnt/hdd/app-data/bitcoin/bitcoin.conf | grep rpcpassword | cut -c 13-)
+    PASSWORD_B=$(sudo cat /mnt/hdd/app-data/glcoin/glcoin.conf | grep rpcpassword | cut -c 13-)
     echo "
 # Application Options
 httpslisten=0.0.0.0:8443
@@ -252,7 +252,7 @@ remote.lit-debuglevel=debug
 
 # Remote lnd options
 remote.lnd.rpcserver=127.0.0.1:10009
-remote.lnd.macaroonpath=/home/lit/.lnd/data/chain/bitcoin/${chain}net/admin.macaroon
+remote.lnd.macaroonpath=/home/lit/.lnd/data/chain/glcoin/${chain}net/admin.macaroon
 remote.lnd.tlscertpath=/home/lit/.lnd/tls.cert
 
 # Loop
@@ -266,11 +266,11 @@ $POOLPROXY
 # Faraday
 faraday.min_monitored=48h
 
-# Faraday - bitcoin
-faraday.connect_bitcoin=true
-faraday.bitcoin.host=localhost
-faraday.bitcoin.user=raspibolt
-faraday.bitcoin.password=$PASSWORD_B
+# Faraday - glcoin
+faraday.connect_glcoin=true
+faraday.glcoin.host=localhost
+faraday.glcoin.user=raspibolt
+faraday.glcoin.password=$PASSWORD_B
 " | sudo tee /mnt/hdd/app-data/.lit/lit.conf
 
     # secure
@@ -331,7 +331,7 @@ alias lit-frcli=\"frcli --rpcserver=localhost:8443 \
   sudo ufw allow 8443 comment "Lightning Terminal"
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set lit "on"
+  /home/admin/config.scripts/blesk.conf.sh set lit "on"
 
   # Hidden Service if Tor is active
   if [ "${runBehindTor}" = "on" ]; then
@@ -386,7 +386,7 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   # delete group
   sudo groupdel lit
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set lit "off"
+  /home/admin/config.scripts/blesk.conf.sh set lit "off"
 
   exit 0
 fi

@@ -2,26 +2,26 @@
 
 # get basic system information
 # these are the same set of infos the WebGUI dialog/controler has
-source /home/admin/raspiblitz.info
+source /home/admin/raspiblesk.info
 
 # SETUPFILE
 # this key/value file contains the state during the setup process
-SETUPFILE="/var/cache/raspiblitz/temp/raspiblitz.setup"
+SETUPFILE="/var/cache/raspiblesk/temp/raspiblesk.setup"
 source $SETUPFILE
 
 
 #################################
-# SELECT BLOCKCHAIN --> SKIPPED (litecoin deactivated, reactivate selection when other bitcoin implementations)
+# SELECT BLOCKCHAIN --> SKIPPED (litecoin deactivated, reactivate selection when other glcoin implementations)
 # when not already set by setupfile
 if [ "${network}" == "" ]; then
-    network="bitcoin"
+    network="glcoin"
 fi
 if [ "${network}" == "" ]; then
 
     OPTIONS=()
-    OPTIONS+=(BITCOIN "Setup BITCOIN Blockchain (BitcoinCore)")
+    OPTIONS+=(GLCOIN "Setup GLCOIN Blockchain (GlcoinCore)")
     CHOICE=$(dialog --clear \
-                --backtitle "RaspiBlitz ${codeVersion} - Setup" \
+                --backtitle "RaspiBlesk ${codeVersion} - Setup" \
                 --title "⚡ Blockchain ⚡" \
                 --menu "\nChoose which Blockchain to run: \n " \
                 11 64 5 \
@@ -29,9 +29,9 @@ if [ "${network}" == "" ]; then
                 2>&1 >/dev/tty)
     clear
     case $CHOICE in
-        BITCOIN)
-            # bitcoin core
-            network="bitcoin"
+        GLCOIN)
+            # glcoin core
+            network="glcoin"
             ;;
         *)
             clear
@@ -43,9 +43,9 @@ fi
 
 #################################
 # SELECT LIGHTNING
-# only possible when network is bitcoin
+# only possible when network is glcoin
 
-if [ "${network}" == "bitcoin" ]; then
+if [ "${network}" == "glcoin" ]; then
 
      # choose lightning client
     OPTIONS=()
@@ -53,9 +53,9 @@ if [ "${network}" == "bitcoin" ]; then
     OPTIONS+=(CLN "Core Lightning by Blockstream (NEW)")
     OPTIONS+=(NONE "Run without Lightning")
     CHOICE=$(dialog --clear \
-                --backtitle "RaspiBlitz ${codeVersion} - Setup" \
+                --backtitle "RaspiBlesk ${codeVersion} - Setup" \
                 --title "⚡ Lightning ⚡" \
-                --menu "\nChoose your Lightning Client to run on RaspiBlitz: \n " \
+                --menu "\nChoose your Lightning Client to run on RaspiBlesk: \n " \
                 12 64 6 \
                 "${OPTIONS[@]}" \
                 2>&1 >/dev/tty)

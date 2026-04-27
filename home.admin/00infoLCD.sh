@@ -2,11 +2,11 @@
 
 ### USER PI AUTOSTART (LCD Display)
 # this script gets started by the autologin of the pi user and
-# and its output is gets displayed on the LCD or the RaspiBlitz
+# and its output is gets displayed on the LCD or the RaspiBlesk
 
 function usage() {
   echo -e "This script gets started by the autologin of the pi user and "
-  echo -e "and its output is gets displayed on the LCD or the RaspiBlitz."
+  echo -e "and its output is gets displayed on the LCD or the RaspiBlesk."
   echo -e ""
   echo -e "Usage: $0 [-h|--help] [-v*|--verbose] [-p|--pause STRING]"
   echo -e ""
@@ -57,11 +57,11 @@ if ! [[ "$pause" =~ ^[[:digit:]]+$ ]]; then
   exit 1
 fi
 
-# CONFIGFILE - configuration of RaspiBlitz
-configFile="/mnt/hdd/app-data/raspiblitz.conf"
+# CONFIGFILE - configuration of RaspiBlesk
+configFile="/mnt/hdd/app-data/raspiblesk.conf"
 
 # INFOFILE - state data from bootstrap
-infoFile="/home/admin/raspiblitz.info"
+infoFile="/home/admin/raspiblesk.info"
 
 # check that user is pi
 if [ "$USER" != "pi" ] && [ "$USER" != "root" ]; then
@@ -72,7 +72,7 @@ fi
 # display a 10s startup time
 source /home/admin/_version.info
 if [ "$pause" -ne "0" ]; then
-    dialog --pause "  Starting RaspiBlitz v${codeVersion} ..." 8 58 ${pause}
+    dialog --pause "  Starting RaspiBlesk v${codeVersion} ..." 8 58 ${pause}
 fi
 
 # DISPLAY LOOP
@@ -128,7 +128,7 @@ while :
       continue
     fi
 
-    # when btc not online or not synced - show sync screen
+    # when glc not online or not synced - show sync screen
     if [ "${btc_default_synced}" != "1" ] || [ "${btc_default_online}" != "1" ]; then
       /home/admin/setup.scripts/eventBlockchainSync.sh lcd
       sleep 3

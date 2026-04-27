@@ -8,21 +8,21 @@ fi
 
 # This script gets called from a fresh SD card
 # starting up that has a config file on HDD
-# from old RaspiBlitz or manufacturer
+# from old RaspiBlesk or manufacturer
 # to install and config services
 
 # LOGFILE - store debug logs of bootstrap
-logFile="/home/admin/raspiblitz.log"
+logFile="/home/admin/raspiblesk.log"
 
 # INFOFILE - state data from bootstrap
-infoFile="/home/admin/raspiblitz.info"
+infoFile="/home/admin/raspiblesk.info"
 
-# CONFIGFILE - configuration of RaspiBlitz
-configFile="/mnt/hdd/app-data/raspiblitz.conf"
+# CONFIGFILE - configuration of RaspiBlesk
+configFile="/mnt/hdd/app-data/raspiblesk.conf"
 
 # SETUPFILE
 # this key/value file contains the state during the setup process
-setupFile="/var/cache/raspiblitz/temp/raspiblitz.setup"
+setupFile="/var/cache/raspiblesk/temp/raspiblesk.setup"
 source ${setupFile}
 
 # log header
@@ -35,7 +35,7 @@ echo "###################################" >> ${logFile}
 # check if there is a config file
 configExists=$(ls ${configFile} 2>/dev/null | grep -c '.conf')
 if [ ${configExists} -eq 0 ]; then
-  /home/admin/config.scripts/blitz.error.sh _provision_.sh "missing-config" "no config file (${configFile}) found to run provision" "" ${logFile}
+  /home/admin/config.scripts/blesk.error.sh _provision_.sh "missing-config" "no config file (${configFile}) found to run provision" "" ${logFile}
   exit 1
 fi
 
@@ -50,19 +50,19 @@ source ${configFile}
 echo "### BASIC SYSTEM SETTINGS ###" >> ${logFile}
 /home/admin/_cache.sh set message "Setup System ."
 
-echo "# Make sure the user bitcoin is in the debian-tor group"
-usermod -a -G debian-tor bitcoin
+echo "# Make sure the user glcoin is in the debian-tor group"
+usermod -a -G debian-tor glcoin
 
-# make sure to have bitcoin core >=22 is backwards comp
-# see https://github.com/rootzoll/raspiblitz/issues/2546
-sed -i '/^deprecatedrpc=.*/d' /mnt/hdd/app-data/bitcoin/bitcoin.conf 2>/dev/null
-echo "deprecatedrpc=addresses" >> /mnt/hdd/app-data/bitcoin/bitcoin.conf 2>/dev/null
+# make sure to have glcoin core >=22 is backwards comp
+# see https://github.com/rootzoll/raspiblesk/issues/2546
+sed -i '/^deprecatedrpc=.*/d' /mnt/hdd/app-data/glcoin/glcoin.conf 2>/dev/null
+echo "deprecatedrpc=addresses" >> /mnt/hdd/app-data/glcoin/glcoin.conf 2>/dev/null
 
 # backup SSH PubKeys
-/home/admin/config.scripts/blitz.ssh.sh backup
+/home/admin/config.scripts/blesk.ssh.sh backup
 
 # set timezone
-/home/admin/config.scripts/blitz.time.sh set-by-config >> ${logFile}
+/home/admin/config.scripts/blesk.time.sh set-by-config >> ${logFile}
 
 # optimize mempool if RAM >1GB
 kbSizeRAM=$(cat /proc/meminfo | grep "MemTotal" | sed 's/[^0-9]*//g')
@@ -76,17 +76,17 @@ if [ ${kbSizeRAM} -gt 3500000 ]; then
 fi
 
 # zram on for all devices
-/home/admin/config.scripts/blitz.zram.sh on >> ${logFile}
+/home/admin/config.scripts/blesk.zram.sh on >> ${logFile}
 
 # PREPARE LND (if activated)
 if [ "${lightning}" == "lnd" ] || [ "${lnd}" == "on" ]; then
   # backup LND TLS certs
-  # https://github.com/rootzoll/raspiblitz/issues/324
+  # https://github.com/rootzoll/raspiblesk/issues/324
   echo "*** Make backup of LND TLS files" >> ${logFile}
-  rm -r  /var/cache/raspiblitz/tls_backup 2>/dev/null
-  mkdir /var/cache/raspiblitz/tls_backup 2>/dev/null
-  cp /mnt/hdd/app-data/lnd/tls.cert /var/cache/raspiblitz/tls_backup/tls.cert >> ${logFile} 2>&1
-  cp /mnt/hdd/app-data/lnd/tls.key /var/cache/raspiblitz/tls_backup/tls.key >> ${logFile} 2>&1
+  rm -r  /var/cache/raspiblesk/tls_backup 2>/dev/null
+  mkdir /var/cache/raspiblesk/tls_backup 2>/dev/null
+  cp /mnt/hdd/app-data/lnd/tls.cert /var/cache/raspiblesk/tls_backup/tls.cert >> ${logFile} 2>&1
+  cp /mnt/hdd/app-data/lnd/tls.key /var/cache/raspiblesk/tls_backup/tls.key >> ${logFile} 2>&1
 fi
 echo "" >> ${logFile}
 
@@ -100,20 +100,20 @@ echo "" >> ${logFile}
 # add bonus scripts (auto install deactivated to reduce third party repos)
 mkdir /home/admin/tmpScriptDL
 cd /home/admin/tmpScriptDL
-echo "installing bash completion for bitcoin-cli and lncli"
-wget https://raw.githubusercontent.com/bitcoin/bitcoin/master/contrib/bitcoin-cli.bash-completion
+echo "installing bash completion for glcoin-cli and lncli"
+wget https://raw.githubusercontent.com/glcoin/glcoin/master/contrib/glcoin-cli.bash-completion
 wget https://raw.githubusercontent.com/lightningnetwork/lnd/master/contrib/lncli.bash-completion
 cp *.bash-completion /etc/bash_completion.d/
 echo "OK - bash completion available after next login"
-echo "type \"bitcoin-cli getblockch\", press [Tab] → bitcoin-cli getblockchaininfo"
+echo "type \"glcoin-cli getblockch\", press [Tab] → glcoin-cli getblockchaininfo"
 rm -r /home/admin/tmpScriptDL
 cd
 
 ###### SWAP File
-source <(/home/admin/config.scripts/blitz.data.sh status)
+source <(/home/admin/config.scripts/blesk.data.sh status)
 if [ ${bootFromSD} -eq 0 ] && [ ${swapActive} -eq 0 ]; then
   echo "No SWAP found - creating ... "
-  /home/admin/config.scripts/blitz.data.sh swap on
+  /home/admin/config.scripts/blesk.data.sh swap on
 else
   echo "SWAP already OK - dont add swap when running from SD card or already active"
 fi
@@ -127,12 +127,12 @@ echo "allow outgoing connections"
 ufw default allow outgoing
 echo "allow: ssh"
 ufw allow ssh
-echo "allow: bitcoin testnet"
-ufw allow 18333 comment 'bitcoin testnet'
-echo "allow: bitcoin mainnet"
-ufw allow 8333 comment 'bitcoin mainnet'
-echo 'allow: bitcoin mainnet RPC'
-ufw allow 8332 comment 'bitcoin mainnet RPC'
+echo "allow: glcoin testnet"
+ufw allow 18333 comment 'glcoin testnet'
+echo "allow: glcoin mainnet"
+ufw allow 8333 comment 'glcoin mainnet'
+echo 'allow: glcoin mainnet RPC'
+ufw allow 8332 comment 'glcoin mainnet RPC'
 echo 'allow: lightning testnet'
 ufw allow 19735 comment 'lightning testnet'
 echo "allow: lightning mainnet"
@@ -168,16 +168,16 @@ apt-get update -y
 echo "OK - System is now up to date"
 
 # mark setup is done
-sed -i "s/^setupStep=.*/setupStep=100/g" /home/admin/raspiblitz.info
+sed -i "s/^setupStep=.*/setupStep=100/g" /home/admin/raspiblesk.info
 
 ##########################
 # PROVISIONING SERVICES
 ##########################
 
 echo "### CHECKING BLITZ-API/FRONT STATUS ###" >> ${logFile}
-blitzApiInstalled=$(systemctl status blitzapi | grep -c "loaded")
-echo "# blitzapi(${blitzapi}) blitzApiInstalled(${blitzApiInstalled})"
-if [ "${blitzapi}" != "on" ] && [ ${blitzApiInstalled} -gt 0 ]; then
+blitzApiInstalled=$(systemctl status bleskapi | grep -c "loaded")
+echo "# bleskapi(${bleskapi}) blitzApiInstalled(${blitzApiInstalled})"
+if [ "${bleskapi}" != "on" ] && [ ${blitzApiInstalled} -gt 0 ]; then
   /home/admin/_cache.sh set message "Deactivated API/WebUI (as in your config) - please use SSH for further setup"
   sleep 10
 else
@@ -186,43 +186,43 @@ fi
 
 # BLITZ WEB SERVICE
 echo "Provisioning BLITZ WEB SERVICE - run config script" >> ${logFile}
-/home/admin/config.scripts/blitz.web.sh https-on >> ${logFile} 2>&1
+/home/admin/config.scripts/blesk.web.sh https-on >> ${logFile} 2>&1
 
-# deinstall when not explizit 'on' when blitzapi is installed by fatpack
-# https://github.com/raspiblitz/raspiblitz/issues/4171#issuecomment-1728302628
-if [ "${blitzapi}" != "on" ] && [ ${blitzApiInstalled} -gt 0 ]; then
-  echo "blitz_api directory exists & blitzapi is not 'on' - deactivating blitz-api" >> ${logFile}
-  /home/admin/config.scripts/blitz.web.api.sh off >> ${logFile} 2>&1
-  /home/admin/config.scripts/blitz.web.ui.sh off >> ${logFile} 2>&1
+# deinstall when not explizit 'on' when bleskapi is installed by fatpack
+# https://github.com/raspiblesk/raspiblesk/issues/4171#issuecomment-1728302628
+if [ "${bleskapi}" != "on" ] && [ ${blitzApiInstalled} -gt 0 ]; then
+  echo "blitz_api directory exists & bleskapi is not 'on' - deactivating blitz-api" >> ${logFile}
+  /home/admin/config.scripts/blesk.web.api.sh off >> ${logFile} 2>&1
+  /home/admin/config.scripts/blesk.web.ui.sh off >> ${logFile} 2>&1
 fi
 # WebAPI & UI (in case image was not fatpack - but webapi was switched on)
-if [ "${blitzapi}" == "on" ] && [ $blitzApiInstalled -eq 0 ]; then
+if [ "${bleskapi}" == "on" ] && [ $blitzApiInstalled -eq 0 ]; then
     echo "Provisioning BlitzAPI - run config script" >> ${logFile}
     /home/admin/_cache.sh set message "Setup BlitzAPI (takes time)"
-    /home/admin/config.scripts/blitz.web.api.sh on DEFAULT >> ${logFile} 2>&1
-    /home/admin/config.scripts/blitz.web.ui.sh on DEFAULT >> ${logFile} 2>&1
+    /home/admin/config.scripts/blesk.web.api.sh on DEFAULT >> ${logFile} 2>&1
+    /home/admin/config.scripts/blesk.web.ui.sh on DEFAULT >> ${logFile} 2>&1
 else
     echo "Provisioning BlitzAPI - keep default" >> ${logFile}
 fi
 
 echo "### RUNNING PROVISIONING SERVICES ###" >> ${logFile}
 
-# BITCOIN INTERIMS UPDATE
-if [ ${#bitcoinInterimsUpdate} -gt 0 ]; then
-  /home/admin/_cache.sh set message "Bitcoin Core update"
-  if [ "${bitcoinInterimsUpdate}" == "reckless" ]; then
-    # recklessly update Bitcoin Core to latest release on GitHub
-    echo "Provisioning Bitcoin Core reckless interims update" >> ${logFile}
-    /home/admin/config.scripts/bitcoin.update.sh reckless >> ${logFile}
+# GLCOIN INTERIMS UPDATE
+if [ ${#glcoinInterimsUpdate} -gt 0 ]; then
+  /home/admin/_cache.sh set message "Glcoin Core update"
+  if [ "${glcoinInterimsUpdate}" == "reckless" ]; then
+    # recklessly update Glcoin Core to latest release on GitHub
+    echo "Provisioning Glcoin Core reckless interims update" >> ${logFile}
+    /home/admin/config.scripts/glcoin.update.sh reckless >> ${logFile}
   else
     # when installing the same sd image - this will re-trigger the secure interims update
-    # if this a update with a newer RaspiBlitz version .. interims update will be ignored
-    # because standard Bitcoin Core version is most more up to date
-    echo "Provisioning Bitcoin Core tested interims update" >> ${logFile}
-    /home/admin/config.scripts/bitcoin.update.sh tested ${bitcoinInterimsUpdate} >> ${logFile}
+    # if this a update with a newer RaspiBlesk version .. interims update will be ignored
+    # because standard Glcoin Core version is most more up to date
+    echo "Provisioning Glcoin Core tested interims update" >> ${logFile}
+    /home/admin/config.scripts/glcoin.update.sh tested ${glcoinInterimsUpdate} >> ${logFile}
   fi
 else
-  echo "Provisioning Bitcoin Core interims update - keep default" >> ${logFile}
+  echo "Provisioning Glcoin Core interims update - keep default" >> ${logFile}
 fi
 
 # LND INTERIMS UPDATE
@@ -234,7 +234,7 @@ if [ ${#lndInterimsUpdate} -gt 0 ]; then
     /home/admin/config.scripts/lnd.update.sh reckless >> ${logFile}
   else
     # when installing the same sd image - this will re-trigger the secure interims update
-    # if this a update with a newer RaspiBlitz version .. interims update will be ignored
+    # if this a update with a newer RaspiBlesk version .. interims update will be ignored
     # because standard LND version is most more up to date
     echo "Provisioning LND verified interims update" >> ${logFile}
     /home/admin/config.scripts/lnd.update.sh verified ${lndInterimsUpdate} >> ${logFile}
@@ -248,7 +248,7 @@ if [ ${#clInterimsUpdate} -gt 0 ]; then
   /home/admin/_cache.sh set message "Provisioning CL update"
   if [ "${clInterimsUpdate}" == "reckless" ]; then
     # determine the database version # Examples: 216 is CLN v23.02.2 # 219 is CLN v23.05
-    clDbVersion=$(sqlite3 /mnt/hdd/app-data/.lightning/bitcoin/lightningd.sqlite3 "SELECT version FROM version;")
+    clDbVersion=$(sqlite3 /mnt/hdd/app-data/.lightning/glcoin/lightningd.sqlite3 "SELECT version FROM version;")
     if [ ${#clDbVersion} -eq 0 ]; then
       echo "Could not determine the CLN database version - using 0" >> ${logFile}
       clDbVersion=0
@@ -266,7 +266,7 @@ if [ ${#clInterimsUpdate} -gt 0 ]; then
     fi
   else
     # when installing the same sd image - this will re-trigger the secure interims update
-    # if this is an update with a newer RaspiBlitz version .. interims update will be ignored
+    # if this is an update with a newer RaspiBlesk version .. interims update will be ignored
     # because the standard CL version is up to date
     echo "Provisioning CL verified interims update" >> ${logFile}
     /home/admin/config.scripts/cl.update.sh verified ${clInterimsUpdate} >> ${logFile}
@@ -410,13 +410,13 @@ else
     echo "Provisioning clWatchtowerClient - keep default" >> ${logFile}
 fi
 
-#BTC RPC EXPLORER
-if [ "${BTCRPCexplorer}" = "on" ]; then
-  echo "Provisioning BTCRPCexplorer - run config script" >> ${logFile}
-  /home/admin/_cache.sh set message "Setup BTCRPCexplorer (takes time)"
-  sudo -u admin /home/admin/config.scripts/bonus.btc-rpc-explorer.sh on >> ${logFile} 2>&1
+#GLC RPC EXPLORER
+if [ "${GlcoinRPCexplorer}" = "on" ]; then
+  echo "Provisioning GlcoinRPCexplorer - run config script" >> ${logFile}
+  /home/admin/_cache.sh set message "Setup GlcoinRPCexplorer (takes time)"
+  sudo -u admin /home/admin/config.scripts/bonus.glc-rpc-explorer.sh on >> ${logFile} 2>&1
 else
-  echo "Provisioning BTCRPCexplorer - keep default" >> ${logFile}
+  echo "Provisioning GlcoinRPCexplorer - keep default" >> ${logFile}
 fi
 
 #ELECTRS
@@ -438,14 +438,14 @@ else
 fi
 
 # BTCPAYSERVER
-if [ "${BTCPayServer}" = "on" ]; then
+if [ "${GlcoinPayServer}" = "on" ]; then
 
   echo "Provisioning BTCPAYSERVER on TOR - running setup" >> ${logFile}
   /home/admin/_cache.sh set message "Setup BTCPay (takes time)"
   sudo -u admin /home/admin/config.scripts/bonus.btcpayserver.sh on >> ${logFile} 2>&1
 
 else
-  echo "Provisioning BTCPayServer - keep default" >> ${logFile}
+  echo "Provisioning GlcoinPayServer - keep default" >> ${logFile}
 fi
 
 # CUSTOM PORT
@@ -501,22 +501,22 @@ fi
 
 # LCD ROTATE
 if [ ${#lcdrotate} -eq 0 ]; then
-  # when upgrading from an old raspiblitz - enforce lcdrotate = 0
+  # when upgrading from an old raspiblesk - enforce lcdrotate = 0
   lcdrotate=0
 fi
 if [ "${lcdrotate}" == "0" ]; then
   echo "Provisioning LCD rotate - run config script" >> ${logFile}
   /home/admin/_cache.sh set message "LCD Rotate"
-  /home/admin/config.scripts/blitz.display.sh rotate ${lcdrotate} >> ${logFile} 2>&1
+  /home/admin/config.scripts/blesk.display.sh rotate ${lcdrotate} >> ${logFile} 2>&1
 else
   echo "Provisioning LCD rotate - not needed, keep default rotate on" >> ${logFile}
 fi
 
-# TOUCHSCREEN - deactivated see https://github.com/raspiblitz/raspiblitz/pull/4609#issuecomment-2144406124
+# TOUCHSCREEN - deactivated see https://github.com/raspiblesk/raspiblesk/pull/4609#issuecomment-2144406124
 # if [ "${#touchscreen}" -gt 0 ]; then
 #     echo "Provisioning Touchscreen - run config script" >> ${logFile}
 #     /home/admin/_cache.sh set message "Setup Touchscreen"
-#     /home/admin/config.scripts/blitz.touchscreen.sh ${touchscreen} >> ${logFile} 2>&1
+#     /home/admin/config.scripts/blesk.touchscreen.sh ${touchscreen} >> ${logFile} 2>&1
 # else
 #     echo "Provisioning Touchscreen - not active" >> ${logFile}
 # fi
@@ -525,7 +525,7 @@ fi
 if [ "${#ups}" -gt 0 ]; then
     echo "Provisioning UPS - run config script" >> ${logFile}
     /home/admin/_cache.sh set message "Setup UPS"
-    /home/admin/config.scripts/blitz.ups.sh on ${ups} >> ${logFile} 2>&1
+    /home/admin/config.scripts/blesk.ups.sh on ${ups} >> ${logFile} 2>&1
 else
     echo "Provisioning UPS - not active" >> ${logFile}
 fi
@@ -596,13 +596,13 @@ else
   echo "Provisioning Mempool Explorer - keep default" >> ${logFile}
 fi
 
-# Bitcoin Knots
+# Glcoin Knots
 if [ "${knots}" = "on" ]; then
-  echo "Provisioning Bitcoin Knots - run config script" >> ${logFile}
-  /home/admin/_cache.sh set message "Setup Bitcoin Knots"
+  echo "Provisioning Glcoin Knots - run config script" >> ${logFile}
+  /home/admin/_cache.sh set message "Setup Glcoin Knots"
   sudo -u admin /home/admin/config.scripts/bonus.knots.sh on >> ${logFile} 2>&1
 else
-  echo "Provisioning Bitcoin Knots - keep default" >> ${logFile}
+  echo "Provisioning Glcoin Knots - keep default" >> ${logFile}
 fi
 
 # letsencrypt
@@ -768,15 +768,15 @@ else
 fi
 
 # replay backup LND conf & tlscerts
-# https://github.com/rootzoll/raspiblitz/issues/324
+# https://github.com/rootzoll/raspiblesk/issues/324
 echo "" >> ${logFile}
 echo "*** Replay backup of LND conf/tls" >> ${logFile}
-if [ -d "/var/cache/raspiblitz/tls_backup" ]; then
+if [ -d "/var/cache/raspiblesk/tls_backup" ]; then
 
   echo "Copying TLS ..." >> ${logFile}
-  cp /var/cache/raspiblitz/tls_backup/tls.cert /mnt/hdd/app-data/lnd/tls.cert >> ${logFile} 2>&1
-  cp /var/cache/raspiblitz/tls_backup/tls.key /mnt/hdd/app-data/lnd/tls.key >> ${logFile} 2>&1
-  chown -R bitcoin:bitcoin /mnt/hdd/app-data/lnd >> ${logFile} 2>&1
+  cp /var/cache/raspiblesk/tls_backup/tls.cert /mnt/hdd/app-data/lnd/tls.cert >> ${logFile} 2>&1
+  cp /var/cache/raspiblesk/tls_backup/tls.key /mnt/hdd/app-data/lnd/tls.key >> ${logFile} 2>&1
+  chown -R glcoin:glcoin /mnt/hdd/app-data/lnd >> ${logFile} 2>&1
   echo "On next final restart admin creds will be updated by _bootstrap.sh" >> ${logFile}
 
   echo "DONE" >> ${logFile}
@@ -785,31 +785,31 @@ else
 fi
 echo "" >> ${logFile}
 
-# repair Bitcoin conf if needed
-echo "*** Repair Bitcoin Conf (if needed)" >> ${logFile}
+# repair Glcoin conf if needed
+echo "*** Repair Glcoin Conf (if needed)" >> ${logFile}
 confExists="$(ls /mnt/hdd/app-data/${network} | grep -c "${network}.conf")"
 if [ ${confExists} -eq 0 ]; then
   echo "Doing init of ${network}.conf" >> ${logFile}
-  cp /home/admin/assets/bitcoin.conf /mnt/hdd/app-data/bitcoin/bitcoin.conf
-  chown bitcoin:bitcoin /mnt/hdd/app-data/bitcoin/bitcoin.conf
-  /home/admin/config.scripts/blitz.data.sh link
+  cp /home/admin/assets/glcoin.conf /mnt/hdd/app-data/glcoin/glcoin.conf
+  chown glcoin:glcoin /mnt/hdd/app-data/glcoin/glcoin.conf
+  /home/admin/config.scripts/blesk.data.sh link
 fi
 
 # I2P
 echo "Start i2pd" >> ${logFile}
 /home/admin/_cache.sh set message "i2pd setup"
-/home/admin/config.scripts/blitz.i2pd.sh on >> ${logFile}
+/home/admin/config.scripts/blesk.i2pd.sh on >> ${logFile}
 
-# clean up raspiblitz config from old settings
-sed -i '/^autoPilot=/d' /mnt/hdd/app-data/raspiblitz.conf
-sed -i '/^lndKeysend=/d' /mnt/hdd/app-data/raspiblitz.conf
+# clean up raspiblesk config from old settings
+sed -i '/^autoPilot=/d' /mnt/hdd/app-data/raspiblesk.conf
+sed -i '/^lndKeysend=/d' /mnt/hdd/app-data/raspiblesk.conf
 
 # signal setup done
 /home/admin/_cache.sh set message "Setup Done"
 
 # set the local network hostname (just if set in config - will not be set anymore by default in newer version)
-# have at the end - see https://github.com/rootzoll/raspiblitz/issues/462
-# see also https://github.com/rootzoll/raspiblitz/issues/819
+# have at the end - see https://github.com/rootzoll/raspiblesk/issues/462
+# see also https://github.com/rootzoll/raspiblesk/issues/819
 if [ ${#hostname} -gt 0 ]; then
   hostnameSanatized=$(echo "${hostname}"| tr -dc '[:alnum:]\n\r')
   if [ ${#hostnameSanatized} -gt 0 ]; then
@@ -826,7 +826,7 @@ if [ ${#hostname} -gt 0 ]; then
       echo "Not setting local network hostname" >> ${logFile}
     fi
   else
-    echo "WARNING: hostname in raspiblitz.conf contains just special chars" >> ${logFile}
+    echo "WARNING: hostname in raspiblesk.conf contains just special chars" >> ${logFile}
   fi
 else
   echo "No hostname set." >> ${logFile}
@@ -836,7 +836,7 @@ fi
 # always at the end, because data drives will be just available again after a reboot
 echo "Prepare fstab for permanent data drive mounting .." >> ${logFile}
 # get info on data drive
-/home/admin/config.scripts/blitz.data.sh mount >> ${logFile}
+/home/admin/config.scripts/blesk.data.sh mount >> ${logFile}
 
 # MAKE SURE SERVICES ARE RUNNING
 echo "Make sure main services are running .." >> ${logFile}

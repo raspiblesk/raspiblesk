@@ -17,14 +17,14 @@ class Ui_DialogConfirmOff(object):
         self.label_2.setGeometry(QtCore.QRect(9, 9, 16, 16))
         self.label_2.setMaximumSize(QtCore.QSize(110, 320))
         self.label_2.setText("")
-        self.label_2.setPixmap(QtGui.QPixmap(":/RaspiBlitz/images/RaspiBlitz_Logo_Main_rotate.png"))
+        self.label_2.setPixmap(QtGui.QPixmap(":/RaspiBlesk/images/RaspiBlesk_Logo_Main_rotate.png"))
         self.label_2.setScaledContents(True)
         self.label_2.setIndent(-4)
         self.label_2.setObjectName("label_2")
         self.label_3 = QtWidgets.QLabel(DialogConfirmOff)
         self.label_3.setGeometry(QtCore.QRect(0, 0, 47, 318))
         self.label_3.setText("")
-        self.label_3.setPixmap(QtGui.QPixmap(":/RaspiBlitz/images/RaspiBlitz_Logo_Main_270.png"))
+        self.label_3.setPixmap(QtGui.QPixmap(":/RaspiBlesk/images/RaspiBlesk_Logo_Main_270.png"))
         self.label_3.setScaledContents(True)
         self.label_3.setObjectName("label_3")
         self.label = QtWidgets.QLabel(DialogConfirmOff)
@@ -69,7 +69,7 @@ class Ui_DialogConfirmOff(object):
     def retranslateUi(self, DialogConfirmOff):
         _translate = QtCore.QCoreApplication.translate
         DialogConfirmOff.setWindowTitle(_translate("DialogConfirmOff", "Dialog"))
-        self.label.setText(_translate("DialogConfirmOff", "Shutdown RaspiBlitz?"))
+        self.label.setText(_translate("DialogConfirmOff", "Shutdown RaspiBlesk?"))
 
 from . import resources_rc
 

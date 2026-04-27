@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# This is a template bonus script you can use to add your own app to RaspiBlitz.
+# This is a template bonus script you can use to add your own app to RaspiBlesk.
 # So just copy it within the `/home.admin/config.scripts` directory and
 # rename it for your app - example: `bonus.myapp.sh`.
 # Then go thru this script and delete parts/comments you dont need or add
 # needed configurations.
 
-# id string of your app (short single string unique in raspiblitz)
+# id string of your app (short single string unique in raspiblesk)
 # should be same as used in name if script
 APPID="template" # one-word lower-case no-specials
 
@@ -51,8 +51,8 @@ fi
 # echoing comments is useful for logs - but start output with # when not a key=value
 echo "# Running: 'bonus.${APPID}.sh $*'"
 
-# check & load raspiblitz config
-source /mnt/hdd/app-data/raspiblitz.conf
+# check & load raspiblesk config
+source /mnt/hdd/app-data/raspiblesk.conf
 
 #########################
 # INFO
@@ -170,14 +170,14 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   # add user to special groups with special access rights
   # BACKGROUND there are some unix groups available that will give the access to
   # like for example to the lnd admin macaroons - to check all groups available use:
-  # `cut -d: -f1 /etc/group | sort` command on raspiblitz commandline
+  # `cut -d: -f1 /etc/group | sort` command on raspiblesk commandline
   echo "# add use to special groups"
   sudo /usr/sbin/usermod --append --groups lndadmin ${APPID}
 
   # create a data directory on /mnt/hdd/app-data/ for the app
   # BACKGROUND is that any critical data that needs to survive an update should
   # be stored in that app-data directory. All data there will also be part of
-  # any raspiblitz data migration. Also on install handle the case that there
+  # any raspiblesk data migration. Also on install handle the case that there
   # is already data from a pervious install available the user wants to
   # continue to use and even may come from an older version from your app.
 
@@ -210,7 +210,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     sudo -u ${APPID} git reset --hard $GITHUB_TAG
   fi
   if [ "${GITHUB_SIGN_AUTHOR}" != "" ]; then
-    sudo -u ${APPID} /home/admin/config.scripts/blitz.git-verify.sh \
+    sudo -u ${APPID} /home/admin/config.scripts/blesk.git-verify.sh \
      "${GITHUB_SIGN_AUTHOR}" "${GITHUB_SIGN_PUBKEYLINK}" "${GITHUB_SIGN_FINGERPRINT}" "${GITHUB_TAG}" || exit 1
   fi
 
@@ -239,8 +239,8 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   echo "
 [Unit]
 Description=${APPID}
-Wants=bitcoind
-After=bitcoind
+Wants=glcoind
+After=glcoind
 
 [Service]
 WorkingDirectory=/home/${APPID}
@@ -331,8 +331,8 @@ server {
   sudo nginx -t
   sudo systemctl reload nginx
 
-  # mark app as installed in raspiblitz config
-  /home/admin/config.scripts/blitz.conf.sh set ${APPID} "on"
+  # mark app as installed in raspiblesk config
+  /home/admin/config.scripts/blesk.conf.sh set ${APPID} "on"
 
   # enable app up thru systemd
   sudo systemctl enable ${APPID}
@@ -349,11 +349,11 @@ server {
   exit 0
 
   # OK so your app is now installed, but there please also check the following parts to ensure a propper integration
-  # into the raspiblitz system:
+  # into the raspiblesk system:
 
   # PROVISION - reinstall on updates & recovery
   # Take a look at `_provision_.sh` script - you can see that there all bonus apps install scripts get called if
-  # they have an active entry in the raspiblitz config. This is needed so that on sd card image update or recovery
+  # they have an active entry in the raspiblesk config. This is needed so that on sd card image update or recovery
   # all apps get installed again. So add your app there accordantly so its install will survive an sd card update.
 
   # MAINMENU - show users that app is installed
@@ -365,7 +365,7 @@ server {
   # as an option in to be easily installed & deinstalled. Add your app there accordantly.
 
   # DEBUGLOGS - add some status information
-  # Take a look at the `blitz.debug.sh` script - you can see there that apps if they are installed give some
+  # Take a look at the `blesk.debug.sh` script - you can see there that apps if they are installed give some
   # information on their latest logs and where to find them in the case that the user is searching for an  error.
   # So its best practice to also add your app there with some small info to help on debug & finding error logs.
 
@@ -442,8 +442,8 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   echo "# removing Tor hidden service (if active)"
   /home/admin/config.scripts/tor.onion-service.sh off ${APPID}
 
-  echo "# mark app as uninstalled in raspiblitz config"
-  /home/admin/config.scripts/blitz.conf.sh set ${APPID} "off"
+  echo "# mark app as uninstalled in raspiblesk config"
+  /home/admin/config.scripts/blesk.conf.sh set ${APPID} "off"
 
   # only if 'delete-data' is an additional parameter then also the data directory gets deleted
   if [ "$(echo "$@" | grep -c delete-data)" -gt 0 ]; then
@@ -461,5 +461,5 @@ echo "# FAIL - Unknown Parameter $1"
 exit 1
 
 # LAST NOTES:
-# Best is to contribute a new app install script as a PR to the raspiblitz GitHub repo.
+# Best is to contribute a new app install script as a PR to the raspiblesk GitHub repo.
 # Please base your PR on the `dev` branch - not on the default branch displayed.

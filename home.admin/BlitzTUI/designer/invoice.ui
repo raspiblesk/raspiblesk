@@ -98,7 +98,7 @@ font: 28pt &quot;Arial&quot;;</string>
     <string/>
    </property>
    <property name="pixmap">
-    <pixmap resource="../resources.qrc">:/RaspiBlitz/images/RaspiBlitz_Logo_Main_270.png</pixmap>
+    <pixmap resource="../resources.qrc">:/RaspiBlesk/images/RaspiBlesk_Logo_Main_270.png</pixmap>
    </property>
    <property name="scaledContents">
     <bool>true</bool>

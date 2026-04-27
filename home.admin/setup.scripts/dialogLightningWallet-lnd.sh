@@ -1,10 +1,10 @@
 # get basic system information
 # these are the same set of infos the WebGUI dialog/controler has
-source /home/admin/raspiblitz.info
+source /home/admin/raspiblesk.info
 
 # SETUPFILE
 # this key/value file contains the state during the setup process
-SETUPFILE="/var/cache/raspiblitz/temp/raspiblitz.setup"
+SETUPFILE="/var/cache/raspiblesk/temp/raspiblesk.setup"
 source $SETUPFILE
 
 # flags for sub dialogs after choice
@@ -15,7 +15,7 @@ uploadSCB=0
 OPTIONS=()
 OPTIONS+=(NEW "Setup a brand new Lightning Node (DEFAULT)")
 OPTIONS+=(OLD "I had an old Node I want to recover/restore")
-CHOICE=$(dialog --backtitle "RaspiBlitz" --clear --title "LND Setup" --menu "LND Data & Wallet" 11 60 6 "${OPTIONS[@]}" 2>&1 >/dev/tty)
+CHOICE=$(dialog --backtitle "RaspiBlesk" --clear --title "LND Setup" --menu "LND Data & Wallet" 11 60 6 "${OPTIONS[@]}" 2>&1 >/dev/tty)
 
 if [ "${CHOICE}" == "NEW" ]; then
 
@@ -40,7 +40,7 @@ elif [ "${CHOICE}" == "OLD" ]; then
     OPTIONS+=(LNDRESCUE "LND tar.gz-Backupfile (BEST)")
     OPTIONS+=(SEED+SCB "Seed & channel.backup file (OK)")
     OPTIONS+=(ONLYSEED "Only Seed Word List (FALLBACK)")
-    CHOICESUB=$(dialog --backtitle "RaspiBlitz" --clear --title "RECOVER LND DATA & WALLET" --menu "Data you have to recover from?" 11 60 6 "${OPTIONS[@]}" 2>&1 >/dev/tty)
+    CHOICESUB=$(dialog --backtitle "RaspiBlesk" --clear --title "RECOVER LND DATA & WALLET" --menu "Data you have to recover from?" 11 60 6 "${OPTIONS[@]}" 2>&1 >/dev/tty)
 
     if [ "${CHOICESUB}" == "LNDRESCUE" ]; then
 
@@ -78,7 +78,7 @@ elif [ "${CHOICE}" == "OLD" ]; then
       whiptail --title "IMPORTANT INFO" --yes-button "JUST SEED" --no-button "Go Back" --yesno "
 Using JUST SEED WORDS will only recover your on-chain funds.
 To also try to recover the open channel funds you need the
-channel.backup file (since RaspiBlitz v1.2 / LND 0.6-beta)
+channel.backup file (since RaspiBlesk v1.2 / LND 0.6-beta)
 or having a complete LND rescue-backup from your old node.
       " 11 65
       
@@ -117,7 +117,7 @@ fi
 if [ ${uploadLNDRESCUE} -eq 1 ]; then
 
   # run upload dialog and get result
-  _temp="/var/cache/raspiblitz/temp/.temp.tmp"
+  _temp="/var/cache/raspiblesk/temp/.temp.tmp"
   /home/admin/config.scripts/lnd.backup.sh lnd-import-gui setup $_temp
   source $_temp 2>/dev/null
   sudo rm $_temp 2>/dev/null
@@ -139,7 +139,7 @@ fi
 if [ ${enterSEED} -eq 1 ]; then
 
   # start seed input and get results
-  _temp="/var/cache/raspiblitz/.temp.tmp"
+  _temp="/var/cache/raspiblesk/.temp.tmp"
   /home/admin/config.scripts/lnd.backup.sh seed-import-gui $_temp
   source $_temp 2>/dev/null
   sudo rm $_temp 2>/dev/null
@@ -163,7 +163,7 @@ fi
 if [ ${uploadSCB} -eq 1 ]; then
 
   # import SCB and get results
-  _temp="/var/cache/raspiblitz/.temp.tmp"
+  _temp="/var/cache/raspiblesk/.temp.tmp"
   /home/admin/config.scripts/lnd.backup.sh scb-import-gui setup $_temp
   source $_temp 2>/dev/null
   sudo rm $_temp 2>/dev/null

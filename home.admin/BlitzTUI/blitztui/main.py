@@ -17,7 +17,7 @@ import qrcode
 from PyQt5.QtCore import Qt, QProcess, QThread, pyqtSignal, QCoreApplication, QTimer, QEventLoop
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QMainWindow, QApplication, QDialog, QDialogButtonBox
-from blitzpy import RaspiBlitzConfig, RaspiBlitzInfo
+from blitzpy import RaspiBleskConfig, RaspiBleskInfo
 from blitztui.file_logger import setup_logging
 from blitztui.client import ReadOnlyStub, InvoiceStub
 from blitztui.client import check_lnd, check_lnd_channels
@@ -34,14 +34,14 @@ from pyqtspinner.spinner import WaitingSpinner
 
 log = logging.getLogger()
 
-IS_DEV_ENV = os.getenv('RASPIBLITZ_DEV', '0').lower() in ['1', 'true', 't', 'y', 'yes', 'on']
+IS_DEV_ENV = os.getenv('RASPIBLESK_DEV', '0').lower() in ['1', 'true', 't', 'y', 'yes', 'on']
 IS_WIN32_ENV = sys.platform == "win32"
 
 SCREEN_HEIGHT = 318
 
 LND_CONF = "/mnt/hdd/app-data/lnd/lnd.conf"
-RB_CONF = "/mnt/hdd/app-data/raspiblitz.conf"
-RB_INFO = "/home/admin/raspiblitz.info"
+RB_CONF = "/mnt/hdd/app-data/raspiblesk.conf"
+RB_INFO = "/home/admin/raspiblesk.info"
 
 STATUS_INTERVAL_LND = 30
 STATUS_INTERVAL_LND_CHANNELS = 120
@@ -154,7 +154,7 @@ class AppWindow(QMainWindow):
         process.readyReadStandardOutput.connect(
             lambda: log.info(str(process.readAllStandardOutput().data().decode('utf-8'))))
 
-        # test by connecting to the raspiblitz 'ssh -X admin@LAN_IP' and run:
+        # test by connecting to the raspiblesk 'ssh -X admin@LAN_IP' and run:
         # uxterm -fa Terminus -fs 9 -fn fixed +sb -hold -e 'bash -c "sudo -u pi /home/admin/00infoLCD.sh --pause 0"'
         process.start('uxterm', ['-fa', 'Terminus', '-fs', '9', '-fn', 'fixed', '-into', str(int(self.ui.widget.winId())),
                                 '+sb', '-hold', '-e', 'bash -c \"/home/admin/00infoLCD.sh --pause {}\"'.format(pause)])
@@ -180,18 +180,18 @@ class AppWindow(QMainWindow):
         if not os.path.exists(rb_info_abs_path):
             log.warning("file does not exist: {}".format(rb_info_abs_path))
 
-        log.debug("init raspiblitz.conf")
+        log.debug("init raspiblesk.conf")
         rb_cfg_valid = False
-        self.rb_cfg = RaspiBlitzConfig(rb_cfg_abs_path)
+        self.rb_cfg = RaspiBleskConfig(rb_cfg_abs_path)
         try:
             self.rb_cfg.reload()
             rb_cfg_valid = True
         except Exception as err:
             pass
 
-        log.debug("init raspiblitz.info")
+        log.debug("init raspiblesk.info")
         rb_info_valid = False
-        self.rb_info = RaspiBlitzInfo(rb_info_abs_path)
+        self.rb_info = RaspiBleskInfo(rb_info_abs_path)
         try:
             self.rb_info.reload()
             rb_info_valid = True
@@ -224,7 +224,7 @@ class AppWindow(QMainWindow):
         if res:
             log.debug("paid!")
             self.ui_qr_code.qcode.setMargin(8)
-            self.ui_qr_code.qcode.setPixmap(QPixmap(":/RaspiBlitz/images/Paid_Stamp.png"))
+            self.ui_qr_code.qcode.setPixmap(QPixmap(":/RaspiBlesk/images/Paid_Stamp.png"))
 
             if amt_paid_sat:
                 self.ui_qr_code.status_value.setText("Paid")
@@ -277,7 +277,7 @@ class AppWindow(QMainWindow):
 
     def update_title_bar(self):
         log.debug("updating: Main Window Title Bar")
-        self.setWindowTitle(self._translate("MainWindow", "RaspiBlitz v{} - {} - {}net".format(self.rb_cfg.version.value,
+        self.setWindowTitle(self._translate("MainWindow", "RaspiBlesk v{} - {} - {}net".format(self.rb_cfg.version.value,
                                                                                                self.rb_cfg.network.value,
                                                                                                self.rb_cfg.chain.value)))
 
@@ -312,7 +312,7 @@ class AppWindow(QMainWindow):
         log.debug("show_qr_code: {}".format(data))
         # reset to logo and set text
         self.ui_qr_code.qcode.setMargin(48)
-        self.ui_qr_code.qcode.setPixmap(QPixmap(":/RaspiBlitz/images/RaspiBlitz_Logo_Stacked.png"))
+        self.ui_qr_code.qcode.setPixmap(QPixmap(":/RaspiBlesk/images/RaspiBlesk_Logo_Stacked.png"))
 
         if screen == SCREEN_NODE_URI:
             self.ui_qr_code.memo_key.show()
@@ -524,7 +524,7 @@ class AppWindow(QMainWindow):
 
         process = QProcess(self)
         process.start('uxterm', ['-fa', 'Terminus', '-fs', '9', '-fn', 'fixed', '-into', str(int(self.ui.widget.winId())),
-                                '+sb', '-hold', '-e', 'bash -c \"sudo /home/admin/config.scripts/blitz.shutdown.sh\"'])
+                                '+sb', '-hold', '-e', 'bash -c \"sudo /home/admin/config.scripts/blesk.shutdown.sh\"'])
 
     def b4_restart(self):
         log.info("restart")
@@ -534,9 +534,9 @@ class AppWindow(QMainWindow):
 
         process = QProcess(self)
         process.start('uxterm', ['-fa', 'Terminus', '-fs', '9', '-fn', 'fixed', '-into', str(int(self.ui.widget.winId())),
-                                '+sb', '-hold', '-e', 'bash -c \"sudo /home/admin/config.scripts/blitz.shutdown.sh reboot\"'])
+                                '+sb', '-hold', '-e', 'bash -c \"sudo /home/admin/config.scripts/blesk.shutdown.sh reboot\"'])
 
-    def create_new_invoice(self, memo="Pay to RaspiBlitz", amt=0):
+    def create_new_invoice(self, memo="Pay to RaspiBlesk", amt=0):
         if IS_DEV_ENV:
             # Fake an invoice for dev
             class FakeAddInvoiceResponse(object):
@@ -645,7 +645,7 @@ def main():
     # make sure CTRL+C works
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-    description = """BlitzTUI - the Touch-User-Interface for the RaspiBlitz project
+    description = """BlitzTUI - the Touch-User-Interface for the RaspiBlesk project
 
 Keep on stacking SATs..! :-D"""
 

@@ -3,14 +3,14 @@
 # command info
 if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
   echo
-  echo "Interim optional Core Lightning updates between RaspiBlitz releases."
+  echo "Interim optional Core Lightning updates between RaspiBlesk releases."
   echo "cl.update.sh [info|verified|reckless]"
   echo "info -> get actual state and possible actions"
-  echo "verified -> only do recommended updates by RaspiBlitz team"
+  echo "verified -> only do recommended updates by RaspiBlesk team"
   echo "  binary will be checked by signature and checksum"
   echo "reckless -> update to the latest release from Core Lightning GitHub"
   echo "  binary will be verified by signature and checksum, but the release"
-  echo "  may not have been tested with RaspiBlitz"
+  echo "  may not have been tested with RaspiBlesk"
   echo
   exit 1
 fi
@@ -18,7 +18,7 @@ fi
 # 1. parameter [info|verified|reckless]
 mode="$1"
 
-# RECOMMENDED UPDATE BY RASPIBLITZ TEAM
+# RECOMMENDED UPDATE BY RASPIBLESK TEAM
 # comment will be shown as "BEWARE Info" when option is choosen (can be multiple lines)
 clUpdateVersion="" # example: v23.02.2 # keep empty if no newer version as sd card build is available
 clUpdateComment="Please keep in mind that downgrading afterwards is not tested. Also not all additional apps are fully tested with the this update - but it looked good on first tests."
@@ -26,7 +26,7 @@ clUpdateComment="Please keep in mind that downgrading afterwards is not tested. 
 # GATHER DATA
 
 # installed Core Lightning version
-clInstalledVersion=$(sudo -u bitcoin lightningd --version) # example output: v23.02.2
+clInstalledVersion=$(sudo -u glcoin lightningd --version) # example output: v23.02.2
 clInstalledVersionMajor=$(echo "${clInstalledVersion}" | cut -d "-" -f1 | cut -d "." -f1)
 clInstalledVersionMain=$(echo "${clInstalledVersion}" | cut -d "-" -f1 | cut -d "." -f2)
 clInstalledVersionMinor=$(echo "${clInstalledVersion}" | cut -d "-" -f1 | cut -d "." -f3)
@@ -71,8 +71,8 @@ if [ "${mode}" = "verified" ]; then
     echo "# checking for fixed version update: askedFor(${fixedUpdateVersion}) available(${clUpdateVersion})"
     if [ "${fixedUpdateVersion}" != "${clUpdateVersion}" ]; then
       echo "warn='required update version does not match'"
-      echo "# this is normal when the recovery script of a new RaspiBlitz version checks for an old update - just ignore"
-      /home/admin/config.scripts/blitz.conf.sh delete clInterimsUpdate
+      echo "# this is normal when the recovery script of a new RaspiBlesk version checks for an old update - just ignore"
+      /home/admin/config.scripts/blesk.conf.sh delete clInterimsUpdate
       exit 1
     else
       echo "# OK - update version is matching"
@@ -98,7 +98,7 @@ fi
 
 # RECKLESS
 # This mode installs the latest release from GitHub with signature verification.
-# Not recommended for production nodes as the release may not have been tested with RaspiBlitz.
+# Not recommended for production nodes as the release may not have been tested with RaspiBlesk.
 # In an update/recovery scenario it will always pick the latest release from GitHub.
 if [ "${mode}" = "reckless" ]; then
 
@@ -118,11 +118,11 @@ fi
 # JOINED INSTALL (verified & RECKLESS)
 if [ "${mode}" = "verified" ] || [ "${mode}" = "reckless" ]; then
 
-  echo "# flag update in raspiblitz config"
-  /home/admin/config.scripts/blitz.conf.sh set clInterimsUpdate "${clInterimsUpdateNew}"
+  echo "# flag update in raspiblesk config"
+  /home/admin/config.scripts/blesk.conf.sh set clInterimsUpdate "${clInterimsUpdateNew}"
 
   echo "# OK Core Lightning is installed"
-  echo "# NOTE: RaspiBlitz may need to reboot now"
+  echo "# NOTE: RaspiBlesk may need to reboot now"
   exit 0
 
 else

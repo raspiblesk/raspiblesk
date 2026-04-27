@@ -2,15 +2,15 @@
 
 # get basic system information
 # these are the same set of infos the WebGUI dialog/controler has
-source /home/admin/raspiblitz.info
+source /home/admin/raspiblesk.info
 
 # SETUPFILE
 # this key/value file contains the state during the setup process
-SETUPFILE="/var/cache/raspiblitz/temp/raspiblitz.setup"
+SETUPFILE="/var/cache/raspiblesk/temp/raspiblesk.setup"
 source $SETUPFILE
 
 ####################################################
-# INPUT PASSWORDS (based on flags from raspiblitz.setup)
+# INPUT PASSWORDS (based on flags from raspiblesk.setup)
 
 # dynamic info string on what passwords need to be changed
 # at the moment its always
@@ -28,7 +28,7 @@ fi
 if [ "${migrationOS}" == "" ]; then
 
   # info text on normal setup
-  dialog --backtitle "RaspiBlitz - Setup" --msgbox "RaspiBlitz uses 3 different passwords.
+  dialog --backtitle "RaspiBlesk - Setup" --msgbox "RaspiBlesk uses 3 different passwords.
 Referenced as password A, B & C.
 
 PASSWORD A) Main User Password (SSH & WebUI, sudo)
@@ -45,9 +45,9 @@ Write them down & store them in a safe place.
 else
 
   # info text on migration setup
-  dialog --backtitle "RaspiBlitz - Migration Setup" --msgbox "You will need to set new passwords.
+  dialog --backtitle "RaspiBlesk - Migration Setup" --msgbox "You will need to set new passwords.
 
-RaspiBlitz works with 3 different passwords:
+RaspiBlesk works with 3 different passwords:
 PASSWORD A) Main User Password (SSH & WebUI, sudo)
 PASSWORD B) APP Password (Additional Apps & API)
 PASSWORD C) Lightning Wallet Password for Unlock
@@ -63,12 +63,12 @@ Write them down & store them in a safe place.
 fi
 
 # temp file for password results
-_temp="/var/cache/raspiblitz/temp/.temp.tmp"
+_temp="/var/cache/raspiblesk/temp/.temp.tmp"
 
 # PASSWORD A
 if [ "${setPasswordA}" == "1" ]; then
   clear
-  sudo /home/admin/config.scripts/blitz.passwords.sh set x "PASSWORD A - Main User Password" $_temp
+  sudo /home/admin/config.scripts/blesk.passwords.sh set x "PASSWORD A - Main User Password" $_temp
   password=$(sudo cat $_temp)
   sudo rm $_temp
   if [ "${password}" == "" ]; then
@@ -77,13 +77,13 @@ if [ "${setPasswordA}" == "1" ]; then
   fi
   sudo sed -i '/^passwordA=/d' $SETUPFILE
   echo "passwordA='${password}'" >> $SETUPFILE
-  dialog --backtitle "RaspiBlitz - Setup" --msgbox "\nThanks - Password A accepted.\n\nUse this password for future SSH or Web-Admin logins to your RaspiBlitz & for sudo commands." 11 35
+  dialog --backtitle "RaspiBlesk - Setup" --msgbox "\nThanks - Password A accepted.\n\nUse this password for future SSH or Web-Admin logins to your RaspiBlesk & for sudo commands." 11 35
 fi
 
 # PASSWORD B
 if [ "${setPasswordB}" == "1" ]; then
   clear
-  sudo /home/admin/config.scripts/blitz.passwords.sh set x "PASSWORD B - APP Password" $_temp
+  sudo /home/admin/config.scripts/blesk.passwords.sh set x "PASSWORD B - APP Password" $_temp
   password=$(sudo cat $_temp)
   sudo rm $_temp
   if [ "${password}" == "" ]; then
@@ -92,13 +92,13 @@ if [ "${setPasswordB}" == "1" ]; then
   fi
   sudo sed -i '/^passwordB=/d' $SETUPFILE
   echo "passwordB='${password}'" >> $SETUPFILE
-  dialog --backtitle "RaspiBlitz - Setup" --msgbox "\nThanks - Password B accepted.\n\nUse this password as login for\nadditional Apps & API access." 10 34
+  dialog --backtitle "RaspiBlesk - Setup" --msgbox "\nThanks - Password B accepted.\n\nUse this password as login for\nadditional Apps & API access." 10 34
 fi
 
 # PASSWORD C
 if [ "${setPasswordC}" == "1" ]; then
   clear
-  sudo /home/admin/config.scripts/blitz.passwords.sh set x "PASSWORD C - Lightning Wallet Password" $_temp
+  sudo /home/admin/config.scripts/blesk.passwords.sh set x "PASSWORD C - Lightning Wallet Password" $_temp
   password=$(sudo cat $_temp)
   sudo rm $_temp
   if [ "${password}" == "" ]; then
@@ -107,7 +107,7 @@ if [ "${setPasswordC}" == "1" ]; then
   fi
   sudo sed -i '/^passwordC=/d' $SETUPFILE
   echo "passwordC='${password}'" >> $SETUPFILE
-  dialog --backtitle "RaspiBlitz - Setup" --msgbox "\nThanks - Password C accepted.\n\nAlways use this password to \nunlock your Lightning Wallet." 10 34
+  dialog --backtitle "RaspiBlesk - Setup" --msgbox "\nThanks - Password C accepted.\n\nAlways use this password to \nunlock your Lightning Wallet." 10 34
 fi
 
 # debug info

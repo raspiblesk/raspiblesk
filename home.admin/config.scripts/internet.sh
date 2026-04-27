@@ -24,7 +24,7 @@ if [ "$1" == "update-publicip" ]; then
 fi
 
 # load local config (but should also work if not available)
-source /mnt/hdd/app-data/raspiblitz.conf 2>/dev/null
+source /mnt/hdd/app-data/raspiblesk.conf 2>/dev/null
 
 #############################################
 # FUNCTIONS
@@ -102,19 +102,19 @@ fi
 ## check for internet connection
 online=0
 if [ "${peers}" != "0" ] && [ "${peers}" != "" ]; then
-  # bitcoind has peers - so device is online
+  # glcoind has peers - so device is online
   online=1
 fi
 
 if [ ${runOnline} -eq 1 ]; then
 
   if [ "$EUID" -eq 0 ]; then
-    # first quick check if bitcoind has peers - if so the client is online
+    # first quick check if glcoind has peers - if so the client is online
     # if not then recheck by pinging different sources if online
     btc_online="0"
-    source <(timeout 2 /home/admin/config.scripts/bitcoin.monitor.sh mainnet status)
+    source <(timeout 2 /home/admin/config.scripts/glcoin.monitor.sh mainnet status)
     if [ "${btc_online}" == "1" ]; then
-      # bitcoind has peers - so device is online
+      # glcoind has peers - so device is online
       online=1
     fi
   fi
@@ -193,7 +193,7 @@ if [ ${runGlobal} -eq 1 ]; then
   fi
 
   # sanity check on IP data
-  # see https://github.com/rootzoll/raspiblitz/issues/371#issuecomment-472416349
+  # see https://github.com/rootzoll/raspiblesk/issues/371#issuecomment-472416349
   echo "# sanity check of IP data:"
   if [[ $globalIP =~ ^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$ ]]; then
     echo "# OK IPv6 for ${globalIP}"
@@ -205,7 +205,7 @@ if [ ${runGlobal} -eq 1 ]; then
   fi
 
   # prevent having no publicIP set at all and LND getting stuck
-  # https://github.com/rootzoll/raspiblitz/issues/312#issuecomment-462675101
+  # https://github.com/rootzoll/raspiblesk/issues/312#issuecomment-462675101
   if [ ${#globalIP} -eq 0 ]; then
     if [ "${ipv6}" == "on" ]; then
       globalIP="::1"
@@ -225,7 +225,7 @@ if [ ${runGlobal} -eq 1 ]; then
 
   ##########################################
   # Public IP
-  # the public that is maybe set by raspiblitz config file (overriding auto-detection)
+  # the public that is maybe set by raspiblesk config file (overriding auto-detection)
   if [ "${publicIP}" == "" ]; then
     if [ "${staticIP}" == "" ]; then
       # if publicIP is not set by config ... use detected global IP
@@ -268,7 +268,7 @@ if [ "$1" == "status" ]; then
     echo "ipv6=${ipv6}"
     echo "# globalip --> ip detected from the outside"
     echo "globalip=${globalIP}"
-    echo "# publicip --> may consider the static IP overide by raspiblitz config"
+    echo "# publicip --> may consider the static IP overide by raspiblesk config"
     echo "publicip=${publicIP}"
     echo "# cleanip --> the publicip with no brackets like used on IPv6"
     echo "cleanip=${cleanIP}"
@@ -296,8 +296,8 @@ elif [ "$1" == "update-publicip" ]; then
     echo "publicip=${publicIP}"
   fi
 
-  # store to raspiblitz.conf new publiciP
-  /home/admin/config.scripts/blitz.conf.sh set publicIP "${publicIP}"
+  # store to raspiblesk.conf new publiciP
+  /home/admin/config.scripts/blesk.conf.sh set publicIP "${publicIP}"
   exit 0
 
 #############################################
@@ -308,7 +308,7 @@ elif [ "$1" == "ipv6" ]; then
     echo "# Switching IPv6 ON"
 
     # set config
-    /home/admin/config.scripts/blitz.conf.sh set ipv6 "on"
+    /home/admin/config.scripts/blesk.conf.sh set ipv6 "on"
     exit 0
 
   elif [ "$2" == "off" ]; then
@@ -316,7 +316,7 @@ elif [ "$1" == "ipv6" ]; then
     echo "# Switching IPv6 OFF"
 
     # set config
-    /home/admin/config.scripts/blitz.conf.sh set ipv6 "off"
+    /home/admin/config.scripts/blesk.conf.sh set ipv6 "off"
 
     exit 0
 

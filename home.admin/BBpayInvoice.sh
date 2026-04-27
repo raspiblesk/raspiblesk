@@ -6,11 +6,11 @@ _temp=$(mktemp -p /dev/shm/)
 _error=$(mktemp -p /dev/shm/)
 sudo chmod 7777 ${_error} 2>/dev/null
 
-# load raspiblitz config data (with backup from old config)
-source /home/admin/raspiblitz.info
-source /mnt/hdd/app-data/raspiblitz.conf
+# load raspiblesk config data (with backup from old config)
+source /home/admin/raspiblesk.info
+source /mnt/hdd/app-data/raspiblesk.conf
 if [ ${#network} -eq 0 ]; then network=$(cat .network); fi
-if [ ${#network} -eq 0 ]; then network="bitcoin"; fi
+if [ ${#network} -eq 0 ]; then network="glcoin"; fi
 if [ ${#chain} -eq 0 ]; then
   echo "gathering chain info ... please wait"
   chain=$(${network}-cli getblockchaininfo | jq -r '.chain')
@@ -21,7 +21,7 @@ source <(/home/admin/config.scripts/network.aliases.sh getvars $1 $2)
 # check if chain is in sync
 if [ $LNTYPE = cl ]; then
   lncommand="${netprefix}lightning-cli"
-  BLOCKHEIGHT=$($bitcoincli_alias getblockchaininfo | grep blocks | awk '{print $2}' | cut -d, -f1)
+  BLOCKHEIGHT=$($glcoincli_alias getblockchaininfo | grep blocks | awk '{print $2}' | cut -d, -f1)
   CLHEIGHT=$($lightningcli_alias getinfo | jq .blockheight)
   if [ $BLOCKHEIGHT -eq $CLHEIGHT ]; then
     cmdChainInSync=1

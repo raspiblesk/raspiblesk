@@ -10,18 +10,18 @@ fi
 # not on recoveries or updates
 
 # LOGFILE - store debug logs of bootstrap
-logFile="/home/admin/raspiblitz.log"
+logFile="/home/admin/raspiblesk.log"
 
 # INFOFILE - state data from bootstrap
-infoFile="/home/admin/raspiblitz.info"
+infoFile="/home/admin/raspiblesk.info"
 source ${infoFile}
 
-# SETUPFILE - setup data of RaspiBlitz
-setupFile="/var/cache/raspiblitz/temp/raspiblitz.setup"
+# SETUPFILE - setup data of RaspiBlesk
+setupFile="/var/cache/raspiblesk/temp/raspiblesk.setup"
 source ${setupFile}
 
-# CONFIGFILE - configuration of RaspiBlitz
-configFile="/mnt/hdd/app-data/raspiblitz.conf"
+# CONFIGFILE - configuration of RaspiBlesk
+configFile="/mnt/hdd/app-data/raspiblesk.conf"
 source ${configFile}
 
 # log header
@@ -29,39 +29,39 @@ echo "###################################" >> ${logFile}
 echo "# _provision.setup.sh" >> ${logFile}
 echo "###################################" >> ${logFile}
 
-# make sure a raspiblitz.conf exists
-confExists=$(ls /mnt/hdd/app-data/raspiblitz.conf 2>/dev/null | grep -c "raspiblitz.conf")
+# make sure a raspiblesk.conf exists
+confExists=$(ls /mnt/hdd/app-data/raspiblesk.conf 2>/dev/null | grep -c "raspiblesk.conf")
 if [ "${confExists}" != "1" ]; then
-    /home/admin/config.scripts/blitz.error.sh _provision.setup.sh "missing-config" "No raspiblitz.conf abvailable." ${logFile}
+    /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "missing-config" "No raspiblesk.conf abvailable." ${logFile}
     exit 6
 fi
 
-# make sure raspiblitz.conf has an blitzapi entry when setup thru fatpack image (blitzapi=on in raspiblitz.info)
-if [ "${blitzapi}" == "on" ]; then
-  /home/admin/config.scripts/blitz.conf.sh set blitzapi on >> ${logFile}
+# make sure raspiblesk.conf has an bleskapi entry when setup thru fatpack image (bleskapi=on in raspiblesk.info)
+if [ "${bleskapi}" == "on" ]; then
+  /home/admin/config.scripts/blesk.conf.sh set bleskapi on >> ${logFile}
 fi
 
 ###################################
 # Preserve SSH keys
 # just copy dont link anymore
-# see: https://github.com/rootzoll/raspiblitz/issues/1798
+# see: https://github.com/rootzoll/raspiblesk/issues/1798
 /home/admin/_cache.sh set message "SSH Keys"
 
 # link ssh directory from SD card to HDD
-/home/admin/config.scripts/blitz.ssh.sh backup
+/home/admin/config.scripts/blesk.ssh.sh backup
 
 ###################################
 # Prepare Blockchain Service
 /home/admin/_cache.sh set message "Blockchain Setup"
-source <(/home/admin/_cache.sh get network chain hddBlocksBitcoin)
+source <(/home/admin/_cache.sh get network chain hddBlocksGlcoin)
 
 if [ "${network}" == "" ]; then
-  /home/admin/config.scripts/blitz.error.sh _provision.setup.sh "missing-network" "" "" ${logFile}
+  /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "missing-network" "" "" ${logFile}
   exit 2
 fi
 
 if [ "${chain}" == "" ]; then
-  /home/admin/config.scripts/blitz.error.sh _provision.setup.sh "missing-chain" "" "" ${logFile}
+  /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "missing-chain" "" "" ${logFile}
   exit 3
 fi
 
@@ -69,28 +69,28 @@ fi
 echo ""
 echo "*** Prepare ${network} ***" >> ${logFile}
 mkdir /mnt/hdd/app-storage/${network} >>${logFile} 2>&1
-chown -R bitcoin:bitcoin /mnt/hdd/app-storage/${network} >>${logFile} 2>&1
-sudo -u bitcoin mkdir /mnt/hdd/app-storage/${network}/blocks >>${logFile} 2>&1
-sudo -u bitcoin mkdir /mnt/hdd/app-storage/${network}/chainstate >>${logFile} 2>&1
+chown -R glcoin:glcoin /mnt/hdd/app-storage/${network} >>${logFile} 2>&1
+sudo -u glcoin mkdir /mnt/hdd/app-storage/${network}/blocks >>${logFile} 2>&1
+sudo -u glcoin mkdir /mnt/hdd/app-storage/${network}/chainstate >>${logFile} 2>&1
 cp /home/admin/assets/${network}.conf /mnt/hdd/app-data/${network}/${network}.conf
-chown bitcoin:bitcoin /mnt/hdd/app-data/${network}/${network}.conf >>${logFile} 2>&1
+chown glcoin:glcoin /mnt/hdd/app-data/${network}/${network}.conf >>${logFile} 2>&1
 mkdir /home/admin/.${network} >>${logFile} 2>&1
 cp /home/admin/assets/${network}.conf /home/admin/.${network}/${network}.conf
 chown -R admin:admin /home/admin/.${network} >>${logFile} 2>&1
 
 # make sure all directories are linked
-/home/admin/config.scripts/blitz.data.sh link >> ${logFile}
+/home/admin/config.scripts/blesk.data.sh link >> ${logFile}
 
-# test bitcoin config
+# test glcoin config
 confExists=$(ls /mnt/hdd/app-data/${network}/${network}.conf | grep -c "${network}.conf")
 echo "File Exists: /mnt/hdd/app-data/${network}/${network}.conf --> ${confExists}" >> ${logFile}
 
 # set password B as RPC password (from setup file)
 echo "# setting PASSWORD B" >> ${logFile}
-/home/admin/config.scripts/blitz.passwords.sh set b "${passwordB}" >> ${logFile}
+/home/admin/config.scripts/blesk.passwords.sh set b "${passwordB}" >> ${logFile}
 
-# optimize RAM for blockchain validation (bitcoin only)
-if [ "${network}" == "bitcoin" ]; then
+# optimize RAM for blockchain validation (glcoin only)
+if [ "${network}" == "glcoin" ]; then
   echo "*** Optimizing RAM for Sync ***" >> ${logFile}
   kbSizeRAM=$(cat /proc/meminfo | grep "MemTotal" | sed 's/[^0-9]*//g')
   echo "kbSizeRAM(${kbSizeRAM})" >> ${logFile}
@@ -123,18 +123,18 @@ systemctl daemon-reload >> ${logFile}
 systemctl enable ${network}d.service
 systemctl start ${network}d.service
 
-# check if bitcoin has started
-bitcoinRunning=0
+# check if glcoin has started
+glcoinRunning=0
 loopcount=0
-while [ ${bitcoinRunning} -eq 0 ]
+while [ ${glcoinRunning} -eq 0 ]
 do
   >&2 echo "# (${loopcount}/50) checking if ${network}d is running ... " >> ${logFile}
-  bitcoinRunning=$(sudo -u bitcoin ${network}-cli getblockchaininfo 2>/dev/null | grep "initialblockdownload" -c)
+  glcoinRunning=$(sudo -u glcoin ${network}-cli getblockchaininfo 2>/dev/null | grep "initialblockdownload" -c)
   sleep 8
   sync
   loopcount=$(($loopcount +1))
   if [ ${loopcount} -gt 50 ]; then
-    /home/admin/config.scripts/blitz.error.sh _provision.setup.sh "btc-testrun-fail" "${network}d not running" "sudo -u bitcoin ${network}-cli getblockchaininfo | grep "initialblockdownload" -c --> ${bitcoinRunning}" ${logFile}
+    /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "glc-testrun-fail" "${network}d not running" "sudo -u glcoin ${network}-cli getblockchaininfo | grep "initialblockdownload" -c --> ${glcoinRunning}" ${logFile}
     exit 4
   fi
 done
@@ -142,11 +142,11 @@ echo "OK ${network} startup successful " >> ${logFile}
 
 ###################################
 # Prepare Lightning
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 echo "Prepare Lightning (${lightning})" >> ${logFile}
 
 if [ "${hostname}" == "" ]; then
-  /home/admin/config.scripts/blitz.error.sh _provision.setup.sh "missing-hostname" "" "" ${logFile}
+  /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "missing-hostname" "" "" ${logFile}
   exit 41
 fi
 
@@ -168,9 +168,9 @@ if [ "${lightning}" == "lnd" ]; then
   echo "############## Setup LND" >> ${logFile}
   /home/admin/_cache.sh set message "LND Setup"
 
-  # password C (raspiblitz.setup)
+  # password C (raspiblesk.setup)
   if [ "${passwordC}" == "" ] && [ "${lndrescue}" = "" ]; then
-    /home/admin/config.scripts/blitz.error.sh _provision.setup.sh "missing-passwordc" "config: missing passwordC" "" ${logFile}
+    /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "missing-passwordc" "config: missing passwordC" "" ${logFile}
     exit 5
   fi
 
@@ -178,19 +178,19 @@ if [ "${lightning}" == "lnd" ]; then
   # if already installed - it will just skip
   /home/admin/config.scripts/lnd.install.sh install >> ${logFile}
 
-  # if user uploaded an LND rescue file (raspiblitz.setup)
+  # if user uploaded an LND rescue file (raspiblesk.setup)
   if [ "${lndrescue}" != "" ]; then
     echo "Restore LND data from uploaded rescue file ${lndrescue} ..." >> ${logFile}
     source <(/home/admin/config.scripts/lnd.backup.sh lnd-import "${lndrescue}")
     if [ "${error}" != "" ]; then
-      /home/admin/config.scripts/blitz.error.sh _provision.setup.sh "lndrescue-import" "setup: lnd import backup failed" "${error}" ${logFile}
+      /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "lndrescue-import" "setup: lnd import backup failed" "${error}" ${logFile}
       exit 6
     fi
     # fix config after import
     /home/admin/config.scripts/lnd.install.sh on mainnet
     /home/admin/config.scripts/lnd.credentials.sh sync mainnet >> $logFile
   else
-    # preparing new LND config (raspiblitz.setup)
+    # preparing new LND config (raspiblesk.setup)
     echo "Creating new LND config ..." >> ${logFile}
     /home/admin/config.scripts/lnd.install.sh on mainnet
     /home/admin/config.scripts/lnd.setname.sh mainnet ${hostname}
@@ -198,12 +198,12 @@ if [ "${lightning}" == "lnd" ]; then
   fi
 
   # make sure all directories are linked
-  /home/admin/config.scripts/blitz.data.sh link
+  /home/admin/config.scripts/blesk.data.sh link
 
   # check if now a config exists
   configLinkedCorrectly=$(ls /mnt/hdd/app-data/lnd/lnd.conf | grep -c "lnd.conf")
   if [ "${configLinkedCorrectly}" != "1" ]; then
-    /home/admin/config.scripts/blitz.error.sh _provision.setup.sh "lnd-link-broken" "link /mnt/hdd/app-data/lnd/lnd.conf broken" "" ${logFile}
+    /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "lnd-link-broken" "link /mnt/hdd/app-data/lnd/lnd.conf broken" "" ${logFile}
     exit 7
   fi
 
@@ -221,7 +221,7 @@ if [ "${lightning}" == "lnd" ]; then
   # set permissions
   echo "# /mnt/hdd/app-data/lnd" >> ${logFile}
   ls -la /mnt/hdd/app-data/lnd >> ${logFile}
-  chown -R bitcoin:bitcoin /mnt/hdd/app-data/lnd >> ${logFile}
+  chown -R glcoin:glcoin /mnt/hdd/app-data/lnd >> ${logFile}
   ls -la /mnt/hdd/app-data/lnd >> ${logFile}
 
   # start lnd up
@@ -243,7 +243,7 @@ if [ "${lightning}" == "lnd" ]; then
     fi
     loopcount=$(($loopcount +1))
     if [ ${loopcount} -gt 100 ]; then
-      /home/admin/config.scripts/blitz.error.sh _provision.setup.sh "lnd-start-fail" "lnd service not getting to running status" "sudo systemctl status lnd.service | grep -c running --> ${lndRunning}" ${logFile}
+      /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "lnd-start-fail" "lnd service not getting to running status" "sudo systemctl status lnd.service | grep -c running --> ${lndRunning}" ${logFile}
       exit 8
     fi
   done
@@ -253,7 +253,7 @@ if [ "${lightning}" == "lnd" ]; then
   # Check LND health/fails (to be extended)
   tlsExists=$(ls /mnt/hdd/app-data/lnd/tls.cert 2>/dev/null | grep -c "tls.cert")
   if [ ${tlsExists} -eq 0 ]; then
-      /home/admin/config.scripts/blitz.error.sh _provision.setup.sh "lnd-no-tls" "lnd not created TLS cert" "no /mnt/hdd/app-data/lnd/tls.cert" ${logFile}
+      /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "lnd-no-tls" "lnd not created TLS cert" "no /mnt/hdd/app-data/lnd/tls.cert" ${logFile}
       exit 9
   fi
 
@@ -271,7 +271,7 @@ if [ "${lightning}" == "lnd" ]; then
     /home/admin/_cache.sh set message "LND Wallet (SEED)"
     source <(/home/admin/config.scripts/lnd.initwallet.py seed mainnet "${passwordC}" "${seedWords}" "${seedPassword}")
     if [ "${err}" != "" ]; then
-      /home/admin/config.scripts/blitz.error.sh _provision.setup.sh "lnd-wallet-seed" "lnd.initwallet.py seed returned error" "/home/admin/config.scripts/lnd.initwallet.py seed mainnet ... --> ${err} + ${errMore}" ${logFile}
+      /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "lnd-wallet-seed" "lnd.initwallet.py seed returned error" "/home/admin/config.scripts/lnd.initwallet.py seed mainnet ... --> ${err} + ${errMore}" ${logFile}
       exit 12
     fi
 
@@ -287,7 +287,7 @@ if [ "${lightning}" == "lnd" ]; then
     /home/admin/_cache.sh set message "LND Wallet (NEW)"
     source <(/home/admin/config.scripts/lnd.initwallet.py new mainnet "${passwordC}")
     if [ "${err}" != "" ]; then
-      /home/admin/config.scripts/blitz.error.sh _provision.setup.sh "lnd-wallet-new" "lnd.initwallet.py new returned error" "/home/admin/config.scripts/lnd.initwallet.py new mainnet ... --> ${err} + ${errMore}" ${logFile}
+      /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "lnd-wallet-new" "lnd.initwallet.py new returned error" "/home/admin/config.scripts/lnd.initwallet.py new mainnet ... --> ${err} + ${errMore}" ${logFile}
       /home/admin/_cache.sh set state "error"
       /home/admin/_cache.sh set message "setup: lnd wallet NEW failed"
       echo "FAIL see ${logFile}"
@@ -310,12 +310,12 @@ if [ "${lightning}" == "lnd" ]; then
 
   # check if macaroon exists now - if not fail
   attempt=0
-  while [ $(sudo -u bitcoin ls -la /mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/admin.macaroon 2>/dev/null | grep -c admin.macaroon) -eq 0 ]; do
+  while [ $(sudo -u glcoin ls -la /mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/admin.macaroon 2>/dev/null | grep -c admin.macaroon) -eq 0 ]; do
     echo "Waiting 2 mins for LND to create macaroons ... (${attempt}0s)" >> ${logFile}
     sleep 10
     attempt=$((attempt+1))
     if [ $attempt -eq 12 ];then
-      /home/admin/config.scripts/blitz.error.sh _provision.setup.sh "lnd-no-macaroons" "lnd did not create macaroons" "/mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/admin.macaroon --> missing" ${logFile}
+      /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "lnd-no-macaroons" "lnd did not create macaroons" "/mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/admin.macaroon --> missing" ${logFile}
       exit 14
     fi
   done
@@ -326,7 +326,7 @@ if [ "${lightning}" == "lnd" ]; then
   # make a final lnd check
   source <(/home/admin/config.scripts/lnd.check.sh basic-setup)
   if [ "${err}" != "" ]; then
-    /home/admin/config.scripts/blitz.error.sh _provision.setup.sh "lnd-check-error" "lnd.check.sh basic-setup with error" "/home/admin/config.scripts/lnd.check.sh basic-setup --> ${err}" ${logFile}
+    /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "lnd-check-error" "lnd.check.sh basic-setup with error" "/home/admin/config.scripts/lnd.check.sh basic-setup --> ${err}" ${logFile}
     exit 15
   fi
 
@@ -347,7 +347,7 @@ if [ "${lightning}" == "cl" ]; then
   /home/admin/_cache.sh set message "Core Lightning Install"
   echo "# Starting CLN binary installation..." >> ${logFile}
   if ! /home/admin/config.scripts/cl.install.sh install >> ${logFile} 2>&1; then
-    /home/admin/config.scripts/blitz.error.sh _provision.setup.sh "cl-install-binary" "cl.install.sh install failed" "Check ${logFile} for compilation errors. Possible causes: insufficient disk space, compilation failure, missing dependencies" ${logFile}
+    /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "cl-install-binary" "cl.install.sh install failed" "Check ${logFile} for compilation errors. Possible causes: insufficient disk space, compilation failure, missing dependencies" ${logFile}
     exit 20
   fi
   echo "# CLN binary installation completed successfully" >> ${logFile}
@@ -356,7 +356,7 @@ if [ "${lightning}" == "cl" ]; then
   /home/admin/_cache.sh set message "Core Lightning Setup"
   echo "# Starting CLN mainnet configuration..." >> ${logFile}
   if ! /home/admin/config.scripts/cl.install.sh on mainnet >> ${logFile} 2>&1; then
-    /home/admin/config.scripts/blitz.error.sh _provision.setup.sh "cl-config-mainnet" "cl.install.sh on mainnet failed" "Check ${logFile} for configuration errors. CLN binary may have installed but configuration failed" ${logFile}
+    /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "cl-config-mainnet" "cl.install.sh on mainnet failed" "Check ${logFile} for configuration errors. CLN binary may have installed but configuration failed" ${logFile}
     exit 21
   fi
   echo "# CLN mainnet configuration completed successfully" >> ${logFile}
@@ -367,31 +367,31 @@ if [ "${lightning}" == "cl" ]; then
     echo "Restore CL data from uploaded rescue file ${clrescue} ..." >> ${logFile}
     source <(/home/admin/config.scripts/cl.backup.sh cl-import "${clrescue}")
     if [ "${error}" != "" ]; then
-      /home/admin/config.scripts/blitz.error.sh _provision.setup.sh "cl-import-backup" "cl.backup.sh cl-import with error" "/home/admin/config.scripts/cl.backup.sh cl-import ${clrescue} --> ${error}" ${logFile}
+      /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "cl-import-backup" "cl.backup.sh cl-import with error" "/home/admin/config.scripts/cl.backup.sh cl-import ${clrescue} --> ${error}" ${logFile}
       exit 16
     fi
 
-    # detect if the imported hsm_secret is encrypted and set in raspiblitz.conf
+    # detect if the imported hsm_secret is encrypted and set in raspiblesk.conf
     # use the variables for the default network
     source <(/home/admin/config.scripts/network.aliases.sh getvars cl mainnet)
-    hsmSecretPath="/home/bitcoin/.lightning/bitcoin/hsm_secret"
+    hsmSecretPath="/home/glcoin/.lightning/glcoin/hsm_secret"
     # check if encrypted
     trap 'rm -f "$output"' EXIT
     output=$(mktemp -p /dev/shm/)
-    echo "test" | sudo -u bitcoin lightning-hsmtool decrypt "$hsmSecretPath" \
+    echo "test" | sudo -u glcoin lightning-hsmtool decrypt "$hsmSecretPath" \
      2> "$output"
     if [ "$(grep -c "hsm_secret is not encrypted" < "$output")" -gt 0 ];then
       echo "# The hsm_secret is not encrypted"
-      echo "# Record in raspiblitz.conf"
-      /home/admin/config.scripts/blitz.conf.sh set "${netprefix}clEncryptedHSM" "off"
+      echo "# Record in raspiblesk.conf"
+      /home/admin/config.scripts/blesk.conf.sh set "${netprefix}clEncryptedHSM" "off"
     else
       cat $output
       echo "# The hsm_secret is encrypted"
-      echo "# Record in raspiblitz.conf"
-      /home/admin/config.scripts/blitz.conf.sh set "${netprefix}clEncryptedHSM" "off"
+      echo "# Record in raspiblesk.conf"
+      /home/admin/config.scripts/blesk.conf.sh set "${netprefix}clEncryptedHSM" "off"
     fi
 
-    # update from raspiblitz.conf
+    # update from raspiblesk.conf
     source ${configFile}
     # set the lightningd service file on each active network
     # init backup plugin, restart cl
@@ -415,9 +415,9 @@ if [ "${lightning}" == "cl" ]; then
     source <(/home/admin/config.scripts/cl.hsmtool.sh seed-force mainnet "${seedWords}" "${seedPassword}")
 
     # check if wallet really got created
-    walletExistsNow=$(ls /home/bitcoin/.lightning/bitcoin/hsm_secret 2>/dev/null | grep -c "hsm_secret")
+    walletExistsNow=$(ls /home/glcoin/.lightning/glcoin/hsm_secret 2>/dev/null | grep -c "hsm_secret")
     if [ $walletExistsNow -eq 0 ]; then
-      /home/admin/config.scripts/blitz.error.sh _provision.setup.sh "cl-wallet-seed" "cl.hsmtool.sh seed-force not created wallet" "ls /home/bitcoin/.lightning/bitcoin/hsm_secret --> 0" ${logFile}
+      /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "cl-wallet-seed" "cl.hsmtool.sh seed-force not created wallet" "ls /home/glcoin/.lightning/glcoin/hsm_secret --> 0" ${logFile}
       exit 17
     fi
 
@@ -427,11 +427,11 @@ if [ "${lightning}" == "cl" ]; then
     echo "# Generate new CL wallet ..." >> ${logFile}
 
     # a new wallet is generated in /home/admin/config.scripts/cl.install.sh on mainnet
-    walletExistsNow=$(ls /home/bitcoin/.lightning/bitcoin/hsm_secret 2>/dev/null | grep -c "hsm_secret")
-    seedwordsFileExitNow=$(ls /home/bitcoin/.lightning/bitcoin/seedwords.info 2>/dev/null | grep -c "seedwords.info")
+    walletExistsNow=$(ls /home/glcoin/.lightning/glcoin/hsm_secret 2>/dev/null | grep -c "hsm_secret")
+    seedwordsFileExitNow=$(ls /home/glcoin/.lightning/glcoin/seedwords.info 2>/dev/null | grep -c "seedwords.info")
     if [ "${walletExistsNow}" -gt 0 ] && [ "${seedwordsFileExitNow}" -gt 0 ]; then
       # get existing ${seedwords} and "${seedwords6x4}"
-      source /home/bitcoin/.lightning/bitcoin/seedwords.info
+      source /home/glcoin/.lightning/glcoin/seedwords.info
     else
       # generate new wallet
       source <(/home/admin/config.scripts/cl.hsmtool.sh new-force mainnet)
@@ -439,14 +439,14 @@ if [ "${lightning}" == "cl" ]; then
 
     # check if got new seedwords
     if [ "${seedwords}" == "" ] || [ "${seedwords6x4}" == "" ]; then
-      /home/admin/config.scripts/blitz.error.sh _provision.setup.sh "cl-wallet-new-noseeds" "cl.hsmtool.sh new-force did not returned seedwords" "/home/admin/config.scripts/cl.hsmtool.sh new-force mainnet --> seedwords=''" ${logFile}
+      /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "cl-wallet-new-noseeds" "cl.hsmtool.sh new-force did not returned seedwords" "/home/admin/config.scripts/cl.hsmtool.sh new-force mainnet --> seedwords=''" ${logFile}
       exit 18
     fi
 
     # check if wallet really got created
-    walletExistsNow=$(ls /home/bitcoin/.lightning/bitcoin/hsm_secret 2>/dev/null | grep -c "hsm_secret")
+    walletExistsNow=$(ls /home/glcoin/.lightning/glcoin/hsm_secret 2>/dev/null | grep -c "hsm_secret")
     if [ $walletExistsNow -eq 0 ]; then
-      /home/admin/config.scripts/blitz.error.sh _provision.setup.sh "cl-wallet-new-nowallet" "cl.hsmtool.sh new-force did not create wallet" "/home/bitcoin/.lightning/bitcoin/hsm_secret --> missing" ${logFile}
+      /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "cl-wallet-new-nowallet" "cl.hsmtool.sh new-force did not create wallet" "/home/glcoin/.lightning/glcoin/hsm_secret --> missing" ${logFile}
       exit 19
     fi
 
@@ -463,9 +463,9 @@ if [ "${lightning}" == "cl" ]; then
 
 fi
 
-# stop bitcoind for the rest of the provision process
-echo "stopping bitcoind for the rest provision again (will start on next boot)" >> ${logFile}
-systemctl stop bitcoind >> ${logFile}
+# stop glcoind for the rest of the provision process
+echo "stopping glcoind for the rest provision again (will start on next boot)" >> ${logFile}
+systemctl stop glcoind >> ${logFile}
 
 /home/admin/_cache.sh set message "Provision Setup Finish"
 echo "END Setup"  >> ${logFile}

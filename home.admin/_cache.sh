@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# the cache concept of RaspiBlitz has two options
-# 1) RAMDISK for files under /var/cache/raspiblitz
+# the cache concept of RaspiBlesk has two options
+# 1) RAMDISK for files under /var/cache/raspiblesk
 # 2) KEY-VALUE STORE for system state infos (REDIS)
 
 # SECURITY NOTE: The files on the RAMDISK can be set with unix file permissions and so restrict certain users access.
@@ -9,7 +9,7 @@
 
 # command info
 if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ "$1" = "-help" ]; then
-  echo "RaspiBlitz Cache"
+  echo "RaspiBlesk Cache"
   echo
   echo "_cache.sh ramdisk [on|off]"
   echo "_cache.sh keyvalue [on|off]"
@@ -56,12 +56,12 @@ META_OUTDATED_SECONDS=":out"
 META_LASTTOUCH_TS=":ts"
 META_VALID_FLAG=":val"
 
-# path of the raspiblitz.info file (persisting cache values)
-infoFile="/home/admin/raspiblitz.info"
+# path of the raspiblesk.info file (persisting cache values)
+infoFile="/home/admin/raspiblesk.info"
 
 ###################
 # RAMDISK
-# will be available under /var/cache/raspiblitz
+# will be available under /var/cache/raspiblesk
 ###################
 
 # install
@@ -70,21 +70,21 @@ if [ "$1" = "ramdisk" ] && [ "$2" = "on" ]; then
   echo "# Turn ON: RAMDISK"
 
   # check if ramdisk is already mounted
-  isMounted=$(df -h | grep -c "/var/cache/raspiblitz")
+  isMounted=$(df -h | grep -c "/var/cache/raspiblesk")
   if [ ${isMounted} -gt 0 ]; then
     echo "# RAMDISK already mounted"
     exit 0
   fi
 
   # make sure mountpoint exists
-  sudo mkdir -p /var/cache/raspiblitz 2>/dev/null
-  sudo rm -rf /var/cache/raspiblitz/* 2>/dev/null
+  sudo mkdir -p /var/cache/raspiblesk 2>/dev/null
+  sudo rm -rf /var/cache/raspiblesk/* 2>/dev/null
 
-  # delete any old entry that contains /var/cache/raspiblitz
-  sudo sed -i '/\/var\/cache\/raspiblitz/d' /etc/fstab
+  # delete any old entry that contains /var/cache/raspiblesk
+  sudo sed -i '/\/var\/cache\/raspiblesk/d' /etc/fstab
 
   # add the new entry to fstab & mounmt it
-  echo "tmpfs         /var/cache/raspiblitz  tmpfs  nodev,nosuid,size=64M,mode=0777 0 0" | sudo tee -a /etc/fstab >/dev/null
+  echo "tmpfs         /var/cache/raspiblesk  tmpfs  nodev,nosuid,size=64M,mode=0777 0 0" | sudo tee -a /etc/fstab >/dev/null
   sudo systemctl daemon-reload
   sudo mount -a
   echo "# RAMDISK created and mounted"
@@ -95,13 +95,13 @@ elif [ "$1" = "ramdisk" ] && [ "$2" = "off" ]; then
   echo "# Turn OFF: RAMDISK"
 
   # clear content
-  sudo rm -rf /var/cache/raspiblitz/* 2>/dev/null
+  sudo rm -rf /var/cache/raspiblesk/* 2>/dev/null
 
-  # delete any old entry that contains /var/cache/raspiblitz
-  sudo sed -i '/\/var\/cache\/raspiblitz/d' /etc/fstab
+  # delete any old entry that contains /var/cache/raspiblesk
+  sudo sed -i '/\/var\/cache\/raspiblesk/d' /etc/fstab
 
   # deactivate the mountpoint
-  sudo umount /var/cache/raspiblitz
+  sudo umount /var/cache/raspiblesk
 
 ###################
 # KEYVALUE (REDIS)
@@ -151,21 +151,21 @@ elif [ "$1" = "set" ] || [ "$1" = "init" ]; then
     exit 1
   fi
 
-  # update certain values also in raspiblitz.info
+  # update certain values also in raspiblesk.info
   if [ "${keystr}" = "state" ]; then
-    # change value in raspiblitz.info
+    # change value in raspiblesk.info
     sudo sed -i "s/^state=.*/state='${valuestr}'/g" ${infoFile}
   fi
   if [ "${keystr}" = "message" ]; then
-    # change value in raspiblitz.info
+    # change value in raspiblesk.info
     sudo sed -i "s/^message=.*/message='${valuestr}'/g" ${infoFile}
   fi
   if [ "${keystr}" = "setupPhase" ]; then
-    # change value in raspiblitz.info
+    # change value in raspiblesk.info
     sudo sed -i "s/^setupPhase=.*/setupPhase='${valuestr}'/g" ${infoFile}
   fi
   if [ "${keystr}" = "setupStep" ]; then
-    # change value in raspiblitz.info
+    # change value in raspiblesk.info
     sudo sed -i "s/^setupStep=.*/setupStep='${valuestr}'/g" ${infoFile}
   fi 
 
@@ -202,7 +202,7 @@ elif [ "$1" = "set" ] || [ "$1" = "init" ]; then
     redis-cli set ${keystr}${META_VALID_FLAG} "1" EX ${outdatesecs} 1>/dev/null
   fi
 
-  # also update value if part of raspiblitz.info (persisting values to survive boot)
+  # also update value if part of raspiblesk.info (persisting values to survive boot)
   persistKey=$(cat ${infoFile} | grep -c "^${keystr}=")
   if [ ${persistKey} -gt 0 ]; then
     sudo sed -i "s/^${keystr}=.*/${keystr}='${valuestr}'/g" ${infoFile}

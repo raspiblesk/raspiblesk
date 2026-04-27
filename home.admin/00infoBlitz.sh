@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source /home/admin/raspiblitz.info
+source /home/admin/raspiblesk.info
 
 source <(/home/admin/_cache.sh get \
   state \
@@ -31,7 +31,7 @@ source <(/home/admin/_cache.sh get \
   ElectRS \
   BTCRPCexplorer \
   joinmarket \
-  blitzapi \
+  bleskapi \
 )
 
 # PARAMETER 1: forcing view on a given network
@@ -84,11 +84,11 @@ if [ "${system_ups_status}" = "SHUTTING DOWN" ]; then
 fi
 
 # check hostname
-if [ ${#hostname} -eq 0 ]; then hostname="raspiblitz"; fi
+if [ ${#hostname} -eq 0 ]; then hostname="raspiblesk"; fi
 
 # for oldnodes
 if [ ${#chain} -eq 0 ]; then
-  network="bitcoin"
+  network="glcoin"
   chain="main"
 fi
 
@@ -107,7 +107,7 @@ if [ "${runBehindTor}" = "on" ]; then
 fi
 
 #######################
-# BITCOIN INFO
+# GLCOIN INFO
 
 # get block data - use meta on cache to call dynamic variable name
 source <(/home/admin/_cache.sh meta btc_${chain}net_blocks_headers)
@@ -315,7 +315,7 @@ fi
 
 webuiinfo=""
 source <(/home/admin/_cache.sh meta ln_${lightning}_${chain}net_recovery_done)
-if [ "${blitzapi}" == "on" ]; then
+if [ "${bleskapi}" == "on" ]; then
  webuiinfo="Web Admin --> http://${internet_localip}"
 fi
 
@@ -352,7 +352,7 @@ ${color_yellow}               ${color_gray}${ln_channelInfo} ${ln_peersInfo}
 ${color_yellow}               ${color_gray}${ln_feeReport}
 ${lastLine}
 " \
-"RaspiBlitz ${codeVersion}-${codeRelease}" \
+"RaspiBlesk ${codeVersion}-${codeRelease}" \
 "-------------------------------------------" \
 "Refreshed: ${datetime}" \
 "CPU load${system_cpu_load##up*,  }" \

@@ -23,10 +23,10 @@ function setting() # FILE LINENUMBER NAME VALUE
   echo "# ${NAME} exists->(${settingExists})"
   if [ "${settingExists}" == "0" ]; then
     echo "# adding setting (${NAME})"
-    sudo -u bitcoin sed -i "${LINENUMBER}i${NAME}=" ${FILE}
+    sudo -u glcoin sed -i "${LINENUMBER}i${NAME}=" ${FILE}
   fi
   echo "# updating setting (${NAME}) with value(${VALUE})"
-  sudo -u bitcoin sed -i "s/^${NAME}=.*/${NAME}=${VALUE}/g" ${FILE}
+  sudo -u glcoin sed -i "s/^${NAME}=.*/${NAME}=${VALUE}/g" ${FILE}
 }
 
 # run interactive if 'turn on' && no further parameters
@@ -57,17 +57,17 @@ insertLine=$(expr $sectionLine + 1)
 # lnd.conf: change name
 setting ${lndConfFile} ${insertLine} "alias" "${newName}"
 
-# raspiblitz.conf: change name
-/home/admin/config.scripts/blitz.conf.sh set hostname "${newName}"
+# raspiblesk.conf: change name
+/home/admin/config.scripts/blesk.conf.sh set hostname "${newName}"
 
 # set name in local network just if forced (not anymore by default)
-# see https://github.com/rootzoll/raspiblitz/issues/819
+# see https://github.com/rootzoll/raspiblesk/issues/819
 if [ "$3" = "alsoNetwork" ]; then
   # OS: change hostname
   sudo raspi-config nonint do_hostname ${newName}
-  /home/admin/config.scripts/blitz.conf.sh set setnetworkname "1"
+  /home/admin/config.scripts/blesk.conf.sh set setnetworkname "1"
 else
-  /home/admin/config.scripts/blitz.conf.sh set setnetworkname "0"
+  /home/admin/config.scripts/blesk.conf.sh set setnetworkname "0"
 fi
 
 #TODO - no need for full reboot only unlock LND

@@ -8,7 +8,7 @@ if [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
 fi
 
 # load data from config
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 
 if [ $# -gt 1 ];  then
   CHAIN=$2
@@ -26,7 +26,7 @@ source <(/home/admin/config.scripts/network.aliases.sh getvars lnd ${CHAIN})
 function copy_mac_set_perms() {
   local file_name=${1}  # the file name (e.g. admin.macaroon)
   local group_name=${2} # the unix group name (e.g. lndadmin)
-  local n=${3:-bitcoin} # the network (e.g. bitcoin) defaults to bitcoin
+  local n=${3:-glcoin} # the network (e.g. glcoin) defaults to glcoin
   local c=${4:-main}    # the chain (e.g. main, test, sim, reg) defaults to main (for mainnet)
   sudo /bin/chown --silent admin:"${group_name}" /mnt/hdd/app-data/lnd/data/chain/"${n}"/"${c}"net/"${file_name}"
   sudo /bin/chmod --silent 750 /mnt/hdd/app-data/lnd/data/chain/"${n}"/"${c}"net/"${file_name}"
@@ -38,7 +38,7 @@ missing=0
 for macaroon in $macaroons
 do
   local file_name=${macaroon}
-  local n=${1:-bitcoin} # the network (e.g. bitcoin) defaults to bitcoin
+  local n=${1:-glcoin} # the network (e.g. glcoin) defaults to glcoin
   local c=${2:-main}    # the chain (e.g. main, test, sim, reg) defaults to main (for mainnet)
   if [ ! -f /mnt/hdd/app-data/lnd/data/chain/"${n}"/"${c}"net/"${macaroon}" ]; then
     missing=$((missing + 1))
@@ -84,7 +84,7 @@ if [ "$1" = "reset" ]; then
     echo "## Resetting Macaroons"
     echo "# all your macaroons get deleted and recreated"
     cd || exit
-    # shellcheck disable=SC2154 # gets the ${network} from the raspiblitz.conf
+    # shellcheck disable=SC2154 # gets the ${network} from the raspiblesk.conf
     sudo find /mnt/hdd/app-data/lnd/data/chain/"${network}"/"${chain}"net/ -iname '*.macaroon' -delete
     sudo find /mnt/hdd/app-data/lnd/data/chain/"${network}"/"${chain}"net/ -iname '*.macaroon' -delete
     if [ "${keepOldMacaroons}" != "1" ]; then
@@ -156,8 +156,8 @@ elif [ "$1" = "sync" ]; then
   copy_mac_set_perms router.macaroon lndrouter "${network}" "${chain}"
 
   sudo usermod -aG lndadmin admin
-  sudo usermod -aG bitcoin admin
-  sudo usermod -aG lndadmin bitcoin
+  sudo usermod -aG glcoin admin
+  sudo usermod -aG lndadmin glcoin
   
 ###########################
 # Check Macaroons and fix missing

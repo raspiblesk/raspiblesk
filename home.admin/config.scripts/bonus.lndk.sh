@@ -12,7 +12,7 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
   exit 1
 fi
 
-source /home/admin/raspiblitz.info
+source /home/admin/raspiblesk.info
 source <(/home/admin/_cache.sh get state)
 
 # Switch on
@@ -34,7 +34,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     sudo -u lndk curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs |
       sudo -u lndk sh -s -- -y
 
-    # Clone and compile lndk onto Raspiblitz.
+    # Clone and compile lndk onto Raspiblesk.
     if [ ! -f "/usr/local/bin/lndk" ] || [ ! -f "/usr/local/bin/lndk-cli" ]; then
       cd /home/lndk || exit 1
       sudo -u lndk git clone https://github.com/lndk-org/lndk
@@ -91,7 +91,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     cat <<EOF | sudo tee /mnt/hdd/app-data/.lndk/lndk.conf
 address="https://localhost:10009"
 cert_path="/mnt/hdd/app-data/lnd/tls.cert"
-macaroon_path="/home/lndk/.lnd/data/chain/bitcoin/mainnet/admin.macaroon"
+macaroon_path="/home/lndk/.lnd/data/chain/glcoin/mainnet/admin.macaroon"
 grpc_port=5635
 log_level="debug"
 response_invoice_timeout=15
@@ -147,8 +147,8 @@ WantedBy=multi-user.target
       echo 'alias lndk-cli="lndk-cli -n mainnet --grpc-port=5635"' | sudo tee -a /home/admin/_aliases
     fi
 
-    # Set value in raspiblitz config
-    /home/admin/config.scripts/blitz.conf.sh set lndk "on"
+    # Set value in raspiblesk config
+    /home/admin/config.scripts/blesk.conf.sh set lndk "on"
   else
     echo "# LNDK is already installed."
     sudo systemctl status lndk
@@ -218,7 +218,7 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   fi
 
   # Set value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set lndk "off"
+  /home/admin/config.scripts/blesk.conf.sh set lndk "off"
 
   exit 0
 fi

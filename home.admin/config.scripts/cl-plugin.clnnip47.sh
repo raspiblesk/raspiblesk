@@ -17,34 +17,34 @@ fi
 source <(/home/admin/config.scripts/network.aliases.sh getvars cl $2)
 
 plugin="cln-nip47"
-plugindir="/home/bitcoin/cl-plugins-available/${plugin}"
+plugindir="/home/glcoin/cl-plugins-available/${plugin}"
 pluginbin="${plugindir}/target/release/${plugin}"
-enabled_dir="/home/bitcoin/${netprefix}cl-plugins-enabled"
+enabled_dir="/home/glcoin/${netprefix}cl-plugins-enabled"
 symlink_target="${enabled_dir}/${plugin}"
 repo_url="https://github.com/daywalker90/cln-nip47.git"
 
 # ensure enabled directory exists (idempotent)
 if [ ! -d "${enabled_dir}" ]; then
-  sudo -u bitcoin mkdir -p "${enabled_dir}"
+  sudo -u glcoin mkdir -p "${enabled_dir}"
 fi
 
 install_build() {
   # clone if missing
   if [ ! -d "${plugindir}/.git" ]; then
-    sudo -u bitcoin mkdir -p "/home/bitcoin/cl-plugins-available"
-    cd /home/bitcoin/cl-plugins-available || exit 1
-    sudo -u bitcoin git clone "${repo_url}" "${plugin}" || exit 1
+    sudo -u glcoin mkdir -p "/home/glcoin/cl-plugins-available"
+    cd /home/glcoin/cl-plugins-available || exit 1
+    sudo -u glcoin git clone "${repo_url}" "${plugin}" || exit 1
   else
     # update repo if it exists
     cd "${plugindir}" || exit 1
-    sudo -u bitcoin git fetch --all
-    sudo -u bitcoin git pull --ff-only || true
+    sudo -u glcoin git fetch --all
+    sudo -u glcoin git pull --ff-only || true
   fi
 
   # build release binary (idempotent) using system-wide Rust (/opt/rust)
   echo "# Building ${plugin} with cargo --release (RUSTUP_HOME=/opt/rust CARGO_HOME=/opt/rust) ..."
   cd "${plugindir}" || exit 1
-  sudo -u bitcoin RUSTUP_HOME=/opt/rust CARGO_HOME=/opt/rust cargo build --release || exit 1
+  sudo -u glcoin RUSTUP_HOME=/opt/rust CARGO_HOME=/opt/rust cargo build --release || exit 1
 
   # ensure binary permissions
   if [ -f "${pluginbin}" ]; then
@@ -64,17 +64,17 @@ install_build() {
 if [ "$1" = "on" ]; then
   install_build
 
-  # set flag in raspiblitz config (idempotent)
-  /home/admin/config.scripts/blitz.conf.sh set ${netprefix}clnnip47 "on"
+  # set flag in raspiblesk config (idempotent)
+  /home/admin/config.scripts/blesk.conf.sh set ${netprefix}clnnip47 "on"
 
   # set default CLN config options if not present yet
   if ! grep -q "^nip47-relays=" "${CLCONF}"; then
     echo "# setting nip47-relays=wss://relay.getalby.com/v1"
-    sudo /home/admin/config.scripts/blitz.conf.sh set "nip47-relays" "wss://relay.getalby.com/v1" "${CLCONF}" "noquotes"
+    sudo /home/admin/config.scripts/blesk.conf.sh set "nip47-relays" "wss://relay.getalby.com/v1" "${CLCONF}" "noquotes"
   fi
   if ! grep -q "^nip47-notifications=" "${CLCONF}"; then
     echo "# setting nip47-notifications=false"
-    sudo /home/admin/config.scripts/blitz.conf.sh set "nip47-notifications" "false" "${CLCONF}" "noquotes"
+    sudo /home/admin/config.scripts/blesk.conf.sh set "nip47-notifications" "false" "${CLCONF}" "noquotes"
   fi
 
   # restart service to apply updated CLCONF and load plugin (if system is ready)
@@ -112,8 +112,8 @@ if [ "$1" = "off" ]; then
   echo "# Clean any nip47-* options from ${CLCONF} (if present)"
   sudo sed -i "/^nip47-/d" ${CLCONF}
 
-  # set flag in raspiblitz config
-  /home/admin/config.scripts/blitz.conf.sh set ${netprefix}clnnip47 "off"
+  # set flag in raspiblesk config
+  /home/admin/config.scripts/blesk.conf.sh set ${netprefix}clnnip47 "off"
 
   echo "# The ${plugin} has been disabled"
 fi

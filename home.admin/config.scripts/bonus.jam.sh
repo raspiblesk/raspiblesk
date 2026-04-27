@@ -7,8 +7,8 @@ REPO=joinmarket-webui/jam
 USERNAME=jam
 HOME_DIR=/home/$USERNAME
 APP_DIR=webui
-RASPIBLITZ_INFO=/home/admin/raspiblitz.info
-RASPIBLITZ_CONF=/mnt/hdd/app-data/raspiblitz.conf
+RASPIBLESK_INFO=/home/admin/raspiblesk.info
+RASPIBLESK_CONF=/mnt/hdd/app-data/raspiblesk.conf
 
 # dergigi 89C4A25E69A5DE7F # theborakompanioni E8070AF0053AAC0D
 PGPsigner="theborakompanioni"
@@ -24,9 +24,9 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
   exit 1
 fi
 
-# check and load raspiblitz config to know which network is running
-source $RASPIBLITZ_INFO
-source $RASPIBLITZ_CONF 2>/dev/null
+# check and load raspiblesk config to know which network is running
+source $RASPIBLESK_INFO
+source $RASPIBLESK_CONF 2>/dev/null
 
 # check if already installed & active
 isInstalled=$(compgen -u | grep -c ${USERNAME})
@@ -61,14 +61,14 @@ if [ "$1" = "menu" ]; then
 
     if [ "${runBehindTor}" = "on" ] && [ ${#toraddress} -gt 0 ]; then
       # Info with Tor
-      sudo /home/admin/config.scripts/blitz.display.sh qr "${toraddress}"
+      sudo /home/admin/config.scripts/blesk.display.sh qr "${toraddress}"
       whiptail --title " Jam (JoinMarket Web UI) " --msgbox "Open in your local web browser:
 https://${localip}:7501\n
 with Fingerprint:
 ${fingerprint}\n
 Hidden Service address for Tor Browser (see LCD for QR):\n${toraddress}
 " 16 67
-      sudo /home/admin/config.scripts/blitz.display.sh hide
+      sudo /home/admin/config.scripts/blesk.display.sh hide
     else
       # Info without Tor
       whiptail --title " Jam (JoinMarket Web UI) " --msgbox "Open in your local web browser & accept self-signed cert:
@@ -113,7 +113,7 @@ if [ "$1" = "install" ]; then
   cd jam || exit 1
   sudo -u $USERNAME git reset --hard v${WEBUI_VERSION}
 
-  sudo -u $USERNAME /home/admin/config.scripts/blitz.git-verify.sh "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" "v${WEBUI_VERSION}" || exit 1
+  sudo -u $USERNAME /home/admin/config.scripts/blesk.git-verify.sh "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" "v${WEBUI_VERSION}" || exit 1
 
   cd $HOME_DIR || exit 1
   sudo -u $USERNAME mv jam $APP_DIR
@@ -234,9 +234,9 @@ WantedBy=multi-user.target
   sudo systemctl enable joinmarket-api 1>&2
 
   # remove legacy name
-  /home/admin/config.scripts/blitz.conf.sh delete joinmarketWebUI $RASPIBLITZ_CONF 1>&2
-  # setting value in raspiblitz config
-  /home/admin/config.scripts/blitz.conf.sh set jam on $RASPIBLITZ_CONF 1>&2
+  /home/admin/config.scripts/blesk.conf.sh delete joinmarketWebUI $RASPIBLESK_CONF 1>&2
+  # setting value in raspiblesk config
+  /home/admin/config.scripts/blesk.conf.sh set jam on $RASPIBLESK_CONF 1>&2
 
   # Hidden Service for jam if Tor is active
   if [ "${runBehindTor}" = "on" ]; then
@@ -245,7 +245,7 @@ WantedBy=multi-user.target
       # add jam
       /home/admin/config.scripts/tor.onion-service.sh jam 80 7502 443 7503 1>&2
   fi
-  source $RASPIBLITZ_INFO
+  source $RASPIBLESK_INFO
   if [ "${state}" == "ready" ]; then
       echo "# OK - the joinmarket-api.service is enabled, system is ready so starting service"
       sudo systemctl start joinmarket-api
@@ -262,20 +262,20 @@ fi
 
 # precheck
 if [ "$1" = "precheck" ]; then
-  if [ $(/usr/local/bin/bitcoin-cli -conf=/mnt/hdd/app-data/bitcoin/bitcoin.conf listwallets | grep -c wallet.dat) -eq 0 ];then
+  if [ $(/usr/local/bin/glcoin-cli -conf=/mnt/hdd/app-data/glcoin/glcoin.conf listwallets | grep -c wallet.dat) -eq 0 ];then
     echo "# Create a non-descriptor wallet.dat"
-    /usr/local/bin/bitcoin-cli -conf=/mnt/hdd/app-data/bitcoin/bitcoin.conf -named createwallet wallet_name=wallet.dat descriptors=false
+    /usr/local/bin/glcoin-cli -conf=/mnt/hdd/app-data/glcoin/glcoin.conf -named createwallet wallet_name=wallet.dat descriptors=false
   else
-    isDescriptor=$(/usr/local/bin/bitcoin-cli -conf=/mnt/hdd/app-data/bitcoin/bitcoin.conf -rpcwallet=wallet.dat getwalletinfo | grep -c '"descriptors": true,')
+    isDescriptor=$(/usr/local/bin/glcoin-cli -conf=/mnt/hdd/app-data/glcoin/glcoin.conf -rpcwallet=wallet.dat getwalletinfo | grep -c '"descriptors": true,')
     if [ "$isDescriptor" -gt 0 ]; then
       # unload
-      /usr/local/bin/bitcoin-cli -conf=/mnt/hdd/app-data/bitcoin/bitcoin.conf unloadwallet wallet.dat
-      echo "# Move the wallet.dat with descriptors to /mnt/hdd/bitcoin/descriptors"
-      mv /mnt/hdd/bitcoin/wallet.dat /mnt/hdd/bitcoin/descriptors
+      /usr/local/bin/glcoin-cli -conf=/mnt/hdd/app-data/glcoin/glcoin.conf unloadwallet wallet.dat
+      echo "# Move the wallet.dat with descriptors to /mnt/hdd/glcoin/descriptors"
+      mv /mnt/hdd/glcoin/wallet.dat /mnt/hdd/glcoin/descriptors
       echo "# Create a non-descriptor wallet.dat"
-      /usr/local/bin/bitcoin-cli -conf=/mnt/hdd/app-data/bitcoin/bitcoin.conf -named createwallet wallet_name=wallet.dat descriptors=false
+      /usr/local/bin/glcoin-cli -conf=/mnt/hdd/app-data/glcoin/glcoin.conf -named createwallet wallet_name=wallet.dat descriptors=false
     else
-      echo "# The non-descriptor wallet.dat is loaded in bitcoind."
+      echo "# The non-descriptor wallet.dat is loaded in glcoind."
     fi
   fi
   echo "# Make sure max_cj_fee_abs and max_cj_fee_rel are set"
@@ -319,7 +319,7 @@ if [ "$1" = "update" ]; then
       cd jam || exit 1
       sudo -u $USERNAME git reset --hard v${version}
 
-      sudo -u $USERNAME /home/admin/config.scripts/blitz.git-verify.sh \
+      sudo -u $USERNAME /home/admin/config.scripts/blesk.git-verify.sh \
        "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" "v${version}" || exit 1
 
       cd $HOME_DIR || exit 1
@@ -375,7 +375,7 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   sudo rm -rf $HOME_DIR/.joinmarket/ssl 1>&2
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh delete jam $RASPIBLITZ_CONF
+  /home/admin/config.scripts/blesk.conf.sh delete jam $RASPIBLESK_CONF
 
   echo "# OK, Jam is removed"
   echo "result='OK'"

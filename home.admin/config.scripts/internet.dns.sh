@@ -19,8 +19,8 @@ autoreboot=0
 if [ "${DNSSERVER}" = "off" ]; then
   # setting DNS address
   echo "# turning static DNS off"
-  sudo /home/admin/config.scripts/blitz.conf.sh delete "static domain_name_servers" /etc/dhcpcd.conf
-  /home/admin/config.scripts/blitz.conf.sh delete dnsServer
+  sudo /home/admin/config.scripts/blesk.conf.sh delete "static domain_name_servers" /etc/dhcpcd.conf
+  /home/admin/config.scripts/blesk.conf.sh delete dnsServer
   echo "# OK - needs reboot to activate"
   echo
   exit 0
@@ -39,7 +39,7 @@ if [ "${DNSSERVER}" = "test" ]; then
 
   # dns is not working --> ask in dialog to set a preset DNS
   whiptail --title ' DNS Test Failed ' --yes-button='Set DNS 1.1.1.1' --no-button='Ignore' --yesno "It looks like your DNS within local network is not working.\n
-Do you want to set the fixed DNS 1.1.1.1 by Cloudflare (they claim they provide privacy) for your RaspiBlitz and reboot?\n
+Do you want to set the fixed DNS 1.1.1.1 by Cloudflare (they claim they provide privacy) for your RaspiBlesk and reboot?\n
 " 10 64
   if [ $? -eq 0 ]; then
     echo "# SETTING 1.1.1.1"
@@ -79,7 +79,7 @@ if sudo test -f /etc/dhcpcd.conf || sudo test -f /etc/dhcp/dhcpd.conf; then
 
   # setting DNS address
   echo "# Setting DNS server ${DNSSERVER} in ${dnsconfFile} ..."
-  sudo /home/admin/config.scripts/blitz.conf.sh set "static domain_name_servers" "${DNSSERVER}" "${dnsconfFile}"
+  sudo /home/admin/config.scripts/blesk.conf.sh set "static domain_name_servers" "${DNSSERVER}" "${dnsconfFile}"
   echo "# OK"
   echo
 else
@@ -110,8 +110,8 @@ else
   nmcli dev show  | grep DNS
 fi
 
-# make sure entry in raspiblitz.conf exists
-/home/admin/config.scripts/blitz.conf.sh set dnsServer "${DNSSERVER}"
+# make sure entry in raspiblesk.conf exists
+/home/admin/config.scripts/blesk.conf.sh set dnsServer "${DNSSERVER}"
 echo "# OK"
 echo ""
 

@@ -15,7 +15,7 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
   exit 1
 fi
 
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 
 GITHUB_SIGN_AUTHOR="web-flow"
 GITHUB_SIGN_PUBKEYLINK="https://github.com/web-flow.gpg"
@@ -118,7 +118,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   cd /home/ckbunker/ckbunker || exit 1
   sudo -u ckbunker git reset --hard ${VERSION}
   if [ "${GITHUB_SIGN_AUTHOR}" != "" ]; then
-    sudo -u ckbunker /home/admin/config.scripts/blitz.git-verify.sh \
+    sudo -u ckbunker /home/admin/config.scripts/blesk.git-verify.sh \
      "${GITHUB_SIGN_AUTHOR}" "${GITHUB_SIGN_PUBKEYLINK}" "${GITHUB_SIGN_FINGERPRINT}" || exit 1
   fi
 
@@ -143,8 +143,8 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   echo "
 [Unit]
 Description=ckbunker
-Wants=bitcoind
-After=bitcoind
+Wants=glcoind
+After=glcoind
 
 [Service]
 WorkingDirectory=/home/ckbunker/ckbunker/
@@ -229,8 +229,8 @@ server {
   sudo nginx -t
   sudo systemctl reload nginx
 
-  # mark app as installed in raspiblitz config
-  /home/admin/config.scripts/blitz.conf.sh set ckbunker "on"
+  # mark app as installed in raspiblesk config
+  /home/admin/config.scripts/blesk.conf.sh set ckbunker "on"
 
   echo "# OK - CKbunker is now installed"
   echo "# To set up:
@@ -279,8 +279,8 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   echo "# remove user"
   sudo userdel -rf ckbunker
 
-  echo "# mark app as uninstalled in raspiblitz config"
-  /home/admin/config.scripts/blitz.conf.sh set ckbunker "off"
+  echo "# mark app as uninstalled in raspiblesk config"
+  /home/admin/config.scripts/blesk.conf.sh set ckbunker "off"
 
   # only if 'delete-data' is an additional parameter then also the data directory gets deleted
   if [ "$(echo "$@" | grep -c delete-data)" -gt 0 ]; then

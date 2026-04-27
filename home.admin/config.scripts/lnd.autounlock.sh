@@ -32,7 +32,7 @@ if [ "${turn}" = "on" ] && [ ${#passwordC} -eq 0 ]; then
 
 For more details see chapter in GitHub README 
 'Auto-unlock LND on startup'
-https://github.com/rootzoll/raspiblitz
+https://github.com/rootzoll/raspiblesk
 
 Password C will be stored on the device.
 " 13 52 2>./.tmp
@@ -69,18 +69,18 @@ fi
 
 # lnd conf file
 lndConfig="/mnt/hdd/app-data/lnd/lnd.conf"
-passwordFile="/mnt/hdd/app-data/lnd/data/chain/bitcoin/mainnet/password.info"
+passwordFile="/mnt/hdd/app-data/lnd/data/chain/glcoin/mainnet/password.info"
 
 # switch on
 if [ "$1" = "1" ] || [ "$1" = "on" ]; then
 
   echo "# switching the Auto-Unlock ON"
 
-  # password C needs to be stored on RaspiBlitz
+  # password C needs to be stored on RaspiBlesk
   echo "# storing password on hdd ${passwordFile}"
   sudo sh -c "echo \"${passwordC}\" > ${passwordFile}"
   sudo chmod 660 "${passwordFile}"
-  sudo chown bitcoin:bitcoin "${passwordFile}"
+  sudo chown glcoin:glcoin "${passwordFile}"
 
   # remove any existing active config in lnd.conf
   sudo sed -i "/^wallet-unlock-password-file=/d" /mnt/hdd/app-data/lnd/lnd.conf
@@ -100,10 +100,10 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   echo "# switching the Auto-Unlock OFF"
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set autoUnlock "off"
+  /home/admin/config.scripts/blesk.conf.sh set autoUnlock "off"
 
   # delete password C securely
-  echo "# shredding password on for RaspiBlitz Auto-Unlock"
+  echo "# shredding password on for RaspiBlesk Auto-Unlock"
   sudo shred -u "${passwordFile}" 2>/dev/null
 
   # remove any existing active config in lnd.conf

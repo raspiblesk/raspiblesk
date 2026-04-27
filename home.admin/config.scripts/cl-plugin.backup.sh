@@ -26,16 +26,16 @@ fi
 source <(/home/admin/config.scripts/network.aliases.sh getvars cl $2)
 
 plugin="backup"
-plugindir="/home/bitcoin/cl-plugins-available/plugins"
+plugindir="/home/glcoin/cl-plugins-available/plugins"
 
 function install() {
   if [ ! -f "${plugindir}/${plugin}/${plugin}.py" ]; then
-    cd /home/bitcoin/cl-plugins-available || exit 1
-    sudo -u bitcoin git clone https://github.com/lightningd/plugins.git
+    cd /home/glcoin/cl-plugins-available || exit 1
+    sudo -u glcoin git clone https://github.com/lightningd/plugins.git
   fi
   cd ${plugindir} || exit 1
-  sudo -u bitcoin git pull
-  sudo -u bitcoin git reset --hard ${pinnedVersion} || exit 1
+  sudo -u glcoin git pull
+  sudo -u glcoin git reset --hard ${pinnedVersion} || exit 1
 
   if [ $($lightningcli_alias plugin list 2>/dev/null | grep -c "/${plugin}") -eq 0 ]; then
     echo "# Checking dependencies"
@@ -47,14 +47,14 @@ function install() {
     fi
     
     cd ${plugindir}/backup/ || exit 1
-    sudo -u bitcoin uv sync --all-extras
+    sudo -u glcoin uv sync --all-extras
 
     sudo chmod +x ${plugindir}/${plugin}/${plugin}.py
 
     # symlink to the default plugin dir
-    if [ ! -L /home/bitcoin/${netprefix}cl-plugins-enabled/backup.py ]; then
+    if [ ! -L /home/glcoin/${netprefix}cl-plugins-enabled/backup.py ]; then
       sudo ln -s ${plugindir}/backup/backup.py \
-        /home/bitcoin/${netprefix}cl-plugins-enabled/
+        /home/glcoin/${netprefix}cl-plugins-enabled/
     fi
   else
     echo "# The ${plugin} plugin is already loaded"
@@ -74,22 +74,22 @@ if [ "$1" = on ]; then
   sudo systemctl stop ${netprefix}lightningd
 
   # don't overwrite old backup
-  if [ -f /home/bitcoin/${netprefix}lightningd.sqlite3.backup ]; then
+  if [ -f /home/glcoin/${netprefix}lightningd.sqlite3.backup ]; then
     echo "# Backup the existing old backup on the SDcard"
     now=$(date +"%Y_%m_%d_%H%M%S")
-    sudo mv /home/bitcoin/${netprefix}lightningd.sqlite3.backup \
-      /home/bitcoin/${netprefix}lightningd.sqlite3.backup.${now} || exit 1
+    sudo mv /home/glcoin/${netprefix}lightningd.sqlite3.backup \
+      /home/glcoin/${netprefix}lightningd.sqlite3.backup.${now} || exit 1
   fi
 
   # always re-init plugin
-  if sudo ls /home/bitcoin/.lightning/${CLNETWORK}/backup.lock 2>/dev/null; then
-    sudo rm /home/bitcoin/.lightning/${CLNETWORK}/backup.lock
+  if sudo ls /home/glcoin/.lightning/${CLNETWORK}/backup.lock 2>/dev/null; then
+    sudo rm /home/glcoin/.lightning/${CLNETWORK}/backup.lock
   fi
   # https://github.com/lightningd/plugins/tree/master/backup#setup
   echo "# Initialize the backup plugin"
   cd ${plugindir}/backup/ || exit 1
-  if ! sudo -u bitcoin uv run python /home/bitcoin/cl-plugins-available/plugins/backup/backup-cli init --lightning-dir /home/bitcoin/.lightning/${CLNETWORK} \
-    file:///home/bitcoin/${netprefix}lightningd.sqlite3.backup; then
+  if ! sudo -u glcoin uv run python /home/glcoin/cl-plugins-available/plugins/backup/backup-cli init --lightning-dir /home/glcoin/.lightning/${CLNETWORK} \
+    file:///home/glcoin/${netprefix}lightningd.sqlite3.backup; then
     echo "# ERROR: Failed to initialize backup plugin"
     exit 1
   fi
@@ -117,13 +117,13 @@ elif
   [ "$1" = off ]
 then
   echo "# Removing the backup plugin"
-  sudo rm -f /home/bitcoin/${netprefix}cl-plugins-enabled/backup.py
+  sudo rm -f /home/glcoin/${netprefix}cl-plugins-enabled/backup.py
   echo "# Backup the existing old backup on the SDcard"
   now=$(date +"%Y_%m_%d_%H%M%S")
-  sudo mv /home/bitcoin/${netprefix}lightningd.sqlite3.backup \
-    /home/bitcoin/${netprefix}lightningd.sqlite3.backup.${now}
+  sudo mv /home/glcoin/${netprefix}lightningd.sqlite3.backup \
+    /home/glcoin/${netprefix}lightningd.sqlite3.backup.${now}
   echo "# Removing the backup.lock file"
-  sudo rm -f /home/bitcoin/.lightning/${CLNETWORK}/backup.lock
+  sudo rm -f /home/glcoin/.lightning/${CLNETWORK}/backup.lock
 
 elif
   [ "$1" = restore ]
@@ -132,29 +132,29 @@ then
   install
 
   #look for a backup to restore
-  if sudo ls /home/bitcoin/${netprefix}lightningd.sqlite3.backup; then
+  if sudo ls /home/glcoin/${netprefix}lightningd.sqlite3.backup; then
 
     sudo systemctl stop ${netprefix}lightningd
 
     # https://github.com/lightningd/plugins/tree/master/backup#restoring-a-backup
-    # poetry run /home/bitcoin/cl-plugins-available/plugins/backup/backup-cli restore file:///mnt/external/location ~/.lightning/bitcoin/lightningd.sqlite3
+    # poetry run /home/glcoin/cl-plugins-available/plugins/backup/backup-cli restore file:///mnt/external/location ~/.lightning/glcoin/lightningd.sqlite3
 
     # make sure to not overwrite old database
-    if sudo ls /home/bitcoin/.lightning/${CLNETWORK}/lightningd.sqlite3; then
+    if sudo ls /home/glcoin/.lightning/${CLNETWORK}/lightningd.sqlite3; then
       now=$(date +"%Y_%m_%d_%H%M%S")
       echo "# Backup the existing old database on the disk"
-      sudo cp /home/bitcoin/.lightning/${CLNETWORK}/lightningd.sqlite3 \
-        /home/bitcoin/.lightning/${CLNETWORK}/lightningd.sqlite3.backup.${now} || exit 1
+      sudo cp /home/glcoin/.lightning/${CLNETWORK}/lightningd.sqlite3 \
+        /home/glcoin/.lightning/${CLNETWORK}/lightningd.sqlite3.backup.${now} || exit 1
       if [ "$(echo "$@" | grep -c "force")" -gt 0 ]; then
-        sudo rm /home/bitcoin/.lightning/${CLNETWORK}/lightningd.sqlite3
+        sudo rm /home/glcoin/.lightning/${CLNETWORK}/lightningd.sqlite3
       fi
     fi
 
     # restore
     cd ${plugindir}/backup/ || exit 1
-    sudo -u bitcoin uv run python /home/bitcoin/cl-plugins-available/plugins/backup/backup-cli restore \
-      file:///home/bitcoin/${netprefix}lightningd.sqlite3.backup \
-      /home/bitcoin/.lightning/${CLNETWORK}/lightningd.sqlite3
+    sudo -u glcoin uv run python /home/glcoin/cl-plugins-available/plugins/backup/backup-cli restore \
+      file:///home/glcoin/${netprefix}lightningd.sqlite3.backup \
+      /home/glcoin/.lightning/${CLNETWORK}/lightningd.sqlite3
 
     source <(/home/admin/_cache.sh get state)
     if [ "${state}" == "ready" ]; then
@@ -168,8 +168,8 @@ elif
   [ "$1" = backup-compact ]
 then
   # https://github.com/lightningd/plugins/tree/master/backup#performing-backup-compaction
-  dbPath="/home/bitcoin/.lightning/${CLNETWORK}/lightningd.sqlite3"
-  backupPath="/home/bitcoin/${netprefix}lightningd.sqlite3.backup"
+  dbPath="/home/glcoin/.lightning/${CLNETWORK}/lightningd.sqlite3"
+  backupPath="/home/glcoin/${netprefix}lightningd.sqlite3.backup"
 
   if sudo ls "${dbPath}" >/dev/null; then
     dbSize=$(sudo du -m "${dbPath}" | awk '{print $1}')

@@ -29,7 +29,7 @@ fi
 
 echo "# Running: 'bonus.${APPID}.sh $*'"
 
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 
 isInstalled=$(sudo ls /etc/systemd/system/${APPID}.service 2>/dev/null | grep -c "${APPID}.service")
 isRunning=$(sudo systemctl status ${APPID} 2>/dev/null | grep -c 'active (running)')
@@ -144,23 +144,23 @@ EOL
   sudo ufw allow ${PORT_UI} comment "${APPID} UI"
 
   echo "# increasing rpcworkqueue"
-  /home/admin/config.scripts/blitz.conf.sh set rpcworkqueue 512 /mnt/hdd/app-data/bitcoin/bitcoin.conf noquotes
-  /home/admin/config.scripts/blitz.conf.sh set rpcthreads 128 /mnt/hdd/app-data/bitcoin/bitcoin.conf noquotes
+  /home/admin/config.scripts/blesk.conf.sh set rpcworkqueue 512 /mnt/hdd/app-data/glcoin/glcoin.conf noquotes
+  /home/admin/config.scripts/blesk.conf.sh set rpcthreads 128 /mnt/hdd/app-data/glcoin/glcoin.conf noquotes
 
   # get RPC credentials
-  RPC_USER=$(sudo cat /mnt/hdd/app-data/bitcoin/bitcoin.conf | grep rpcuser | cut -c 9-)
-  RPC_PASS=$(sudo cat /mnt/hdd/app-data/bitcoin/bitcoin.conf | grep rpcpassword | cut -c 13-)
+  RPC_USER=$(sudo cat /mnt/hdd/app-data/glcoin/glcoin.conf | grep rpcuser | cut -c 9-)
+  RPC_PASS=$(sudo cat /mnt/hdd/app-data/glcoin/glcoin.conf | grep rpcpassword | cut -c 13-)
 
   echo "# create .env file"
   echo "
-BITCOIN_RPC_URL=http://127.0.0.1
-BITCOIN_RPC_USER=$RPC_USER
-BITCOIN_RPC_PASSWORD=$RPC_PASS
-BITCOIN_RPC_PORT=8332
-BITCOIN_RPC_TIMEOUT=20000
+GLCOIN_RPC_URL=http://127.0.0.1
+GLCOIN_RPC_USER=$RPC_USER
+GLCOIN_RPC_PASSWORD=$RPC_PASS
+GLCOIN_RPC_PORT=1617
+GLCOIN_RPC_TIMEOUT=20000
 API_PORT=${PORT_API}
 STRATUM_PORT=${PORT_STRATUM}
-POOL_IDENTIFIER=raspiblitz
+POOL_IDENTIFIER=raspiblesk
 NETWORK=mainnet
 API_SECURE=false
 " | sudo tee /home/${APPID}/${APPID}/.env >/dev/null
@@ -169,8 +169,8 @@ API_SECURE=false
   echo "
 [Unit]
 Description=${APPID}
-Wants=bitcoind.service
-After=bitcoind.service
+Wants=glcoind.service
+After=glcoind.service
 
 [Service]
 WorkingDirectory=/home/${APPID}/${APPID}
@@ -206,8 +206,8 @@ WantedBy=multi-user.target
 " | sudo tee /etc/systemd/system/${APPID}-ui.service
   sudo chown root:root /etc/systemd/system/${APPID}-ui.service
 
-  # mark app as installed in raspiblitz config
-  /home/admin/config.scripts/blitz.conf.sh set ${APPID} "on"
+  # mark app as installed in raspiblesk config
+  /home/admin/config.scripts/blesk.conf.sh set ${APPID} "on"
 
   # enable and start services
   sudo systemctl enable ${APPID}
@@ -237,8 +237,8 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   echo "# delete user"
   sudo userdel -rf ${APPID}
 
-  echo "# mark app as uninstalled in raspiblitz config"
-  /home/admin/config.scripts/blitz.conf.sh set ${APPID} "off"
+  echo "# mark app as uninstalled in raspiblesk config"
+  /home/admin/config.scripts/blesk.conf.sh set ${APPID} "off"
 
   if [ "$(echo "$@" | grep -c delete-data)" -gt 0 ]; then
     echo "# found 'delete-data' parameter --> also deleting the app-data"

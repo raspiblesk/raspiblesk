@@ -7,7 +7,7 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
  exit 1
 fi
 
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 
 # switch on
 if [ "$1" = "1" ] || [ "$1" = "on" ]; then
@@ -57,15 +57,15 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     fi
   fi
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set angular_cli "on"
+  /home/admin/config.scripts/blesk.conf.sh set angular_cli "on"
   echo "Installed angular_cli $(node -v)"
   exit 0
 fi
 
 # switch off
 if [ "$1" = "0" ] || [ "$1" = "off" ]; then
-  # setting value in raspiblitz config
-  /home/admin/config.scripts/blitz.conf.sh set angular_cli "off"
+  # setting value in raspiblesk config
+  /home/admin/config.scripts/blesk.conf.sh set angular_cli "off"
   echo "*** REMOVING angular_cli ***"
   npm uninstall @angular/cli -g
   echo "OK angular_cli removed."

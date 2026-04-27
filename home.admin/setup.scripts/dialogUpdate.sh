@@ -3,9 +3,9 @@
 # get basic system information
 # these are the same set of infos the WebGUI dialog/controler has
 source /home/admin/_version.info
-source /home/admin/raspiblitz.info
+source /home/admin/raspiblesk.info
 
-whiptail --title " RASPIBLITZ UPDATE " --yes-button "Start Update" --no-button "Other Options" --yesno "We found data from an old RaspiBlitz on your HDD/SSD.
+whiptail --title " RASPIBLESK UPDATE " --yes-button "Start Update" --no-button "Other Options" --yesno "We found data from an old RaspiBlesk on your HDD/SSD.
 
 You can start now the UPDATE to version ${codeVersion}-${codeRelease}.
 
@@ -13,7 +13,7 @@ You will need to set a new Password A for the SSH login. All your channels will 
 
 Please make sure to have your seed words & static channel backup file (just in case).
 
-Do you want to start UPDATE of your RaspiBlitz now?
+Do you want to start UPDATE of your RaspiBlesk now?
       " 18 65
 
 if [ "$?" == "0" ]; then

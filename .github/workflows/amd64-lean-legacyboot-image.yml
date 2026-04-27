@@ -10,21 +10,21 @@ on:
     branches: ['dev', 'v1.10']
     paths:
       - 'build_sdcard.sh'
-      - 'home.admin/bitcoin.install.sh'
+      - 'home.admin/glcoin.install.sh'
       - 'home.admin/tor.install.sh'
-      - 'home.admin/blitz.i2pd.sh'
-      - 'home.admin/blitz.web.sh'
-      - 'home.admin/blitz.display.sh'
+      - 'home.admin/blesk.i2pd.sh'
+      - 'home.admin/blesk.web.sh'
+      - 'home.admin/blesk.display.sh'
       - 'ci/amd64/**'
   pull_request:
     branches: ['dev', 'v1.10']
     paths:
       - 'build_sdcard.sh'
-      - 'home.admin/bitcoin.install.sh'
+      - 'home.admin/glcoin.install.sh'
       - 'home.admin/tor.install.sh'
-      - 'home.admin/blitz.i2pd.sh'
-      - 'home.admin/blitz.web.sh'
-      - 'home.admin/blitz.display.sh'
+      - 'home.admin/blesk.i2pd.sh'
+      - 'home.admin/blesk.web.sh'
+      - 'home.admin/blesk.display.sh'
       - 'ci/amd64/**'
 
 jobs:
@@ -50,7 +50,7 @@ jobs:
           fi
 
       - name: Display the build name
-        run: echo "Building the raspiblitz-amd64-debian-image-${{env.BUILD_DATE}}-${{env.BUILD_VERSION}}"
+        run: echo "Building the raspiblesk-amd64-debian-image-${{env.BUILD_DATE}}-${{env.BUILD_VERSION}}"
 
       - name: Run the build script
         run: |
@@ -60,24 +60,24 @@ jobs:
 
       - name: Compute checksum of the raw image
         run: |
-          cd ci/amd64/builds/raspiblitz-amd64-debian-lean-qemu
-          sha256sum raspiblitz-amd64-debian-lean.qcow2 > raspiblitz-amd64-debian-lean.qcow2.sha256
+          cd ci/amd64/builds/raspiblesk-amd64-debian-lean-qemu
+          sha256sum raspiblesk-amd64-debian-lean.qcow2 > raspiblesk-amd64-debian-lean.qcow2.sha256
 
       - name: Compress image
         run: |
-          cd ci/amd64/builds/raspiblitz-amd64-debian-lean-qemu
-          gzip -v9 raspiblitz-amd64-debian-lean.qcow2
+          cd ci/amd64/builds/raspiblesk-amd64-debian-lean-qemu
+          gzip -v9 raspiblesk-amd64-debian-lean.qcow2
 
       - name: Compute checksum of the compressed image
         run: |
-          cd ci/amd64/builds/raspiblitz-amd64-debian-lean-qemu
-          sha256sum raspiblitz-amd64-debian-lean.qcow2.gz > raspiblitz-amd64-debian-lean.qcow2.gz.sha256
+          cd ci/amd64/builds/raspiblesk-amd64-debian-lean-qemu
+          sha256sum raspiblesk-amd64-debian-lean.qcow2.gz > raspiblesk-amd64-debian-lean.qcow2.gz.sha256
 
       - name: Upload the image and checksums
         uses: actions/upload-artifact@v4
         with:
-          name: raspiblitz-amd64-image-${{env.BUILD_DATE}}-${{env.BUILD_VERSION}}
+          name: raspiblesk-amd64-image-${{env.BUILD_DATE}}-${{env.BUILD_VERSION}}
           path: |
-            ${{github.workspace}}/ci/amd64/builds/raspiblitz-amd64-debian-lean-qemu/raspiblitz-amd64-debian-lean.qcow2.sha256
-            ${{github.workspace}}/ci/amd64/builds/raspiblitz-amd64-debian-lean-qemu/raspiblitz-amd64-debian-lean.qcow2.gz
-            ${{github.workspace}}/ci/amd64/builds/raspiblitz-amd64-debian-lean-qemu/raspiblitz-amd64-debian-lean.qcow2.gz.sha256
+            ${{github.workspace}}/ci/amd64/builds/raspiblesk-amd64-debian-lean-qemu/raspiblesk-amd64-debian-lean.qcow2.sha256
+            ${{github.workspace}}/ci/amd64/builds/raspiblesk-amd64-debian-lean-qemu/raspiblesk-amd64-debian-lean.qcow2.gz
+            ${{github.workspace}}/ci/amd64/builds/raspiblesk-amd64-debian-lean-qemu/raspiblesk-amd64-debian-lean.qcow2.gz.sha256

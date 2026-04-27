@@ -3,12 +3,12 @@
 # For now just list all testnet/signet options available
 # injecting specific perspectives can be done later
 
-source /home/admin/raspiblitz.info
-source /mnt/hdd/app-data/raspiblitz.conf
+source /home/admin/raspiblesk.info
+source /mnt/hdd/app-data/raspiblesk.conf
 
 # BASIC MENU INFO
 WIDTH=64
-BACKTITLE="RaspiBlitz"
+BACKTITLE="RaspiBlesk"
 TITLE=" Testnet/Signet Options "
 MENU="Choose one of the following options:"
 OPTIONS=()

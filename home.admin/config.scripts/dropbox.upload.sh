@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# DEPRECATED: https://github.com/rootzoll/raspiblitz/issues/2264#issuecomment-872655605
+# DEPRECATED: https://github.com/rootzoll/raspiblesk/issues/2264#issuecomment-872655605
 # script will stay on v1.7.1 ... but should be removed after that
 
 # command info
@@ -16,7 +16,7 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
  exit 1
 fi
 
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 
 # get first parameter
 MODE="$1"
@@ -32,20 +32,20 @@ if [ "${MODE}" == "on" ]; then
     whiptail --title " Static Channel Backup on Dropbox " --inputbox "
 Follow the steps described at the following link
 to get the DropBox-Authtoken from your account:
-https://github.com/rootzoll/raspiblitz/#a-dropbox-backup-target" 11 70 2>/home/admin/.tmp
+https://github.com/rootzoll/raspiblesk/#a-dropbox-backup-target" 11 70 2>/home/admin/.tmp
     authtoken=$(cat /home/admin/.tmp)
     shred -u /home/admin/.tmp
   fi
 
   # set in config - that activates the dropbox back in background process
   if [ ${#authtoken} -gt 0 ]; then
-    /home/admin/config.scripts/blitz.conf.sh set dropboxBackupTarget "${authtoken}"
+    /home/admin/config.scripts/blesk.conf.sh set dropboxBackupTarget "${authtoken}"
   fi
 
 elif [ "${MODE}" == "off" ]; then
 
   # to turn backup off - delete the parameter from the config file
-  /home/admin/config.scripts/blitz.conf.sh delete dropboxBackupTarget
+  /home/admin/config.scripts/blesk.conf.sh delete dropboxBackupTarget
 
 elif [ "${MODE}" == "check" ]; then
 
@@ -83,9 +83,9 @@ elif [ "${MODE}" == "upload" ]; then
     exit 1
   fi
 
-  source /mnt/hdd/app-data/raspiblitz.conf
+  source /mnt/hdd/app-data/raspiblesk.conf
   if [ ${#hostname} -eq 0 ]; then
-    hostname="raspiblitz"
+    hostname="raspiblesk"
   fi
 
   DEVICE=$(echo "${hostname}" | awk '{print tolower($0)}' | sed -e 's/ /-/g')

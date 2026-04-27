@@ -35,8 +35,8 @@ if [ "$1" == "mainnet" ] || [ "$1" == "testnet" ] || [ "$1" == "signet" ]; then
   ################################
 
   # c-lightning is considered in "recoverymode" when it is scanning the chain
-  # and getinfo -H shows:  'warning_lightningd_sync=Still loading latest blocks from bitcoind.'
-  # and 'blockheight=lower-than-in-bitcoind'
+  # and getinfo -H shows:  'warning_lightningd_sync=Still loading latest blocks from glcoind.'
+  # and 'blockheight=lower-than-in-glcoind'
 
   if [ ${mode} = "recoverymode" ]; then
 
@@ -124,11 +124,11 @@ if [ ${mode} = "cl-export" ]; then
   # stop
   echo "# Stopping cl..."
   sudo systemctl stop lightningd 1>/dev/null
-  if grep -Eq "^tcl=on" /mnt/hdd/app-data/raspiblitz.conf; then
+  if grep -Eq "^tcl=on" /mnt/hdd/app-data/raspiblesk.conf; then
     echo "# stopping tcl..."
     sudo systemctl stop tlightningd 1>/dev/null
   fi
-  if grep -Eq "^scl=on" /mnt/hdd/app-data/raspiblitz.conf; then
+  if grep -Eq "^scl=on" /mnt/hdd/app-data/raspiblesk.conf; then
     echo "# stopping scl..."
     sudo systemctl stop slightningd 1>/dev/null
   fi
@@ -137,11 +137,11 @@ if [ ${mode} = "cl-export" ]; then
   echo 
 
   # add cl version info into lnd dir (to detect needed updates later)
-  clVersion=$(sudo -u bitcoin lightning-cli --version | cut -d '-' -f1 | cut -d 'v' -f2)
+  clVersion=$(sudo -u glcoin lightning-cli --version | cut -d '-' -f1 | cut -d 'v' -f2)
   sudo rm /mnt/hdd/app-data/.lightning/version.info 2>/dev/null
   echo "${clVersion}" > /home/admin/cl.version.info
   sudo mv /home/admin/cl.version.info /mnt/hdd/app-data/.lightning/version.info
-  sudo chown bitcoin:bitcoin /mnt/hdd/app-data/.lightning/version.info
+  sudo chown glcoin:glcoin /mnt/hdd/app-data/.lightning/version.info
 
   # zip it
   sudo tar -zcvf ${downloadPath}/cl-rescue.tar.gz /mnt/hdd/app-data/.lightning 1>&2
@@ -196,7 +196,7 @@ if [ ${mode} = "cl-export-gui" ]; then
   echo "Check for correct file size after transfer: ${size} byte"
   echo
   echo "BEWARE: Your Lightning node is now stopped. It's safe to backup the data and"
-  echo "restore it on a fresh RaspiBlitz. But once this Lightning node gets started"
+  echo "restore it on a fresh RaspiBlesk. But once this Lightning node gets started"
   echo "again or rebooted, it's not advised to restore the backup file because"
   echo "it would contain outdated channel data and can lead to loss of channel funds."
   exit 0
@@ -223,11 +223,11 @@ if [ ${mode} = "cl-import" ]; then
   # stop
   echo "# stopping cl..."
   sudo systemctl stop lightningd 1>/dev/null
-  if grep -Eq "^tcl=on" /mnt/hdd/app-data/raspiblitz.conf; then
+  if grep -Eq "^tcl=on" /mnt/hdd/app-data/raspiblesk.conf; then
     echo "# stopping tcl..."
     sudo systemctl stop tlightningd 1>/dev/null
   fi
-  if grep -Eq "^scl=on" /mnt/hdd/app-data/raspiblitz.conf; then
+  if grep -Eq "^scl=on" /mnt/hdd/app-data/raspiblesk.conf; then
     echo "# stopping scl..."
     sudo systemctl stop slightningd 1>/dev/null
   fi
@@ -240,7 +240,7 @@ if [ ${mode} = "cl-import" ]; then
   # unpack zip
   echo "# restoring CL data from ${filename} ..."
   sudo tar -xf ${filename} -C / 1>/dev/null
-  sudo chown -R bitcoin:bitcoin /mnt/hdd/app-data/.lightning 1>/dev/null
+  sudo chown -R glcoin:glcoin /mnt/hdd/app-data/.lightning 1>/dev/null
 
   echo "# DONE - lightningd service is still stopped - start manually with command:"
   echo "# sudo systemctl start lightningd"
@@ -268,13 +268,13 @@ if [ ${mode} = "cl-import-gui" ]; then
 
   # determine password info based on scenario
   if [ "${scenario}" == "setup" ]; then
-    passwordInfo="password 'raspiblitz'"
+    passwordInfo="password 'raspiblesk'"
   else
     passwordInfo="your Password A"
   fi
 
   # get defaultUploadPath, localIP, etc
-  source <(sudo /home/admin/config.scripts/blitz.upload.sh prepare-upload)
+  source <(sudo /home/admin/config.scripts/blesk.upload.sh prepare-upload)
 
   filename=""
   while [ "${filename}" == "" ]
@@ -298,7 +298,7 @@ if [ ${mode} = "cl-import-gui" ]; then
       read key
 
       # check upload (will return filename or error)
-      source <(sudo /home/admin/config.scripts/blitz.upload.sh check-upload cl-rescue)
+      source <(sudo /home/admin/config.scripts/blesk.upload.sh check-upload cl-rescue)
       if [ "${filename}" != "" ]; then
         echo "OK - File found: ${filename}"
         echo "PRESS ENTER to continue."
@@ -342,10 +342,10 @@ if [ ${mode} = "cl-import-gui" ]; then
   fi
 
   # in production now start restoring CL data based on file
-  source /mnt/hdd/app-data/raspiblitz.conf
+  source /mnt/hdd/app-data/raspiblesk.conf
   
   # ask security question before deleting old wallet
-  echo "WARNING: This will delete/overwrite the Core Lightning state/funds of this RaspiBlitz."
+  echo "WARNING: This will delete/overwrite the Core Lightning state/funds of this RaspiBlesk."
   echo
   echo "Write the word 'override' and press ENTER to CONTINUE:"
   read securityInput
@@ -368,16 +368,16 @@ if [ ${mode} = "cl-import-gui" ]; then
   # detect if the imported hsm_secret is encrypted
   # use the variables for the default network 
   source <(/home/admin/config.scripts/network.aliases.sh getvars cl)
-  hsmSecretPath="/home/bitcoin/.lightning/${CLNETWORK}/hsm_secret"
+  hsmSecretPath="/home/glcoin/.lightning/${CLNETWORK}/hsm_secret"
   # check if encrypted
   trap 'rm -f "$output"' EXIT
   output=$(mktemp -p /dev/shm/)
-  echo "test" | sudo -u bitcoin lightning-hsmtool decrypt "$hsmSecretPath" \
+  echo "test" | sudo -u glcoin lightning-hsmtool decrypt "$hsmSecretPath" \
    2> "$output"
   if [ "$(grep -c "hsm_secret is not encrypted" < "$output")" -gt 0 ];then
     echo "# The hsm_secret is not encrypted"
-    echo "# Record in raspiblitz.conf"
-    /home/admin/config.scripts/blitz.conf.sh set ${netprefix}clEncryptedHSM "off"
+    echo "# Record in raspiblesk.conf"
+    /home/admin/config.scripts/blesk.conf.sh set ${netprefix}clEncryptedHSM "off"
   else
     cat $output
     echo "# Starting cl.hsmtool.sh unlock ${CHAIN}"
@@ -437,7 +437,7 @@ if [ ${mode} = "seed-export-gui" ]; then
 fi
 
 # Results will be stored on memory cache:
-# /var/cache/raspiblitz/seed-import.results
+# /var/cache/raspiblesk/seed-import.results
 if [ ${mode} = "seed-import-gui" ]; then
 
   # fake seed 24 words for testing input:
@@ -451,9 +451,9 @@ if [ ${mode} = "seed-import-gui" ]; then
   fi
 
   # prepare seed result file
-  sudo rm /var/cache/raspiblitz/seed-import.results 2>/dev/null
-  sudo touch /var/cache/raspiblitz/seed-import.results
-  sudo chown admin:admin /var/cache/raspiblitz/seed-import.results
+  sudo rm /var/cache/raspiblesk/seed-import.results 2>/dev/null
+  sudo touch /var/cache/raspiblesk/seed-import.results
+  sudo chown admin:admin /var/cache/raspiblesk/seed-import.results
 
   # input loop for seed words
   wordsCorrect=0
@@ -461,14 +461,14 @@ if [ ${mode} = "seed-import-gui" ]; then
     do
 
       # prepare temp file 
-      sudo rm /var/cache/raspiblitz/.seed.tmp 2>/dev/null
-      sudo touch /var/cache/raspiblitz/.seed.tmp
-      sudo chown admin:admin /var/cache/raspiblitz/.seed.tmp
+      sudo rm /var/cache/raspiblesk/.seed.tmp 2>/dev/null
+      sudo touch /var/cache/raspiblesk/.seed.tmp
+      sudo chown admin:admin /var/cache/raspiblesk/.seed.tmp
 
       # dialog to enter
-      dialog --backtitle "RaspiBlitz - Recover from Core Lightning seed" --inputbox "Please enter/paste the SEED WORD LIST:\n(just the words, separated by spaces, in correct order as numbered)" 9 78 2>/var/cache/raspiblitz/.seed.tmp
-      wordstring=$(cat /var/cache/raspiblitz/.seed.tmp | sed 's/[^a-zA-Z0-9 ]//g')
-      sudo shred -u /var/cache/raspiblitz/.seed.tmp 2>/dev/null
+      dialog --backtitle "RaspiBlesk - Recover from Core Lightning seed" --inputbox "Please enter/paste the SEED WORD LIST:\n(just the words, separated by spaces, in correct order as numbered)" 9 78 2>/var/cache/raspiblesk/.seed.tmp
+      wordstring=$(cat /var/cache/raspiblesk/.seed.tmp | sed 's/[^a-zA-Z0-9 ]//g')
+      sudo shred -u /var/cache/raspiblesk/.seed.tmp 2>/dev/null
       echo "processing ..."
       
       # check correct number of words
@@ -476,7 +476,7 @@ if [ ${mode} = "seed-import-gui" ]; then
       if [ ${wordcount} -eq 24 ]; then
 
         # check if words are valid seed
-        source <(python /home/admin/config.scripts/blitz.mnemonic.py test "${wordstring}")
+        source <(python /home/admin/config.scripts/blesk.mnemonic.py test "${wordstring}")
         if [ "${valid}" == "0" ]; then
           whiptail --title " WARNING " --yes-button "Try Again" --no-button "Cancel" --yesno "
 The word list has 24 words BUT its not a
@@ -518,7 +518,7 @@ wordone wordtwo wordthree ...
       fi
     done
 
-  # dont ask for password D (seed password) because raspiblitz never had that option for cl
+  # dont ask for password D (seed password) because raspiblesk never had that option for cl
   passwordD=""
 
   # writing result file data

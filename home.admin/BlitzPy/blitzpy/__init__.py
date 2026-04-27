@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from .config import RaspiBlitzConfig, RaspiBlitzInfo
+from .config import RaspiBleskConfig, RaspiBleskInfo
 from .exceptions import BlitzError
 
 __all__ = [
-    'RaspiBlitzConfig',
-    'RaspiBlitzInfo',
+    'RaspiBleskConfig',
+    'RaspiBleskInfo',
     'BlitzError'
 ]

@@ -396,7 +396,7 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "RaspiBlitz"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "RaspiBlesk"))
         self.pushButton_1.setText(_translate("MainWindow", "Info"))
         self.pushButton_2.setText(_translate("MainWindow", "Node"))
         self.pushButton_3.setText(_translate("MainWindow", "Invoice"))

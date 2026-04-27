@@ -7,7 +7,7 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
  exit 1
 fi
 
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 
 # switch on
 if [ "$1" = "1" ] || [ "$1" = "on" ]; then
@@ -50,15 +50,15 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     fi
   fi
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set typescript "on"
+  /home/admin/config.scripts/blesk.conf.sh set typescript "on"
   echo "Installed typescript $(node -v)"
   exit 0
 fi
 
 # switch off
 if [ "$1" = "0" ] || [ "$1" = "off" ]; then
-  # setting value in raspiblitz config
-  /home/admin/config.scripts/blitz.conf.sh set typescript "off"
+  # setting value in raspiblesk config
+  /home/admin/config.scripts/blesk.conf.sh set typescript "off"
   echo "*** REMOVING typescript ***"
   npm uninstall typescript -g
   echo "OK typescript removed."

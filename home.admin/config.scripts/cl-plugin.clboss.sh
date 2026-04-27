@@ -41,7 +41,7 @@ CLBOSS does the following automatically:
 - Set forwarding fees so that they're competitive to other nodes
 
 Links with more info:
-https://github.com/rootzoll/raspiblitz/blob/dev/FAQ.cl.md#clboss
+https://github.com/rootzoll/raspiblesk/blob/dev/FAQ.cl.md#clboss
 https://github.com/ZmnSCPxj/clboss#operating
 " 0 0
   exit $?
@@ -55,34 +55,34 @@ function buildFromSource() {
   sudo apt install -y git automake autoconf-archive libtool
 
   # download
-  cd /home/bitcoin/cl-plugins-available/ || exit 1
-  sudo -u bitcoin git clone https://github.com/ZmnSCPxj/clboss
+  cd /home/glcoin/cl-plugins-available/ || exit 1
+  sudo -u glcoin git clone https://github.com/ZmnSCPxj/clboss
   cd clboss || exit 1
   if [[ -v version && -n "$version" ]]; then
-    sudo -u bitcoin git reset --hard ${version}
+    sudo -u glcoin git reset --hard ${version}
   fi
 
   # build
-  sudo -u bitcoin autoreconf -i
-  sudo -u bitcoin ./configure && sudo -u bitcoin make
+  sudo -u glcoin autoreconf -i
+  sudo -u glcoin ./configure && sudo -u glcoin make
   # sudo make install # optional - installs to /usr/local/bin/clboss
 }
 
 if [ "$1" = on ]; then
 
-  if [ ! -f /home/bitcoin/cl-plugins-available/clboss/clboss ]; then
+  if [ ! -f /home/glcoin/cl-plugins-available/clboss/clboss ]; then
 
     buildFromSource ${CLBOSSVERSION}
 
   fi
 
   # refresh symlink to enable
-  sudo rm /home/bitcoin/${netprefix}cl-plugins-enabled/clboss 2>/dev/null
-  sudo ln -s /home/bitcoin/cl-plugins-available/clboss/clboss \
-    /home/bitcoin/${netprefix}cl-plugins-enabled/
+  sudo rm /home/glcoin/${netprefix}cl-plugins-enabled/clboss 2>/dev/null
+  sudo ln -s /home/glcoin/cl-plugins-available/clboss/clboss \
+    /home/glcoin/${netprefix}cl-plugins-enabled/
 
-  # setting value in raspiblitz.conf
-  /home/admin/config.scripts/blitz.conf.sh set ${netprefix}clboss "on"
+  # setting value in raspiblesk.conf
+  /home/admin/config.scripts/blesk.conf.sh set ${netprefix}clboss "on"
 
   source <(/home/admin/_cache.sh get state)
   if [ "${state}" == "ready" ]; then
@@ -92,7 +92,7 @@ if [ "$1" = on ]; then
 
   echo "# clboss was installed for $CHAIN"
   echo "# Monitor with:"
-  echo "sudo tail -n 100 -f /home/bitcoin/.lightning/${CLNETWORK}/cl.log | grep clboss"
+  echo "sudo tail -n 100 -f /home/glcoin/.lightning/${CLNETWORK}/cl.log | grep clboss"
   echo "${netprefix}cl clboss-status"
   echo "https://github.com/ZmnSCPxj/clboss#operating"
 
@@ -101,7 +101,7 @@ fi
 
 if [ "$1" = off ]; then
   # delete symlink
-  sudo rm -rf /home/bitcoin/${netprefix}cl-plugins-enabled/clboss
+  sudo rm -rf /home/glcoin/${netprefix}cl-plugins-enabled/clboss
 
   echo "# Restarting the ${netprefix}lightningd.service to deactivate clboss"
   sudo systemctl restart ${netprefix}lightningd
@@ -109,23 +109,23 @@ if [ "$1" = off ]; then
   # purge
   if [ "$(echo "$@" | grep -c purge)" -gt 0 ]; then
     echo "# Delete plugin"
-    sudo rm -rf /home/bitcoin/cl-plugins-available/clboss*
+    sudo rm -rf /home/glcoin/cl-plugins-available/clboss*
     sudo rm -f /usr/local/bin/clboss
   fi
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set ${netprefix}clboss "off"
+  /home/admin/config.scripts/blesk.conf.sh set ${netprefix}clboss "off"
   echo "# clboss was uninstalled for $CHAIN"
 
   exit 0
 fi
 
 if [ "$1" = update ]; then
-  if [ ! -f /home/bitcoin/cl-plugins-available/clboss/clboss ]; then
+  if [ ! -f /home/glcoin/cl-plugins-available/clboss/clboss ]; then
     /home/admin/config.scrips/cl-plugin/clboss.sh on "${CHAIN}"
     exit 0
   else
-    sudo rm -rf /home/bitcoin/cl-plugins-available/clboss
+    sudo rm -rf /home/glcoin/cl-plugins-available/clboss
 
     buildFromSource
 

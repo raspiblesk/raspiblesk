@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# load raspiblitz config data (with backup from old config)
-source /home/admin/raspiblitz.info
-source /mnt/hdd/app-data/raspiblitz.conf
+# load raspiblesk config data (with backup from old config)
+source /home/admin/raspiblesk.info
+source /mnt/hdd/app-data/raspiblesk.conf
 if [ ${#network} -eq 0 ]; then network=`cat .network`; fi
-if [ ${#network} -eq 0 ]; then network="bitcoin"; fi
+if [ ${#network} -eq 0 ]; then network="glcoin"; fi
 if [ ${#chain} -eq 0 ]; then
   chain=$(${network}-cli getblockchaininfo | jq -r '.chain')
 fi

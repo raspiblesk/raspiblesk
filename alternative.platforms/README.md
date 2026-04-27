@@ -1,5 +1,5 @@
 <!-- omit in toc -->
-# ⚡️ Alternative platforms for the RaspiBlitz ⚡️
+# ⚡️ Alternative platforms for the RaspiBlesk ⚡️
 - [Minimum requirements](#minimum-requirements)
   - [Recommended specs](#recommended-specs)
 - [amd64 image](#amd64-image)
@@ -7,7 +7,7 @@
   - [Automated builds](#automated-builds)
 - [Virtual Machine](#virtual-machine)
   - [Create the base image](#create-the-base-image)
-  - [Building the Raspiblitz scripts](#building-the-raspiblitz-scripts)
+  - [Building the Raspiblitz scripts](#building-the-raspiblesk-scripts)
   - [Notes](#notes)
     - [Data drive](#data-drive)
 - [Armbian](#armbian)
@@ -20,7 +20,7 @@
   - [Download and verify the base image](#download-and-verify-the-base-image)
   - [Flash the base image to the installation medium](#flash-the-base-image-to-the-installation-medium)
   - [Install Debian to the OS disk](#install-debian-to-the-os-disk)
-  - [Install the RaspiBlitz Scripts](#install-the-raspiblitz-scripts)
+  - [Install the RaspiBlesk Scripts](#install-the-raspiblesk-scripts)
   - [Prepare the release](#prepare-the-release)
     - [Clean and shutdown the build machine](#clean-and-shutdown-the-build-machine)
     - [Start Tails](#start-tails)
@@ -60,15 +60,15 @@ All testers are welcome. Open an issue for your specific board to collaborate an
 
 ## Virtual Machine
 
-Instructions to run a RaspiBlitz as a VM on a Linux host machine.
-The process is similar if you want to run RaspiBlitz on the bare metal.
+Instructions to run a RaspiBlesk as a VM on a Linux host machine.
+The process is similar if you want to run RaspiBlesk on the bare metal.
 
 Tested with:
 * Debian image in VirtualBox and linux virt-manager / [cockpit-machines](https://github.com/cockpit-project/cockpit-machines)
 * Ubuntu image in VirtualBox and linux virt-manager / [cockpit-machines](https://github.com/cockpit-project/cockpit-machines)
-* Debian image in VirtualBox https://github.com/rootzoll/raspiblitz/issues/2756#issuecomment-983532237
-* TrueNAS (FreeBSD bhyve) with an Ubuntu VM: https://github.com/rootzoll/raspiblitz/issues/2104#issuecomment-917444238
-* [QEMU+UTM](https://github.com/rootzoll/raspiblitz/blob/dev/alternative.platforms/QEMU/raspiblitz-on-qemu.md)
+* Debian image in VirtualBox https://github.com/rootzoll/raspiblesk/issues/2756#issuecomment-983532237
+* TrueNAS (FreeBSD bhyve) with an Ubuntu VM: https://github.com/rootzoll/raspiblesk/issues/2104#issuecomment-917444238
+* [QEMU+UTM](https://github.com/rootzoll/raspiblesk/blob/dev/alternative.platforms/QEMU/raspiblesk-on-qemu.md)
 
 ### Create the base image
 * Download and install the base OS on an at least 32GB drive
@@ -82,7 +82,7 @@ These not need installation, password: `osboxes.org`
 
   ```bash
   # download the build script
-  wget https://raw.githubusercontent.com/rootzoll/raspiblitz/dev/build_sdcard.sh
+  wget https://raw.githubusercontent.com/rootzoll/raspiblesk/dev/build_sdcard.sh
   # run
   sudo bash build_sdcard.sh -f false -b dev -d headless -t false -w off
   ```
@@ -92,7 +92,7 @@ These not need installation, password: `osboxes.org`
     -h, --help                               this help info
     -i, --interaction [0|1]                  interaction before proceeding with execution (default: 1)
     -f, --fatpack [0|1]                      fatpack mode (default: 1)
-    -u, --github-user [raspiblitz|other]       github user to be checked from the repo (default: raspiblitz)
+    -u, --github-user [raspiblesk|other]       github user to be checked from the repo (default: raspiblesk)
     -b, --branch [v1.7|v1.8]                 branch to be built on (default: v1.10)
     -d, --display [lcd|hdmi|headless]        display class (default: lcd)
     -t, --tweak-boot-drive [0|1]             tweak boot drives (default: 1)
@@ -100,7 +100,7 @@ These not need installation, password: `osboxes.org`
   ```
 
 * Switch off when ready
-* Attach an other disk (can be even small if you prune or [stop bitcoind](https://github.com/rootzoll/raspiblitz/issues/1500#issuecomment-982779830) manually.
+* Attach an other disk (can be even small if you prune or [stop glcoind](https://github.com/rootzoll/raspiblesk/issues/1500#issuecomment-982779830) manually.
 The second virtual disk will be used as the BLOCKCHAIN drive.
 This makes that data portable and independent from the OS similar to the combination of the SDcard and separate SSD.
 
@@ -127,9 +127,9 @@ Assemble and boot.
 
 password: `1234`
 
-Follow the instructions in the terminal. Set the new password to `raspiblitz` and name the new user `admin` to keep in line with the rest of the setup.
+Follow the instructions in the terminal. Set the new password to `raspiblesk` and name the new user `admin` to keep in line with the rest of the setup.
 
-Continue with building the SDcard: https://github.com/rootzoll/raspiblitz#build-the-sd-card-image
+Continue with building the SDcard: https://github.com/rootzoll/raspiblesk#build-the-sd-card-image
 
 ---
 
@@ -160,7 +160,7 @@ if there is an error:
 run:
 `reboot` and update as above
 
-Continue with building the SDcard: https://github.com/rootzoll/raspiblitz#build-the-sd-card-image
+Continue with building the SDcard: https://github.com/rootzoll/raspiblesk#build-the-sd-card-image
 
 ---
 
@@ -205,7 +205,7 @@ Continue with building the SDcard: https://github.com/rootzoll/raspiblitz#build-
 
 ## Manual image release for amd64
 
-Work notes partially based on: https://github.com/rootzoll/raspiblitz/blob/v1.7/FAQ.md#what-is-the-process-of-creating-a-new-sd-card-image-release
+Work notes partially based on: https://github.com/rootzoll/raspiblesk/blob/v1.7/FAQ.md#what-is-the-process-of-creating-a-new-sd-card-image-release
 
 ### Requirements:
 * amd64 Laptop or Server connected to the internet via a LAN cable
@@ -270,7 +270,7 @@ Work notes partially based on: https://github.com/rootzoll/raspiblitz/blob/v1.7/
 * Continue to work on the screen of the laptop or a connected monitor
 * Install Debian with the defaults:
     * leave the root password empty (root user disabled)
-    * create a new user called `pi`, set the password to `raspiblitz`
+    * create a new user called `pi`, set the password to `raspiblesk`
     * use a single partition for the OS
       * Choose: `Guided - use entire disk`
       * Select the OS disk
@@ -284,16 +284,16 @@ Work notes partially based on: https://github.com/rootzoll/raspiblitz/blob/v1.7/
 * Install GRUB on the primary partition (OS Disk)
 
 
-### Install the RaspiBlitz Scripts
-* Once the setup is finished reboot and log in with the `pi` user (pw: `raspiblitz`)
+### Install the RaspiBlesk Scripts
+* Once the setup is finished reboot and log in with the `pi` user (pw: `raspiblesk`)
 * Run the following commands to build from the `dev` branch or change `dev` with the branch name of your version:
     ```bash
     # download
-    wget https://raw.githubusercontent.com/rootzoll/raspiblitz/dev/build_sdcard.sh
+    wget https://raw.githubusercontent.com/rootzoll/raspiblesk/dev/build_sdcard.sh
     # run
     sudo bash build_sdcard.sh -f true -b dev -d headless -t false -w off
     ```
-* The `[sudo] password for pi:` is `raspiblitz`
+* The `[sudo] password for pi:` is `raspiblesk`
 * Confirm the chosen parameters
 * Monitor/Check outputs for warnings/errors
 * (Optional for development - copy the output to a build_sdcard.sh.log)
@@ -307,7 +307,7 @@ Work notes partially based on: https://github.com/rootzoll/raspiblitz/blob/v1.7/
 #### Clean and shutdown the build machine
 * run the command (same as running `release` under `admin`):
     ```bash
-    sudo -u admin /home/admin/config.scripts/blitz.release.sh
+    sudo -u admin /home/admin/config.scripts/blesk.release.sh
     ```
 * This will shut down the laptop.
 * Remove the `Installation medium` and the `Ubuntu Live` USB stick and the LAN cable
@@ -327,12 +327,12 @@ Work notes partially based on: https://github.com/rootzoll/raspiblitz/blob/v1.7/
 * Run `lsblk` in a terminal to double check the OS disk device name (ignore last partition number)
 * Clone and compress the OS disk image (copy 11GB so the 10GB sized partition is comfortably included):
     ```bash
-    sudo dd if=/dev/[OSdiskddevice] bs=1G count=11 status=progress | gzip > raspiblitz-amd64-vX.X.X-YEAR-MONTH-DAY.img.gz
+    sudo dd if=/dev/[OSdiskddevice] bs=1G count=11 status=progress | gzip > raspiblesk-amd64-vX.X.X-YEAR-MONTH-DAY.img.gz
     ```
 * When finished you should see that 30GB was copied (the resulting compressed file is less than 3GB).
 * Create sha256 hash of the image:
     ```bash
-    sha256sum *.gz > raspiblitz-amd64-vX.X.X-YEAR-MONTH-DAY.img.gz.sha256
+    sha256sum *.gz > raspiblesk-amd64-vX.X.X-YEAR-MONTH-DAY.img.gz.sha256
     ```
 * Sign the sha256 hash file:
     ```bash
@@ -341,9 +341,9 @@ Work notes partially based on: https://github.com/rootzoll/raspiblitz/blob/v1.7/
 * Check the files:
   ```bash
   ls
-    raspiblitz-amd64-vX.X.X-YEAR-MONTH-DAY.img.gz
-    raspiblitz-amd64-vX.X.X-YEAR-MONTH-DAY.img.gz.sha256
-    raspiblitz-amd64-vX.X.X-YEAR-MONTH-DAY.img.gz.sha256.asc
+    raspiblesk-amd64-vX.X.X-YEAR-MONTH-DAY.img.gz
+    raspiblesk-amd64-vX.X.X-YEAR-MONTH-DAY.img.gz.sha256
+    raspiblesk-amd64-vX.X.X-YEAR-MONTH-DAY.img.gz.sha256.asc
   ```
 
 * Test with:
@@ -360,9 +360,9 @@ Work notes partially based on: https://github.com/rootzoll/raspiblitz/blob/v1.7/
 #### Linux instructions
 * Open a terminal in the directory with the downloaded files
     ```
-    raspiblitz-amd64-vX.X.X-YEAR-MONTH-DAY.img.gz
-    raspiblitz-amd64-vX.X.X-YEAR-MONTH-DAY.img.gz.sha256
-    raspiblitz-amd64-vX.X.X-YEAR-MONTH-DAY.img.gz.sha256.asc
+    raspiblesk-amd64-vX.X.X-YEAR-MONTH-DAY.img.gz
+    raspiblesk-amd64-vX.X.X-YEAR-MONTH-DAY.img.gz.sha256
+    raspiblesk-amd64-vX.X.X-YEAR-MONTH-DAY.img.gz.sha256.asc
     ```
 * Paste the following commands (see the comments for the explanations and an example output)
   ```bash
@@ -372,7 +372,7 @@ Work notes partially based on: https://github.com/rootzoll/raspiblitz/blob/v1.7/
   # Verify the signature of the sha256 hash:
   gpg --verify *.asc
   # Look for the output 'Good signature':
-  # gpg: assuming signed data in 'raspiblitz-amd64-vX.X.X-YEAR-MONTH-DAY.img.gz.sha256'
+  # gpg: assuming signed data in 'raspiblesk-amd64-vX.X.X-YEAR-MONTH-DAY.img.gz.sha256'
   # gpg: Signature made Mon DAY MONTH YEAR xx:xx:xx GMT
   # gpg:                using RSA key 13C688DB5B9C745DE4D2E4545BFB77609B081B65
   # gpg: Good signature from "openoms <oms@tuta.io>" [unknown]
@@ -383,7 +383,7 @@ Work notes partially based on: https://github.com/rootzoll/raspiblitz/blob/v1.7/
   # Compare the sha256 hash to the hash of the image file
   shasum -c *.sha256
   # Look for the output 'OK' :
-  # raspiblitz-amd64-vX.X.X-YEAR-MONTH-DAY.img.gz: OK
+  # raspiblesk-amd64-vX.X.X-YEAR-MONTH-DAY.img.gz: OK
   ```
 
 ### Create a torrent
@@ -402,11 +402,11 @@ Work notes partially based on: https://github.com/rootzoll/raspiblitz/blob/v1.7/
     ```
 * Comments:
     ```
-    raspiblitz-raspiblitz-amd64-vX.X.X-YEAR-MONTH-DAY
+    raspiblesk-raspiblesk-amd64-vX.X.X-YEAR-MONTH-DAY
 
-    raspiblitz-raspiblitz-amd64-vX.X.X-YEAR-MONTH-DAY image, sha256sum and signature
+    raspiblesk-raspiblesk-amd64-vX.X.X-YEAR-MONTH-DAY image, sha256sum and signature
 
-    Find more info at: https://github.com/rootzoll/raspiblitz/tree/dev/alternative.platforms
+    Find more info at: https://github.com/rootzoll/raspiblesk/tree/dev/alternative.platforms
 
     # Import the signing pubkey:
     curl https://keybase.io/oms/pgp_keys.asc | gpg --import

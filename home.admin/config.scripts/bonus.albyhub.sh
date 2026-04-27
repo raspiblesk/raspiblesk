@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# This script installs Alby Hub on RaspiBlitz.
+# This script installs Alby Hub on RaspiBlesk.
 # Rename it as `bonus.albyhub.sh` and place it in `/home/admin/config.scripts`.
 
-# id string of your app (short single string unique in raspiblitz)
+# id string of your app (short single string unique in raspiblesk)
 APPID="albyhub" # one-word lower-case no-specials
 
 # https://github.com/getAlby/hub/releases
@@ -55,7 +55,7 @@ if [ "$1" = "prestart" ]; then
   echo "LN_BACKEND_TYPE=LND" >> ${ENVFILE}
   echo "LND_ADDRESS=127.0.0.1:10009" >> ${ENVFILE}
   echo "LND_CERT_FILE=/mnt/hdd/app-data/lnd/tls.cert" >> ${ENVFILE}
-  echo "LND_MACAROON_FILE=/mnt/hdd/app-data/lnd/data/chain/bitcoin/mainnet/admin.macaroon" >> ${ENVFILE}
+  echo "LND_MACAROON_FILE=/mnt/hdd/app-data/lnd/data/chain/glcoin/mainnet/admin.macaroon" >> ${ENVFILE}
   echo >> ${ENVFILE}
 
   echo "## PRESTART CONFIG DONE for ${APPID}"
@@ -65,8 +65,8 @@ fi
 # echoing comments is useful for logs - but start output with # when not a key=value
 echo "# Running: 'bonus.${APPID}.sh $*'"
 
-source /home/admin/raspiblitz.info
-source /mnt/hdd/app-data/raspiblitz.conf 2>/dev/null
+source /home/admin/raspiblesk.info
+source /mnt/hdd/app-data/raspiblesk.conf 2>/dev/null
 
 #########################
 # INFO
@@ -135,7 +135,7 @@ if [ "$1" = "menu" ]; then
 http://${localIP}:${PORT_CLEAR}\n
 https://${localIP}:${PORT_SSL} with Fingerprint:
 ${fingerprint}\n
-The Alby Hub password is managed separate from RaspiBlitz - make sure to manage it safely.\n
+The Alby Hub password is managed separate from RaspiBlesk - make sure to manage it safely.\n
 "
 
   # use whiptail to show SSH dialog & exit
@@ -341,8 +341,8 @@ server {
     echo "# OK - the ${APPID}.service is now started"
   fi
 
-  echo "# mark app as installed in raspiblitz config"
-  /home/admin/config.scripts/blitz.conf.sh set ${APPID} "on"
+  echo "# mark app as installed in raspiblesk config"
+  /home/admin/config.scripts/blesk.conf.sh set ${APPID} "on"
 
   echo "# Monitor with: sudo journalctl -f -u ${APPID}"
   echo "# OK actvation done"
@@ -382,8 +382,8 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   echo "# removing Tor hidden service (if active)"
   /home/admin/config.scripts/tor.onion-service.sh off ${APPID}
 
-  echo "# mark app as uninstalled in raspiblitz config"
-  /home/admin/config.scripts/blitz.conf.sh set ${APPID} "off"
+  echo "# mark app as uninstalled in raspiblesk config"
+  /home/admin/config.scripts/blesk.conf.sh set ${APPID} "off"
 
   # only if 'delete-data' is an additional parameter then also the data directory gets deleted
   if [ "$(echo "$@" | grep -c delete-data)" -gt 0 ]; then

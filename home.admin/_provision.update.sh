@@ -7,16 +7,16 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # LOGFILE - store debug logs of bootstrap
-logFile="/home/admin/raspiblitz.log"
+logFile="/home/admin/raspiblesk.log"
 
 # INFOFILE - state data from bootstrap
-infoFile="/home/admin/raspiblitz.info"
+infoFile="/home/admin/raspiblesk.info"
 
-# CONFIGFILE - configuration of RaspiBlitz
-configFile="/mnt/hdd/app-data/raspiblitz.conf"
+# CONFIGFILE - configuration of RaspiBlesk
+configFile="/mnt/hdd/app-data/raspiblesk.conf"
 
-# SETUPFILE - - setup data of RaspiBlitz
-setupFile="/var/cache/raspiblitz/temp/raspiblitz.setup"
+# SETUPFILE - - setup data of RaspiBlesk
+setupFile="/var/cache/raspiblesk/temp/raspiblesk.setup"
 source ${setupFile}
 
 # log header
@@ -29,22 +29,22 @@ echo "###################################" >> ${logFile}
 
 # check if config file exists
 if [ ! -f ${configFile} ]; then
-  /home/admin/config.scripts/blitz.error.sh _provision.update.sh "missing-config" "missing ${configFile}" "" ${logFile}
+  /home/admin/config.scripts/blesk.error.sh _provision.update.sh "missing-config" "missing ${configFile}" "" ${logFile}
   exit 1
 fi
 
-# load old or init raspiblitz config
+# load old or init raspiblesk config
 source ${configFile}
 
 # if hostname missing - set default
 if [ ${#hostname} -eq 0 ]; then
-  /home/admin/config.scripts/blitz.conf.sh set hostname "raspiblitz"
+  /home/admin/config.scripts/blesk.conf.sh set hostname "raspiblesk"
   source ${configFile}
 fi
 
 # re-check if config files contains hostname value
 if [ ${#hostname} -eq 0 ]; then
-  /home/admin/config.scripts/blitz.error.sh _provision.update.sh "missing-hostname" "${setupFile} or ${configFile} contains no hostname" "" ${logFile}
+  /home/admin/config.scripts/blesk.error.sh _provision.update.sh "missing-hostname" "${setupFile} or ${configFile} contains no hostname" "" ${logFile}
   exit 1
 fi
 
@@ -56,10 +56,10 @@ if [ "${entryExists}" != "1" ]; then
 fi
 # make sure lnd / cl is set if lightning is on
 if [ "${lightning}" == "lnd" ] && [ "${lnd}" != "on" ]; then
-  /home/admin/config.scripts/blitz.conf.sh set lnd on
+  /home/admin/config.scripts/blesk.conf.sh set lnd on
 fi
 if [ "${lightning}" == "cl" ] && [ "${cl}" != "on" ]; then
-  /home/admin/config.scripts/blitz.conf.sh set cl on
+  /home/admin/config.scripts/blesk.conf.sh set cl on
 fi
 
 # load codeVersion
@@ -67,7 +67,7 @@ source /home/admin/_version.info
 
 # check if code version was loaded
 if [ ${#codeVersion} -eq 0 ]; then
-  /home/admin/config.scripts/blitz.error.sh _provision.update.sh "missing-version" "missing /home/admin/_version.info" "" ${logFile}
+  /home/admin/config.scripts/blesk.error.sh _provision.update.sh "missing-version" "missing /home/admin/_version.info" "" ${logFile}
   exit 1
 fi
 
@@ -77,14 +77,14 @@ echo "prechecks OK"  >> ${logFile}
 # this is the place if on a future version change
 # a conversion of config data or app data is needed
 
-# if old bitcoin.conf exists ...
-configExists=$(sudo ls /mnt/hdd/app-data/bitcoin/bitcoin.conf | grep -c '.conf')
+# if old glcoin.conf exists ...
+configExists=$(sudo ls /mnt/hdd/app-data/glcoin/glcoin.conf | grep -c '.conf')
 if [ ${configExists} -eq 1 ]; then
-  echo "Checking old bitcoin.conf ..." >> ${logFile}
+  echo "Checking old glcoin.conf ..." >> ${logFile}
 
-  # make sure to fix bitcoind RPC port if not done in old version
-  # https://github.com/rootzoll/raspiblitz/issues/217
-  # https://github.com/rootzoll/raspiblitz/issues/950
+  # make sure to fix glcoind RPC port if not done in old version
+  # https://github.com/rootzoll/raspiblesk/issues/217
+  # https://github.com/rootzoll/raspiblesk/issues/950
 
   if ! grep -Eq "^rpcallowip=.*" /mnt/hdd/app-data/${network}/${network}.conf; then
     echo "fix issue #217 -> adding rpcallowip=127.0.0.1" >> ${logFile}
@@ -139,20 +139,20 @@ if [ ${configExists} -eq 1 ]; then
   fi
 
 else
-  echo "WARN: /mnt/hdd/app-data/bitcoin/bitcoin.conf not found" >> ${logFile}
+  echo "WARN: /mnt/hdd/app-data/glcoin/glcoin.conf not found" >> ${logFile}
 fi
 
-# delete old Tor v1 addresses from config -  see: https://github.com/rootzoll/raspiblitz/issues/3659
+# delete old Tor v1 addresses from config -  see: https://github.com/rootzoll/raspiblesk/issues/3659
 sed -i -E "/^addnode=[a-z0-9]{8,18}\.onion/d" /mnt/hdd/app-data/${network}/${network}.conf 2>/dev/null
 
 echo "Version Code: ${codeVersion}" >> ${logFile}
-echo "Version Data: ${raspiBlitzVersion}" >> ${logFile}
+echo "Version Data: ${raspiBleskVersion}" >> ${logFile}
 
-if [ "${raspiBlitzVersion}" != "${codeVersion}" ]; then
+if [ "${raspiBleskVersion}" != "${codeVersion}" ]; then
   echo "detected version change ... starting migration script" >> ${logFile}
   # nothing specific here yet
   echo "OK Done - Updating version in config"
-  /home/admin/config.scripts/blitz.conf.sh set raspiBlitzVersion "${codeVersion}"
+  /home/admin/config.scripts/blesk.conf.sh set raspiBleskVersion "${codeVersion}"
 else
   echo "OK - version of config data is up to date" >> ${logFile}
 fi
@@ -162,7 +162,7 @@ echo ""
 echo "*** Start ${network} (UPDATE) ***" >> ${logFile}
 /home/admin/_cache.sh set message "Blockchain Testrun"
 echo "- This can take a while .." >> ${logFile}
-chown -R bitcoin:bitcoin /mnt/hdd/app-storage/${network} >>${logFile} 2>&1
+chown -R glcoin:glcoin /mnt/hdd/app-storage/${network} >>${logFile} 2>&1
 systemctl daemon-reload >> ${logFile}
 systemctl enable ${network}d.service >> ${logFile}
 systemctl start ${network}d.service >> ${logFile}
@@ -175,7 +175,7 @@ if [ "${lightning}" == "lnd" ] || [ "${lnd}" == "on" ]; then
   if [ ${configExists} -eq 1 ]; then
 
     # make sure correct file permisions are set
-    chown bitcoin:bitcoin /mnt/hdd/app-data/lnd/lnd.conf
+    chown glcoin:glcoin /mnt/hdd/app-data/lnd/lnd.conf
     chmod 664 /mnt/hdd/app-data/lnd/lnd.conf
 
     # make sure additional values are added to [Application Options] since v1.7

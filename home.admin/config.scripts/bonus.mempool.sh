@@ -17,7 +17,7 @@ PGPsigner="wiz"
 PGPpubkeyLink="https://github.com/wiz.gpg"
 PGPpubkeyFingerprint="A394E332255A6173"
 
-source /mnt/hdd/app-data/raspiblitz.conf 2>/dev/null
+source /mnt/hdd/app-data/raspiblesk.conf 2>/dev/null
 
 # show info menu
 if [ "$1" = "menu" ]; then
@@ -39,7 +39,7 @@ This can take multiple hours.
   if [ "${runBehindTor}" = "on" ] && [ ${#toraddress} -gt 0 ]; then
 
     # Tor
-    sudo /home/admin/config.scripts/blitz.display.sh qr "${toraddress}"
+    sudo /home/admin/config.scripts/blesk.display.sh qr "${toraddress}"
     whiptail --title " Mempool " --msgbox "Open in your local web browser:
 http://${localIP}:${httpPort}\n
 https://${localIP}:${httpsPort} with Fingerprint:
@@ -47,7 +47,7 @@ ${fingerprint}\n
 Hidden Service address for Tor Browser (QR see LCD):
 ${toraddress}
 " 16 67
-    sudo /home/admin/config.scripts/blitz.display.sh hide
+    sudo /home/admin/config.scripts/blesk.display.sh hide
   else
 
     # IP + Domain
@@ -143,7 +143,7 @@ if [ "$1" = "install" ]; then
   sudo -u mempool git clone https://github.com/mempool/mempool.git
   cd mempool || exit 1
   sudo -u mempool git reset --hard $pinnedVersion
-  sudo -u mempool /home/admin/config.scripts/blitz.git-verify.sh "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" || exit 1
+  sudo -u mempool /home/admin/config.scripts/blesk.git-verify.sh "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" || exit 1
 
   echo "# npm install for mempool explorer (frontend)"
 
@@ -247,10 +247,10 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     RPC_USER=$(sudo cat /mnt/hdd/app-data/${network}/${network}.conf | grep rpcuser | cut -c 9-)
     PASSWORD_B=$(sudo cat /mnt/hdd/app-data/${network}/${network}.conf | grep rpcpassword | cut -c 13-)
 
-    sudo rm /var/cache/raspiblitz/mempool-config.json 2>/dev/null
-    touch /var/cache/raspiblitz/mempool-config.json
-    chmod 600 /var/cache/raspiblitz/mempool-config.json || exit 1
-    cat >/var/cache/raspiblitz/mempool-config.json <<EOF
+    sudo rm /var/cache/raspiblesk/mempool-config.json 2>/dev/null
+    touch /var/cache/raspiblesk/mempool-config.json
+    chmod 600 /var/cache/raspiblesk/mempool-config.json || exit 1
+    cat >/var/cache/raspiblesk/mempool-config.json <<EOF
 {
   "MEMPOOL": {
     "NETWORK": "mainnet",
@@ -285,7 +285,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   }
 }
 EOF
-    sudo mv /var/cache/raspiblitz/mempool-config.json /home/mempool/mempool/backend/mempool-config.json
+    sudo mv /var/cache/raspiblesk/mempool-config.json /home/mempool/mempool/backend/mempool-config.json
     sudo chown mempool:mempool /home/mempool/mempool/backend/mempool-config.json
     cd /home/mempool/mempool/frontend || exit 1
 
@@ -322,7 +322,7 @@ EOF
 
     # install service
     echo "*** Install mempool systemd ***"
-    cat >/var/cache/raspiblitz/mempool.service <<EOF
+    cat >/var/cache/raspiblesk/mempool.service <<EOF
 # systemd unit for Mempool
 
 [Unit]
@@ -350,7 +350,7 @@ PrivateDevices=true
 WantedBy=multi-user.target
 EOF
 
-    sudo mv /var/cache/raspiblitz/mempool.service /etc/systemd/system/mempool.service
+    sudo mv /var/cache/raspiblesk/mempool.service /etc/systemd/system/mempool.service
     sudo systemctl enable mempool
     echo "# OK - the mempool service is now enabled"
 
@@ -378,10 +378,10 @@ EOF
   fi
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set mempoolExplorer "on"
+  /home/admin/config.scripts/blesk.conf.sh set mempoolExplorer "on"
 
   echo "# needs to finish creating txindex to be functional"
-  echo "# monitor with: sudo tail -n 20 -f /mnt/hdd/app-data/bitcoin/debug.log"
+  echo "# monitor with: sudo tail -n 20 -f /mnt/hdd/app-data/glcoin/debug.log"
 
   # Hidden Service for Mempool if Tor is active
   if [ "${runBehindTor}" = "on" ]; then
@@ -435,7 +435,7 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   fi
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set mempoolExplorer "off"
+  /home/admin/config.scripts/blesk.conf.sh set mempoolExplorer "off"
 
   # needed for API/WebUI as signal that install ran thru
   echo "result='OK'"

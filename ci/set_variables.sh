@@ -54,6 +54,11 @@ function set_variables() {
       params[image_type]="$2"
       shift 2
       ;;
+    # path to local glcoin source directory (used until glcoin is published online)
+    --glcoin_source_path)
+      params[glcoin_source_path]="$2"
+      shift 2
+      ;;
     --)
       shift
       break

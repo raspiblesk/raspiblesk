@@ -19,7 +19,7 @@
 
 @test "Create test database in 13" {
   sudo -u postgres psql -c "CREATE DATABASE testdb13 TEMPLATE template0 LC_CTYPE 'C' LC_COLLATE 'C' ENCODING 'UTF8';"
-  sudo -u postgres psql -c "CREATE USER testuser13 WITH ENCRYPTED PASSWORD 'raspiblitz';"
+  sudo -u postgres psql -c "CREATE USER testuser13 WITH ENCRYPTED PASSWORD 'raspiblesk';"
   sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE testdb13 TO testuser13;"
   run pg_lsclusters
   [ "$status" -eq 0 ]
@@ -67,7 +67,7 @@
 
 @test "Create test database (2)" {
   sudo -u postgres psql -c "CREATE DATABASE testdb15 TEMPLATE template0 LC_CTYPE 'C' LC_COLLATE 'C' ENCODING 'UTF8';"
-  sudo -u postgres psql -c "CREATE USER testuser15 WITH ENCRYPTED PASSWORD 'raspiblitz';"
+  sudo -u postgres psql -c "CREATE USER testuser15 WITH ENCRYPTED PASSWORD 'raspiblesk';"
   sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE testdb15 TO testuser15;"
   run pg_lsclusters
   [ "$status" -eq 0 ]

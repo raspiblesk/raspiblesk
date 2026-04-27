@@ -2,18 +2,18 @@
 
 # get basic system information
 # these are the same set of infos the WebGUI dialog/controler has
-source /home/admin/raspiblitz.info
+source /home/admin/raspiblesk.info
 # get values from cache
 
 # SETUPFILE
 # this key/value file contains the state during the setup process
-SETUPFILE="/var/cache/raspiblitz/temp/raspiblitz.setup"
+SETUPFILE="/var/cache/raspiblesk/temp/raspiblesk.setup"
 
 # init SETUPFILE & temp dir on mem drive
-sudo mkdir /var/cache/raspiblitz/temp
-sudo chown admin:admin /var/cache/raspiblitz/temp
+sudo mkdir /var/cache/raspiblesk/temp
+sudo chown admin:admin /var/cache/raspiblesk/temp
 sudo rm $SETUPFILE 2>/dev/null
-echo "# RASPIBLITZ SETUP STATE" > $SETUPFILE
+echo "# RASPIBLESK SETUP STATE" > $SETUPFILE
 sudo chown admin:admin $SETUPFILE
 sudo chmod 777 $SETUPFILE
 
@@ -93,7 +93,7 @@ if [ "${setupPhase}" == "migration" ]; then
     # on cancel - default to normal setup
     /home/admin/_cache.sh set setupPhase "setup"
     echo "# you refused node migration option - defaulting to normal setup"
-    /home/admin/00raspiblitz.sh
+    /home/admin/00raspiblesk.sh
     exit 1
   fi
 
@@ -115,7 +115,7 @@ Power up again." 16 50
 fi
 
 # fresh import setup values
-source /home/admin/raspiblitz.info
+source /home/admin/raspiblesk.info
 
 ############################################
 # DEFAULT: Basic Setup menu
@@ -176,7 +176,7 @@ if [ "${setupPhase}" = "setup" ]; then
   if [ "${menuresult}" = "6" ]; then
     
     # ask user details on migrate HDD (resutls in cache)
-    sudo /home/admin/config.scripts/blitz.data.sh migration hdd menu-prepare
+    sudo /home/admin/config.scripts/blesk.data.sh migration hdd menu-prepare
     if [ "$?" == "1" ]; then
       # user wants to exit
       exit 0
@@ -199,11 +199,11 @@ if [ "${setupPhase}" = "setup" ]; then
     existingBlockchain=""
     if [ "${menuresult}" = "0" ] && [ "${system_setup_storageBlockchainGB}" != "" ] && [ "${system_setup_storageBlockchainGB}" != "0" ]; then
       echo "# Existing blockchain can be used - cannot be moved to new drive layout"
-      existingBlockchain="BITCOIN"
+      existingBlockchain="GLCOIN"
       # allow, when bootFromStorage & storage already has 3 partitions (new drive layout)
     elif [ "${system_setup_storagePartitionsCount}" == "3" ]; then
         echo "# Existing blockchain can be used - already new drive layout"
-        existingBlockchain="BITCOIN"
+        existingBlockchain="GLCOIN"
       # otherwise - dont use existing blockchain
     else
         echo "# Existing blockchain will not be used - to allow transfere to new drive layout"
@@ -330,7 +330,7 @@ sudo /home/admin/setup.scripts/dialogPasswords.sh || exit 1
 # check if password A is set
 source ${SETUPFILE}
 if [ "${passwordA}" = "" ]; then
-  sudo /home/admin/config.scripts/blitz.error.sh $(basename "$0") "missing-passworda-1" "missing passwordA(1) in (${SETUPFILE}) after dialogPasswords.sh" ""
+  sudo /home/admin/config.scripts/blesk.error.sh $(basename "$0") "missing-passworda-1" "missing passwordA(1) in (${SETUPFILE}) after dialogPasswords.sh" ""
   exit 1
 fi
 

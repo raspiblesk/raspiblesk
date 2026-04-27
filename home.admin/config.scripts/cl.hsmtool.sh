@@ -3,7 +3,7 @@
 # keeps the password in memory between restarts: /dev/shm/.${netprefix}cl.pw
 # see the reasoning: https://github.com/ElementsProject/lightning#hd-wallet-encryption
 # does not store the password on disk unless auto-unlock is enabled
-# autounlock password is in /home/bitcoin/.${netprefix}cl.pw
+# autounlock password is in /home/glcoin/.${netprefix}cl.pw
 
 # command info
 if [ $# -lt 1 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]||\
@@ -39,15 +39,15 @@ fi
 
 echo "# Running 'cl.hsmtool.sh $*'"
 
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 source <(/home/admin/config.scripts/network.aliases.sh getvars cl $2)
-hsmSecretPath="/home/bitcoin/.lightning/${CLNETWORK}/hsm_secret"
+hsmSecretPath="/home/glcoin/.lightning/${CLNETWORK}/hsm_secret"
 
 # password file is on the disk if encrypted and auto-unlock is enabled
 passwordFile="/dev/shm/.${netprefix}cl.pw"
-if grep -Eq "${netprefix}clEncryptedHSM=on" /mnt/hdd/app-data/raspiblitz.conf;then
-  if grep -Eq "${netprefix}clAutoUnlock=on" /mnt/hdd/app-data/raspiblitz.conf;then
-    passwordFile=/home/bitcoin/.${netprefix}cl.pw
+if grep -Eq "${netprefix}clEncryptedHSM=on" /mnt/hdd/app-data/raspiblesk.conf;then
+  if grep -Eq "${netprefix}clAutoUnlock=on" /mnt/hdd/app-data/raspiblesk.conf;then
+    passwordFile=/home/glcoin/.${netprefix}cl.pw
   fi
 fi
 
@@ -77,8 +77,8 @@ function passwordToFile() {
     0)
       sudo touch $passwordFile
       sudo chmod 600 $passwordFile
-      sudo chown bitcoin:bitcoin $passwordFile
-      sudo -u bitcoin tee $passwordFile 1>/dev/null < "$data"
+      sudo chown glcoin:glcoin $passwordFile
+      sudo -u glcoin tee $passwordFile 1>/dev/null < "$data"
       shred "$data";;
     1)
       shred "$data"
@@ -100,25 +100,25 @@ function shredPasswordFile() {
   if [ -f /dev/shm/.${netprefix}cl.pw ];then
     sudo shred -uvz /dev/shm/.${netprefix}cl.pw
   fi
-  if [ -f /home/bitcoin/.${netprefix}cl.pw ];then
-    sudo shred -uvz /home/bitcoin/.${netprefix}cl.pw
+  if [ -f /home/glcoin/.${netprefix}cl.pw ];then
+    sudo shred -uvz /home/glcoin/.${netprefix}cl.pw
   fi
 }
 
 function encryptHSMsecret() {
   walletPassword=$1
   if [ ${#walletPassword} -eq 0 ];then
-    sudo /home/admin/config.scripts/blitz.passwords.sh set x \
+    sudo /home/admin/config.scripts/blesk.passwords.sh set x \
      "Enter the password C to encrypt the Core Lightning wallet file (hsm_secret)" \
      "$passwordFile"
-    sudo chown bitcoin:bitcoin $passwordFile
+    sudo chown glcoin:glcoin $passwordFile
     sudo chmod 600 $passwordFile
     walletPassword=$(sudo cat $passwordFile)
   fi
   (echo $walletPassword; echo $walletPassword) | \
-   sudo -u bitcoin lightning-hsmtool encrypt $hsmSecretPath || exit 1
-  # setting value in raspiblitz.conf
-  /home/admin/config.scripts/blitz.conf.sh set ${netprefix}clEncryptedHSM "on"
+   sudo -u glcoin lightning-hsmtool encrypt $hsmSecretPath || exit 1
+  # setting value in raspiblesk.conf
+  /home/admin/config.scripts/blesk.conf.sh set ${netprefix}clEncryptedHSM "on"
   echo "# Encrypted the hsm_secret for Core Lightning $CHAIN"
 }
 
@@ -130,15 +130,15 @@ function decryptHSMsecret() {
   # check if encrypted
   trap 'rm -f "$output"' EXIT
   output=$(mktemp -p /dev/shm/)
-  echo "test" | sudo -u bitcoin lightning-hsmtool decrypt "$hsmSecretPath" \
+  echo "test" | sudo -u glcoin lightning-hsmtool decrypt "$hsmSecretPath" \
    2> "$output"
   if [ "$(grep -c "hsm_secret is not encrypted" < "$output")" -gt 0 ];then
     echo "# The hsm_secret is not encrypted"
     shredPasswordFile
-    echo "# Continue to record in the raspiblitz.conf"
+    echo "# Continue to record in the raspiblesk.conf"
   else
-    # setting value in raspiblitz.conf
-    /home/admin/config.scripts/blitz.conf.sh set ${netprefix}clEncryptedHSM "on"
+    # setting value in raspiblesk.conf
+    /home/admin/config.scripts/blesk.conf.sh set ${netprefix}clEncryptedHSM "on"
     if [ "${password}" != "" ]; then
       echo "# using the password from parameter"
     elif [ -f $passwordFile ];then
@@ -148,20 +148,20 @@ function decryptHSMsecret() {
       passwordToFile
       password=$(sudo cat $passwordFile)
     fi
-    if echo "${password}" | sudo -u bitcoin lightning-hsmtool decrypt \
+    if echo "${password}" | sudo -u glcoin lightning-hsmtool decrypt \
      "$hsmSecretPath"; then
       echo "# Decrypted successfully"
     else
       # unlock manually
       /home/admin/config.scripts/cl.hsmtool.sh unlock ${CHAIN}
       # attempt to decrypt again
-      sudo cat $passwordFile | sudo -u bitcoin lightning-hsmtool decrypt \
+      sudo cat $passwordFile | sudo -u glcoin lightning-hsmtool decrypt \
        "$hsmSecretPath" || exit 1
     fi
   fi
   shredPasswordFile
-  # setting value in raspiblitz config
-  /home/admin/config.scripts/blitz.conf.sh set ${netprefix}clEncryptedHSM "off"
+  # setting value in raspiblesk config
+  /home/admin/config.scripts/blesk.conf.sh set ${netprefix}clEncryptedHSM "off"
   echo "# Decrypted the hsm_secret for Core Lightning $CHAIN"
 }
 
@@ -170,10 +170,10 @@ function decryptHSMsecret() {
 ###########
 if [ "$1" = "new" ] || [ "$1" = "new-force" ] || [ "$1" = "seed" ] || [ "$1" = "seed-force" ]; then
 
-  # make sure /home/bitcoin/.lightning/bitcoin exists (when lightningd was not run yet)
-  if ! sudo ls /home/bitcoin/.lightning/bitcoin 2>/dev/null; then
-    echo "# Create /home/bitcoin/.lightning/bitcoin/"
-    sudo -u bitcoin mkdir -p /home/bitcoin/.lightning/bitcoin/
+  # make sure /home/glcoin/.lightning/glcoin exists (when lightningd was not run yet)
+  if ! sudo ls /home/glcoin/.lightning/glcoin 2>/dev/null; then
+    echo "# Create /home/glcoin/.lightning/glcoin/"
+    sudo -u glcoin mkdir -p /home/glcoin/.lightning/glcoin/
   fi
 
   # check/delete existing wallet
@@ -187,8 +187,8 @@ if [ "$1" = "new" ] || [ "$1" = "new-force" ] || [ "$1" = "seed" ] || [ "$1" = "
     if sudo ls $hsmSecretPath 2>1 1>/dev/null; then
       echo "# The hsm_secret is already present at $hsmSecretPath."
       if [ ${CHAIN} = "mainnet" ]; then
-        if sudo ls /home/bitcoin/.lightning/${CLNETWORK}/seedwords.info 2>1 1>/dev/null; then
-          echo "# There is a /home/bitcoin/.lightning/${CLNETWORK}/seedwords.info so don't create new"
+        if sudo ls /home/glcoin/.lightning/${CLNETWORK}/seedwords.info 2>1 1>/dev/null; then
+          echo "# There is a /home/glcoin/.lightning/${CLNETWORK}/seedwords.info so don't create new"
           # show seed
           if [ "$3" != "noninteractive" ]; then
             sudo /home/admin/config.scripts/cl.backup.sh seed-export-gui
@@ -225,7 +225,7 @@ if [ "$1" = "new" ] || [ "$1" = "new-force" ] || [ "$1" = "seed" ] || [ "$1" = "
     seedpassword="$3"
     echo "new seedpassword='${seedpassword}'"
     # get 24 words
-    source <(python /home/admin/config.scripts/blitz.mnemonic.py generate)
+    source <(python /home/admin/config.scripts/blesk.mnemonic.py generate)
     if [ "${seedpassword}" != "noninteractive" ]; then
       /home/admin/config.scripts/cl.backup.sh seed-export-gui "${seedwords6x4}"
     else
@@ -233,7 +233,7 @@ if [ "$1" = "new" ] || [ "$1" = "new-force" ] || [ "$1" = "seed" ] || [ "$1" = "
     fi
   elif [ "$1" = "new-force" ]; then
     # get 24 words
-    source <(python /home/admin/config.scripts/blitz.mnemonic.py generate)
+    source <(python /home/admin/config.scripts/blesk.mnemonic.py generate)
     seedwordsCommaSeparated=$(echo "$seedwords" | sed 's/^ *//;s/ *$//;s/ \+/, /g')
 
     echo "seedwords='${seedwordsCommaSeparated}'"
@@ -242,7 +242,7 @@ if [ "$1" = "new" ] || [ "$1" = "new-force" ] || [ "$1" = "seed" ] || [ "$1" = "
     #TODO get seedwords from cl.backup.sh seed-import-gui [$RESULTFILE]
     seedwords="$3"
     # get seedwords6x4
-    source <(python /home/admin/config.scripts/blitz.mnemonic.py add6x4 "${seedwords}")
+    source <(python /home/admin/config.scripts/blesk.mnemonic.py add6x4 "${seedwords}")
     seedpassword="$4"
   fi
 
@@ -251,26 +251,26 @@ if [ "$1" = "new" ] || [ "$1" = "new-force" ] || [ "$1" = "seed" ] || [ "$1" = "
     exit 14
   fi
   seedwordsCommaSeparated=$(echo "$seedwords" | sed 's/^ *//;s/ *$//;s/ \+/, /g')
-  # place the seedwords to /home/bitcoin/.lightning/${CLNETWORK}/seedwords.info
-  sudo touch /home/bitcoin/.lightning/${CLNETWORK}/seedwords.info
-  sudo chown bitcoin:bitcoin /home/bitcoin/.lightning/${CLNETWORK}/seedwords.info
-  sudo chmod 600 /home/bitcoin/.lightning/${CLNETWORK}/seedwords.info
+  # place the seedwords to /home/glcoin/.lightning/${CLNETWORK}/seedwords.info
+  sudo touch /home/glcoin/.lightning/${CLNETWORK}/seedwords.info
+  sudo chown glcoin:glcoin /home/glcoin/.lightning/${CLNETWORK}/seedwords.info
+  sudo chmod 600 /home/glcoin/.lightning/${CLNETWORK}/seedwords.info
   echo "
 # This file was placed by cl.hsmtool.sh
 # Contains the seed words from which the hsm_secret in the same directory was generated from
 seedwords='${seedwordsCommaSeparated}'
 seedwords6x4='${seedwords6x4}'
 # Will be removed safely when the hsm_secret is encrypted.
-" | sudo -u bitcoin tee /home/bitcoin/.lightning/${CLNETWORK}/seedwords.info
+" | sudo -u glcoin tee /home/glcoin/.lightning/${CLNETWORK}/seedwords.info
 
   # pass to 'hsmtool generatehsm hsm_secret'
   if [ ${#seedpassword} -eq 0 ]; then
-    (echo "0"; echo "${seedwords}"; echo) | sudo -u bitcoin lightning-hsmtool \
+    (echo "0"; echo "${seedwords}"; echo) | sudo -u glcoin lightning-hsmtool \
      "generatehsm" $hsmSecretPath 1>&2
   else
     # pass to 'hsmtool generatehsm hsm_secret' - confirm seedpassword
     (echo "0"; echo "${seedwords}"; echo "$seedpassword"; echo "$seedpassword")\
-     | sudo -u bitcoin lightning-hsmtool "generatehsm" $hsmSecretPath 1>&2
+     | sudo -u glcoin lightning-hsmtool "generatehsm" $hsmSecretPath 1>&2
   fi
 
   echo "# Re-init the backup plugin with the new wallet"
@@ -285,14 +285,14 @@ elif [ "$1" = "unlock" ]; then
   justUnlocked=0
   while [ $($lightningcli_alias getinfo 2>&1 | grep -c '"id":') -eq 0 ];do
     clError=$(sudo journalctl -n5 -u ${netprefix}lightningd)
-    clLog=$(sudo tail -n 5 /home/bitcoin/.lightning/${CLNETWORK}/cl.log)
+    clLog=$(sudo tail -n 5 /home/glcoin/.lightning/${CLNETWORK}/cl.log)
 
     # check passwordfile
     if [ "$(eval echo \$${netprefix}clEncryptedHSM)" = "on" ] && [ ! -f $passwordFile ];then
         if [ $# -lt 3 ];then
           passwordToFile
         else
-          echo "$3" | sudo -u bitcoin tee $passwordFile 1>/dev/null
+          echo "$3" | sudo -u glcoin tee $passwordFile 1>/dev/null
         fi
         sudo systemctl restart ${netprefix}lightningd
 
@@ -308,7 +308,7 @@ elif [ "$1" = "unlock" ]; then
         if [ $# -lt 3 ];then
           passwordToFile
         else
-          echo "$3" | sudo -u bitcoin tee $passwordFile 1>/dev/null
+          echo "$3" | sudo -u glcoin tee $passwordFile 1>/dev/null
         fi
         sudo systemctl restart ${netprefix}lightningd
         justUnlocked=1
@@ -325,10 +325,10 @@ elif [ "$1" = "unlock" ]; then
         if [ $# -lt 3 ];then
           passwordToFile
         else
-          echo "$3" | sudo -u bitcoin tee $passwordFile 1>/dev/null
+          echo "$3" | sudo -u glcoin tee $passwordFile 1>/dev/null
         fi
-        # setting value in raspiblitz config
-        /home/admin/config.scripts/blitz.conf.sh set ${netprefix}clEncryptedHSM "on"
+        # setting value in raspiblesk config
+        /home/admin/config.scripts/blesk.conf.sh set ${netprefix}clEncryptedHSM "on"
         /home/admin/config.scripts/cl.install-service.sh $CHAIN
 
     # get new password
@@ -347,21 +347,21 @@ elif [ "$1" = "unlock" ]; then
     # check if the backup plugin is needing to be reinitialized
     elif [ $(echo "${clLog}" | \
       grep -c 'Backup is out of date, we cannot continue safely. Emergency shutdown.') -gt 0 ];then
-      echo "# Backup is out of date, reinitiliazng and saving a copy in /home/bitcoin/ (on the SDcard / OS disk)"
+      echo "# Backup is out of date, reinitiliazng and saving a copy in /home/glcoin/ (on the SDcard / OS disk)"
       /home/admin/config.scripts/cl-plugin.backup.sh on
 
     # check if database upgrade is needed
     elif [ $(echo "${clError}" | \
      grep -c 'use --database-upgrade=true to override') -gt 0 ];then
-      /home/admin/config.scripts/blitz.conf.sh set database-upgrade true $CLCONF noquotes
+      /home/admin/config.scripts/blesk.conf.sh set database-upgrade true $CLCONF noquotes
       sudo systemctl restart ${netprefix}lightningd
 
     # fail
     elif [ $attempt -eq 12 ];then
       echo "# Failed to unlock the ${netprefix}lightningd wallet - giving up after 1 minute"
       echo
-      echo "# The last lines of the ${netprefix}lightningd logs ('sudo tail -n 5 /home/bitcoin/.lightning/${CLNETWORK}/cl.log'):"
-      sudo tail -n 5 /home/bitcoin/.lightning/${CLNETWORK}/cl.log
+      echo "# The last lines of the ${netprefix}lightningd logs ('sudo tail -n 5 /home/glcoin/.lightning/${CLNETWORK}/cl.log'):"
+      sudo tail -n 5 /home/glcoin/.lightning/${CLNETWORK}/cl.log
       echo
       echo "# The last lines of the ${netprefix}lightningd journal ('sudo journalctl -u ${netprefix}lightningd'):"
       sudo journalctl -n 5 -u ${netprefix}lightningd
@@ -390,8 +390,8 @@ elif [ "$1" = "encrypt" ]; then
     exit 1
   fi
 
-  if [ -f /home/bitcoin/.lightning/${CLNETWORK}/seedwords.info ]; then
-    source /home/bitcoin/.lightning/${CLNETWORK}/seedwords.info
+  if [ -f /home/glcoin/.lightning/${CLNETWORK}/seedwords.info ]; then
+    source /home/glcoin/.lightning/${CLNETWORK}/seedwords.info
     if [ ${#seedwords6x4} -gt 0 ];then
       # show the words one last time
       ack=0
@@ -408,7 +408,7 @@ elif [ "$1" = "encrypt" ]; then
       deletedWhen="not available any more"
     fi
     # shred seedwords.info
-    shred /home/bitcoin/.lightning/${CLNETWORK}/seedwords.info
+    shred /home/glcoin/.lightning/${CLNETWORK}/seedwords.info
   fi
   echo "
 # This file was placed by cl.hsmtool.sh
@@ -417,8 +417,8 @@ elif [ "$1" = "encrypt" ]; then
 # The words cannot be generated from the hsm_secret (one way function).
 # If you don't have the words the hsm_secret can be still backed up as a file or in hex:
 # https://lightning.readthedocs.io/BACKUP.html#hsm-secret
-# https://github.com/rootzoll/raspiblitz/blob/dev/FAQ.cl.md#seed
-" | sudo -u bitcoin tee /home/bitcoin/.lightning/${CLNETWORK}/seedwords.info
+# https://github.com/rootzoll/raspiblesk/blob/dev/FAQ.cl.md#seed
+" | sudo -u glcoin tee /home/glcoin/.lightning/${CLNETWORK}/seedwords.info
   # encrypt
   walletPassword=$4
   encryptHSMsecret "$walletPassword"
@@ -429,28 +429,28 @@ elif [ "$1" = "decrypt" ]; then
 
 
 elif [ "$1" = "autounlock-on" ]; then
-  if grep -Eq "${netprefix}clEncryptedHSM=on" /mnt/hdd/app-data/raspiblitz.conf;then
-    echo "# Moving the password from $passwordFile to /home/bitcoin/.${netprefix}cl.pw"
-    sudo -u bitcoin mv /dev/shm/.${netprefix}cl.pw /home/bitcoin/.${netprefix}cl.pw
+  if grep -Eq "${netprefix}clEncryptedHSM=on" /mnt/hdd/app-data/raspiblesk.conf;then
+    echo "# Moving the password from $passwordFile to /home/glcoin/.${netprefix}cl.pw"
+    sudo -u glcoin mv /dev/shm/.${netprefix}cl.pw /home/glcoin/.${netprefix}cl.pw
   else
-    passwordFile=/home/bitcoin/.${netprefix}cl.pw
+    passwordFile=/home/glcoin/.${netprefix}cl.pw
     passwordToFile
   fi
-  # setting value in raspiblitz config
-  /home/admin/config.scripts/blitz.conf.sh set ${netprefix}clAutoUnlock "on"
+  # setting value in raspiblesk config
+  /home/admin/config.scripts/blesk.conf.sh set ${netprefix}clAutoUnlock "on"
 
   echo "# Autounlock is on for Core Lightning $CHAIN"
 
 
 elif [ "$1" = "autounlock-off" ]; then
-  if [ -f /home/bitcoin/.${netprefix}cl.pw ];then
-    sudo cp /home/bitcoin/.${netprefix}cl.pw /dev/shm/.${netprefix}cl.pw
-    sudo shred -uzv /home/bitcoin/.${netprefix}cl.pw
+  if [ -f /home/glcoin/.${netprefix}cl.pw ];then
+    sudo cp /home/glcoin/.${netprefix}cl.pw /dev/shm/.${netprefix}cl.pw
+    sudo shred -uzv /home/glcoin/.${netprefix}cl.pw
     sudo chmod 600 /dev/shm/.${netprefix}cl.pw
-    sudo chown bitcoin:bitcoin /dev/shm/.${netprefix}cl.pw
+    sudo chown glcoin:glcoin /dev/shm/.${netprefix}cl.pw
   fi
-  # setting value in raspiblitz config
-  /home/admin/config.scripts/blitz.conf.sh set ${netprefix}clAutoUnlock "off"
+  # setting value in raspiblesk config
+  /home/admin/config.scripts/blesk.conf.sh set ${netprefix}clAutoUnlock "off"
   echo "# Autounlock is off for Core Lightning $CHAIN"
 
 
@@ -467,11 +467,11 @@ elif [ "$1" = "change-password" ]; then
 
 
 elif [ "$1" = "check" ]; then
-  # TODO https://github.com/rootzoll/raspiblitz/issues/2897
+  # TODO https://github.com/rootzoll/raspiblesk/issues/2897
   # dumponchaindescriptors <path/to/hsm_secret> [network]
   # get current descriptors
-  sudo -u bitcoin /home/bitcoin/lightning/tools/hsmtool dumponchaindescriptors \
-   /home/bitcoin/.lightning/${CLNETWORK}/hsm_secret $CLNETWORK
+  sudo -u glcoin /home/glcoin/lightning/tools/hsmtool dumponchaindescriptors \
+   /home/glcoin/.lightning/${CLNETWORK}/hsm_secret $CLNETWORK
   # get seed to compare
 
 

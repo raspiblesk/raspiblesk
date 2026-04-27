@@ -51,7 +51,7 @@ Under "Memory" you must specify the desired RAM number in MB. This also depends 
 
 ![](images/2022-09-21_20-07.png)
 
-The VM also needs a network adapter. You also have to select this adapter based on your Proxmox installation. Default will be vmbr0. On my Proxmox I have configured several VLAN, where vmbr3 is my BTC VLAN. But this is only the case for me.
+The VM also needs a network adapter. You also have to select this adapter based on your Proxmox installation. Default will be vmbr0. On my Proxmox I have configured several VLAN, where vmbr3 is my GLC VLAN. But this is only the case for me.
 
 ![](images/2022-09-21_20-08.png)
 
@@ -86,7 +86,7 @@ The VM is now installed and starts to boot. In the meantime you can remove the I
 
 ## Add storage
 
-Now to install Raspiblitz on this new VM we need to do 2 things: Connect the hard disk for the blockchain data and pass it to the VM and install the SD Card Builder Script of Raspiblitz. We start first with the hard disk, where there are 2 variants:
+Now to install Raspiblitz on this new VM we need to do 2 things: Connect the hard disk for the blockchain data and pass it to the VM and install the SD Card Builder Script of Raspiblesk. We start first with the hard disk, where there are 2 variants:
 
 ### Variant 1: External hard disk
 
@@ -128,7 +128,7 @@ apt install sudo
 Now we need to download the Build SDCard Script from Rootzoll. The version can be customized as you like. The latest version (as of block time 768745) is the 1.9.
 
 ```
-wget https://raw.githubusercontent.com/rootzoll/raspiblitz/v1.9/build_sdcard.sh
+wget https://raw.githubusercontent.com/rootzoll/raspiblesk/v1.9/build_sdcard.sh
 ```
 
 And run:
@@ -147,4 +147,4 @@ Now the installation takes a few minutes. Do not abort or shut down the VM here,
 sudo shutdown -r now
 ```
 
-Now you can call the IP address of your VM in the browser and perform the normal installation steps of Raspiblitz.
+Now you can call the IP address of your VM in the browser and perform the normal installation steps of Raspiblesk.

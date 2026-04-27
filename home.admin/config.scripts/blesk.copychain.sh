@@ -1,0 +1,420 @@
+#!/bin/bash
+
+if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
+ echo "# managing the copy of blockchain data over LAN"
+ echo "# blesk.copychain.sh [status|target|source]"
+ echo "error='missing parameters'"
+ exit 1
+fi
+
+# load basic system settings
+source /home/admin/raspiblesk.info 2>/dev/null
+source /mnt/hdd/app-data/raspiblesk.conf 2>/dev/null
+
+# check that blockchain is set & supported
+if [ "${network}" != "glcoin" ]; then
+  echo "blockchain='${network}'"
+  echo "error='blockchain type missing or not supported'"
+  exit 1
+fi
+
+# check that HDD is available
+if [ ! -L /mnt/hdd/app-data ]; then
+  echo "error='no datadrive is mounted'"
+  exit 1
+fi
+
+###################
+# STATUS
+###################
+
+# get values from cache
+source <(/home/admin/_cache.sh get internet_localip)
+
+# check if copy is in progress
+copyBeginTime=$(cat /mnt/hdd/app-storage/${network}/copy_begin.time 2>/dev/null | tr -cd '[[:digit:]]')
+if [ ${#copyBeginTime} -eq 0 ]; then
+  copyBeginTime=0
+fi
+copyEndTime=$(cat /mnt/hdd/app-storage/${network}/copy_end.time 2>/dev/null | tr -cd '[[:digit:]]')
+if [ ${#copyEndTime} -eq 0 ]; then
+  copyEndTime=0
+fi
+copyInProgress=0
+if [ ${copyBeginTime} -gt ${copyEndTime} ]; then
+  copyInProgress=1
+fi
+
+# output status data & exit
+if [ "$1" = "status" ]; then
+  echo "# blesk.copychain.sh"
+  echo "copyInProgress=${copyInProgress}"
+  echo "copyBeginTime=${copyBeginTime}"
+  echo "copyEndTime=${copyEndTime}"
+  exit 1
+fi
+
+###################
+# COPYTARGET
+###################
+
+# output status data & exit
+if [ "$1" = "target" ]; then
+
+  # Basic Options
+  OPTIONS=(WINDOWS "Windows" \
+         MACOS "Apple MacOSX" \
+         LINUX "Linux" \
+         BLITZ "RaspiBlesk"
+        )
+  CHOICE=$(dialog --clear --title " Copy Blockchain from another laptop/node over LAN " --menu "\nWhich system is running on the other laptop/node you want to copy the blockchain from?\n " 14 60 9 "${OPTIONS[@]}" 2>&1 >/dev/tty)
+
+  clear
+  case $CHOICE in
+        MACOS) echo "Steve";;
+        LINUX) echo "Linus";;
+        WINDOWS) echo "Bill";;
+        BLITZ) echo "Satoshi";;
+        *) exit 1;;
+  esac
+
+  # setting copy state
+  /home/admin/_cache.sh set state "copytarget"
+  /home/admin/_cache.sh set message "Receiving Blockchain over LAN"
+
+  echo "stopping services ..."
+  sudo systemctl stop lnd 2>/dev/null
+  sudo systemctl stop lightningd 2>/dev/null
+  sudo systemctl stop glcoind 2>/dev/null
+  sudo systemctl disable glcoind 2>/dev/null
+
+  # check if old blockchain data exists (1 Block is 1KB)
+  deleteOldBlockchain=0
+  sizeBlocks=$(sudo du -s /mnt/hdd/app-storage/glcoin/blocks 2>/dev/null | tr -dc '[0-9]')
+  if [ "${sizeBlocks}" == "" ] || [ ${sizeBlocks} -lt 250000 ]; then 
+    # blockchain block data is below 250MB ... assume just to be deleted and start copy fresh
+    deleteOldBlockchain=1
+  else
+    # ask if existing blockchain data should be deleted for not before copy start
+    dialog --title " Old Blockchain Data Found " --yesno "\nDo you want to delete the existing blockchain data now?" 7 60
+    response=$?
+    clear
+    echo "response(${response})"
+    if [ "${response}" = "1" ]; then
+      echo "OK - keep old blockchain - just try to repair by copying over it"
+      sleep 3
+    else
+      echo "OK - mark old blockchain to be deleted"
+      deleteOldBlockchain=1
+    fi
+  fi
+
+  # delete ald blockchain data
+  if [ "${deleteOldBlockchain}" == "1" ]; then
+    sudo rm -rfv /mnt/hdd/app-storage/glcoin/blocks/* 2>/dev/null
+    sudo rm -rfv /mnt/hdd/app-storage/glcoin/chainstate/* 2>/dev/null
+    sudo rm -rfv /mnt/hdd/glcoin/blocks/* 2>/dev/null
+    sudo rm -rfv /mnt/hdd/glcoin/chainstate/* 2>/dev/null
+    sleep 3
+  fi
+
+  # make sure /mnt/hdd/app-storage/glcoin exists
+  sudo mkdir -p /mnt/hdd/app-storage/glcoin 2>/dev/null
+
+  # allow all users write to it
+  sudo chmod 777 /mnt/hdd/app-storage/glcoin
+
+  echo 
+  clear
+  if [ "${CHOICE}" = "WINDOWS" ]; then
+    echo "****************************************************************************"
+    echo "Instructions to COPY/TRANSFER SYNCED BLOCKCHAIN from a WINDOWS computer"
+    echo "****************************************************************************"
+    echo ""
+    echo "ON YOUR WINDOWS COMPUTER download and validate the blockchain with the Glcoin"
+    echo "Core wallet software (>=0.17.1) from: glcoincore.org/en/download"
+    echo "If the Glcoin Blockchain is synced up - make sure that your Windows computer &"
+    echo "your RaspiBlesk are in the same local network."
+    echo ""
+    echo "Open a fresh terminal on your Windows computer & change into the directory that"
+    echo "contains the blockchain data - should see folders named 'blocks' & 'chainstate'"
+    echo "there. Normally on Windows thats: C:\Users\YourUserName\Appdata\Roaming\Glcoin"
+    echo "Make sure that the Glcoin Core Wallet is not running in the background anymore."
+    echo ""
+    echo "COPY, PASTE & EXECUTE the following command on your Windows computer terminal:"
+    echo "scp -r ./chainstate ./blocks glcoin@${internet_localip}:/mnt/hdd/app-storage/glcoin"
+    echo ""
+    echo "If asked for a password use PASSWORD A (or 'raspiblesk')."
+  fi
+  if [ "${CHOICE}" = "MACOS" ]; then
+    echo "****************************************************************************"
+    echo "Instructions to COPY/TRANSFER SYNCED BLOCKCHAIN from a MacOSX computer"
+    echo "****************************************************************************"
+    echo ""
+    echo "ON YOUR MacOSX COMPUTER download and validate the blockchain with the Glcoin"
+    echo "Core wallet software (>=0.17.1) from: glcoincore.org/en/download"
+    echo "If the Glcoin Blockchain is synced up - make sure that your MacOSX computer &"
+    echo "your RaspiBlesk are in the same local network."
+    echo ""
+    echo "Open a fresh terminal on your MacOSX computer and change into the directory that"
+    echo "contains the blockchain data - should see folders named 'blocks' & 'chainstate'"
+    echo "there. Normally on MacOSX thats: cd ~/Library/Application Support/Glcoin/"
+    echo "Make sure that the Glcoin Core Wallet is not running in the background anymore."
+    echo ""
+    echo "COPY, PASTE & EXECUTE the following command on your MacOSX terminal:"
+    echo "sudo rsync -avhW --progress ./chainstate ./blocks glcoin@${internet_localip}:/mnt/hdd/app-storage/glcoin"
+    echo ""
+    echo "You will be asked for passwords. First can be the user password of your MacOSX"
+    echo "computer and the last is the PASSWORD A (or 'raspiblesk') of this RaspiBlesk."
+  fi
+  if [ "${CHOICE}" = "LINUX" ]; then
+    echo "****************************************************************************"
+    echo "Instructions to COPY/TRANSFER SYNCED BLOCKCHAIN from a LINUX computer"
+    echo "****************************************************************************"
+    echo ""
+    echo "ON YOUR LINUX COMPUTER download and validate the blockchain with the Glcoin"
+    echo "Core wallet software (>=0.17.1) from: glcoincore.org/en/download"
+    echo "If the Glcoin Blockchain is synced up - make sure that your Linux computer &"
+    echo "your RaspiBlesk are in the same local network."
+    echo ""
+    echo "Open a fresh terminal on your Linux computer and change into the directory that"
+    echo "contains the blockchain data - should see folders named 'blocks' & 'chainstate'"
+    echo "there. Normally on Linux thats: cd ~/.glcoin/"
+    echo "Make sure that the Glcoin Core Wallet is not running in the background anymore."
+    echo ""
+    echo "COPY, PASTE & EXECUTE the following command on your Linux terminal:"
+    echo "sudo rsync -avhW --progress ./chainstate ./blocks glcoin@${internet_localip}:/mnt/hdd/app-storage/glcoin"
+    echo ""
+    echo "You will be asked for passwords. First can be the user password of your Linux"
+    echo "computer and the last is the PASSWORD A (or 'raspiblesk') of this RaspiBlesk."
+  fi
+  if [ "${CHOICE}" = "BLITZ" ]; then
+    echo "****************************************************************************"
+    echo "Instructions to COPY/TRANSFER SYNCED BLOCKCHAIN from another RaspiBlesk"
+    echo "****************************************************************************"
+    echo ""
+    echo "The other RaspiBlesk needs a minimum version of 1.6 (if lower, update first)."
+    echo "Make sure that the other RaspiBlesk is on the same local network."
+    echo ""
+    echo "Open a fresh terminal and login per SSH into that other RaspiBlesk."
+    echo "Once in the main menu go: MAINMENU > REPAIR > COPY-SOURCE"
+    echo "Follow the given instructions ..."
+    echo ""
+    echo "The LOCAL IP of this target RaspiBlesk is: ${internet_localip}"
+  fi
+  echo "" 
+  echo "It can take multiple hours until transfer is complete - be patient."
+  echo "****************************************************************************"
+  echo "PRESS ENTER if transfers is done OR if you want to choose another option."
+  sleep 2
+  read key
+
+  # make quick check if data is there
+  anyDataAtAll=0
+  quickCheckOK=1
+  count=$(sudo find /mnt/hdd/app-storage/glcoin/ -iname *.dat -type f | wc -l)
+  if [ ${count} -gt 0 ]; then
+    echo "Found data in /mnt/hdd/app-storage/glcoin/blocks"
+    anyDataAtAll=1
+  fi
+  if [ ${count} -lt 300 ]; then
+    echo "FAIL: transfer seems invalid - less then 300 .dat files (${count})"
+    quickCheckOK=0
+  fi
+  count=$(sudo find /mnt/hdd/app-storage/glcoin/chainstate -iname *.ldb -type f | wc -l)
+  if [ ${count} -gt 0 ]; then
+    echo "Found data in /mnt/hdd/app-storage/glcoin/chainstate"
+    anyDataAtAll=1
+  fi
+  if [ ${count} -lt 300 ]; then
+    echo "FAIL: transfer seems invalid - less then 300 .ldb files (${count})"
+    quickCheckOK=0
+  fi
+
+  echo "*********************************************"
+  echo "QUICK CHECK RESULT"
+  echo "*********************************************"
+
+  # just if any data transferred ..
+  if [ ${anyDataAtAll} -eq 1 ]; then
+
+    # data was invalid - ask user to keep?
+    if [ ${quickCheckOK} -eq 0 ]; then
+      echo "FAIL -> DATA seems incomplete."
+    else
+      echo "OK -> DATA LOOKS GOOD :D"
+      sudo rm /mnt/hdd/app-storage/glcoin/debug.log 2>/dev/null
+    fi
+
+  else
+    echo "CANCEL -> NO DATA was copied."
+    quickCheckOK=0
+  fi
+  echo "*********************************************"
+
+
+  # REACT ON QUICK CHECK DURING INITAL SETUP
+  if [ ${quickCheckOK} -eq 0 ]; then
+
+    echo "*********************************************"
+    echo "There seems to be an invalid transfer."
+
+    echo "Wait 5 secs ..."
+    sleep 5
+
+    dialog --title " INVALID TRANSFER - TRY AGAIN?" --yesno "Quickcheck shows the data you transferred is invalid/incomplete. Maybe transfere was interrupted and not completed.\n\nDo you want retry/proceed the copy process?" 8 70
+    response=$?
+    echo "response(${response})"
+    if [ "${response}" == "0" ]; then
+      /home/admin/config.scripts/blesk.copychain.sh target
+      exit 0
+    fi
+
+    dialog --title " INVALID TRANSFER - DELETE DATA?" --yesno "Quickcheck shows the data you transferred is invalid/incomplete. This can lead further RaspiBlesk setup to get stuck in error state.\nDo you want to reset/delete data?" 8 60
+    response=$?
+    echo "response(${response})"
+    case $response in
+      1) quickCheckOK=1 ;;
+    esac
+
+    clear
+    echo "****************************************************************************"
+    echo "OK your RaspiBlesk will now go into reboot and try to sync the blockchain"
+    echo "by itself. If you run into troubles you can always cut power and restart"
+    echo "setup with a fresh flashed sd card."
+    echo "****************************************************************************"
+    echo "PRESS ENTER to trigger reboot."
+    sleep 1
+    read key
+
+  fi
+
+  if [ ${quickCheckOK} -eq 0 ]; then
+    echo "Deleting invalid Data ... "
+    sudo rm -rfv /mnt/hdd/app-storage/glcoin/blocks/* 2>/dev/null
+    sudo rm -rfv /mnt/hdd/app-storage/glcoin/chainstate/* 2>/dev/null
+    sleep 2
+  fi
+
+  # setting copy state
+  /home/admin/_cache.sh set state "ready"
+  /home/admin/_cache.sh set message "Node Running"
+
+  echo "restarting services ... (please wait)"
+  sudo systemctl enable glcoind 
+
+  echo "rebooting"
+  /home/admin/config.scripts/blesk.shutdown.sh reboot
+  exit
+
+fi
+
+###################
+# COPYSOURCE
+###################
+
+if [ "$1" = "source" ]; then
+
+  clear
+  echo
+  echo "# *** Copy Blockchain Source Modus ***"
+
+  echo "# get IP of RaspiBlesk to copy to ..."
+  targetIP=$(whiptail --inputbox "\nPlease enter the LOCAL IP of the\nRaspiBlesk to copy Blockchain to:" 10 38 "" --title " Target IP " --backtitle "RaspiBlesk - Copy Blockchain" 3>&1 1>&2 2>&3)
+  targetIP=$(echo "${targetIP[0]}")
+  if [ ${#targetIP} -eq 0 ]; then
+    exit 1
+  fi
+  if [ "${internet_localip}" == "${targetIP}" ]; then
+    whiptail --msgbox "Dont type in the local IP of this RaspiBlesk,\nthe LOCAL IP of the other RaspiBlesk is needed." 8 54 "" --title " Testing Target IP " --backtitle "RaspiBlesk - Copy Blockchain"
+    exit 1
+  fi
+  canPingIP=$(ping ${targetIP} -c 1 | grep -c "1 received")
+  if [ ${canPingIP} -eq 0 ]; then
+    whiptail --msgbox "Was not able to contact/ping: ${targetIP}\n\n- check if IP of target RaspiBlesk is correct.\n- check to be on the same local network.\n- try again ..." 11 58 "" --title " Testing Target IP " --backtitle "RaspiBlesk - Copy Blockchain"
+    exit 1
+  fi
+  
+  echo "# get Password of RaspiBlesk to copy to ..."
+  targetPassword=$(whiptail --passwordbox "\nPlease enter the PASSWORD A of the\nRaspiBlesk to copy Blockchain to:" 10 38 "" --title "Target Password" --backtitle "RaspiBlesk - Copy Blockchain" 3>&1 1>&2 2>&3)
+  if [ ${#targetPassword} -eq 0 ]; then
+    exit 1
+  fi
+
+  sudo rm /root/.ssh/known_hosts 2>/dev/null
+  canLogin=$(sudo sshpass -p "${targetPassword}" ssh -t -o StrictHostKeyChecking=no glcoin@${targetIP} "echo 'working'" 2>/dev/null | grep -c 'working')
+  if [ ${canLogin} -eq 0 ]; then
+    whiptail --msgbox "Password was not working for IP: ${targetIP}\n\n- check thats the correct IP for correct RaspiBlesk\n- check that you used PASSWORD A and had no typo\n- If you tried too often, wait 1h try again" 11 58 "" --title " Testing Target Password " --backtitle "RaspiBlesk - Copy Blockchain"
+    exit 1
+  fi
+
+  echo "# stopping services ..."
+  sudo systemctl stop lnd 2>/dev/null
+  sudo systemctl stop lightningd 2>/dev/null
+  sudo systemctl stop ${network}d
+  sudo systemctl disable ${network}d
+  sleep 5
+
+  clear
+  echo
+  echo "# Starting copy over LAN (around 4-6 hours) ..."
+  sed -i "s/^state=.*/state=copysource/g" /home/admin/raspiblesk.info
+  cd /mnt/hdd/app-storage/${network}
+
+  # transfere beginning flag
+  date +%s > /home/admin/copy_begin.time
+  sudo sshpass -p "${targetPassword}" rsync -avhW -e 'ssh -o StrictHostKeyChecking=no -p 22' /home/admin/copy_begin.time glcoin@${targetIP}:/mnt/hdd/app-storage/glcoin
+  sudo rm -f /home/admin/copy_begin.time
+
+  # repeat the syncing of directories until
+  # a) there are no files left to transfere (be robust against failing connections, etc)
+  # b) the user hits a key to break loop after report
+  while :
+    do
+
+      # transfere blockchain data
+      sudo rm -f ./transferred.rsync
+      sudo sshpass -p "${targetPassword}" rsync -avhW -e 'ssh -o StrictHostKeyChecking=no -p 22' --info=progress2 --log-file=./transferred.rsync ./chainstate ./blocks glcoin@${targetIP}:/mnt/hdd/app-storage/glcoin
+
+      # check result
+      # the idea is even after successfull transfer the loop will run a second time
+      # but on the second time there will be no files transfered (log lines are below 4)
+      # thats the signal that its done
+      linesInLogFile=$(wc -l ./transferred.rsync | cut -d " " -f 1) 
+      if [ ${linesInLogFile} -lt 4 ]; then
+        echo ""
+        echo "OK all files transfered. DONE"
+        sleep 2
+        break
+      fi
+
+      # wait 20 seconds for user exiting loop
+      echo ""
+      echo -en "OK one sync loop done ... will test in next loop if all was transferred."
+      echo -en "PRESS X TO MANUALLY FINISH SYNCING"
+      read -n 1 -t 6 keyPressed
+      if [ "${keyPressed}" = "x" ]; then
+        echo ""
+        echo "Ending Sync ..."
+        sleep 2
+        break
+      fi
+
+    done
+  
+  # transfere end flag
+  sed -i "s/^state=.*/state=ready/g" /home/admin/raspiblesk.info
+  date +%s > /home/admin/copy_end.time
+  sudo sshpass -p "${targetPassword}" rsync -avhW -e 'ssh -o StrictHostKeyChecking=no -p 22' /home/admin/copy_end.time glcoin@${targetIP}:/mnt/hdd/app-storage/glcoin
+  sudo rm -f /home/admin/copy_end.time
+
+  echo "# start services again ..."
+  sudo systemctl enable ${network}d
+  sudo systemctl start ${network}d
+  sudo systemctl start lnd 2>/dev/null
+  sudo systemctl start lightningd 2>/dev/null
+
+  echo "# show final message"
+  whiptail --msgbox "OK - Copy Process Finished.\n\nNow check on the target RaspiBlesk if it was sucessful." 10 40 "" --title " DONE " --backtitle "RaspiBlesk - Copy Blockchain"
+
+fi

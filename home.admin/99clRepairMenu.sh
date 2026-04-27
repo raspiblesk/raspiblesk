@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# get raspiblitz config
-echo "# get raspiblitz config"
-source /home/admin/raspiblitz.info
-source /mnt/hdd/app-data/raspiblitz.conf
+# get raspiblesk config
+echo "# get raspiblesk config"
+source /home/admin/raspiblesk.info
+source /mnt/hdd/app-data/raspiblesk.conf
 
 source <(/home/admin/config.scripts/network.aliases.sh getvars cl $1)
 
-sudo mkdir /var/cache/raspiblitz/temp 2>/dev/null
+sudo mkdir /var/cache/raspiblesk/temp 2>/dev/null
 
 
 function clRescan() {
@@ -32,14 +32,14 @@ If left empty will start to rescan from the block 700000 (-700000).
 function resetWallet() {
     echo "# Delete ${CLCONF}"
     sudo rm -f ${CLCONF}
-    echo "# Delete and recreate /home/bitcoin/.lightning/${CLNETWORK}"
-    sudo rm -rf /home/bitcoin/.lightning/${CLNETWORK}
-    sudo -u bitcoin mkdir /home/bitcoin/.lightning/${CLNETWORK}
+    echo "# Delete and recreate /home/glcoin/.lightning/${CLNETWORK}"
+    sudo rm -rf /home/glcoin/.lightning/${CLNETWORK}
+    sudo -u glcoin mkdir /home/glcoin/.lightning/${CLNETWORK}
 }
 
 # BASIC MENU INFO
 WIDTH=64
-BACKTITLE="RaspiBlitz"
+BACKTITLE="RaspiBlesk"
 TITLE="Core Lightning repair options for $CHAIN"
 MENU=""
 OPTIONS=()
@@ -49,7 +49,7 @@ if [ "$(eval echo \$${netprefix}clEncryptedHSM)" = "off" ];then
 elif [ "$(eval echo \$${netprefix}clEncryptedHSM)"  = "on" ];then
     OPTIONS+=(PASSWORD_C "Change the hsm_secret encryption password")
     OPTIONS+=(DECRYPT "Decrypt the hsm_secret")
-  if [ ! -f "/home/bitcoin/.${netprefix}cl.pw" ]; then
+  if [ ! -f "/home/glcoin/.${netprefix}cl.pw" ]; then
     OPTIONS+=(AUTOUNLOCK-ON "Auto-decrypt the hsm_secret after boot")
   else
     OPTIONS+=(AUTOUNLOCK-OFF "Do not auto-decrypt the hsm_secret after boot")
@@ -76,12 +76,12 @@ CHOICE=$(dialog --clear \
 case $CHOICE in
   ENCRYPT)
     sudo /home/admin/config.scripts/cl.hsmtool.sh encrypt $CHAIN
-    source /mnt/hdd/app-data/raspiblitz.conf
+    source /mnt/hdd/app-data/raspiblesk.conf
     ;;
 
   DECRYPT)
     /home/admin/config.scripts/cl.hsmtool.sh decrypt $CHAIN
-    source /mnt/hdd/app-data/raspiblitz.conf
+    source /mnt/hdd/app-data/raspiblesk.conf
     ;;
 
   PASSWORD_C)
@@ -110,7 +110,7 @@ Save this password as it will be needed to restore the backup (same as the Passw
     fi
     /home/admin/config.scripts/cl.hsmtool.sh lock mainnet
     ## from dialogLightningWallet.sh
-    _temp="/var/cache/raspiblitz/temp/.temp.tmp"
+    _temp="/var/cache/raspiblesk/temp/.temp.tmp"
     clear
     /home/admin/config.scripts/cl.backup.sh cl-export-gui production $_temp
     source $_temp 2>/dev/null
@@ -123,7 +123,7 @@ Save this password as it will be needed to restore the backup (same as the Passw
   RESET)
     # backup
     ## from dialogLightningWallet.sh
-    _temp="/var/cache/raspiblitz/temp/.temp.tmp"
+    _temp="/var/cache/raspiblesk/temp/.temp.tmp"
     clear
     /home/admin/config.scripts/cl.backup.sh cl-export-gui production $_temp
     source $_temp 2>/dev/null
@@ -138,8 +138,8 @@ Save this password as it will be needed to restore the backup (same as the Passw
     resetWallet
 
     # make sure the new hsm_secret is treated as unencrypted and clear autounlock
-    /home/admin/config.scripts/blitz.conf.sh set ${netprefix}clEncryptedHSM "off"
-    /home/admin/config.scripts/blitz.conf.sh set ${netprefix}clAutoUnlock "off"
+    /home/admin/config.scripts/blesk.conf.sh set ${netprefix}clEncryptedHSM "off"
+    /home/admin/config.scripts/blesk.conf.sh set ${netprefix}clAutoUnlock "off"
     # new
     /home/admin/config.scripts/cl.hsmtool.sh new $CHAIN
     # create config
@@ -159,7 +159,7 @@ Save this password as it will be needed to restore the backup (same as the Passw
   FILERESTORE)
     # backup
     ## from dialogLightningWallet.sh
-    _temp="/var/cache/raspiblitz/temp/.temp.tmp"
+    _temp="/var/cache/raspiblesk/temp/.temp.tmp"
     clear
     /home/admin/config.scripts/cl.backup.sh cl-export-gui production $_temp
     source $_temp 2>/dev/null
@@ -174,7 +174,7 @@ Save this password as it will be needed to restore the backup (same as the Passw
     resetWallet
 
     # import file
-    _temp="/var/cache/raspiblitz/temp/.temp.tmp"
+    _temp="/var/cache/raspiblesk/temp/.temp.tmp"
     clear
     /home/admin/config.scripts/cl.backup.sh cl-import-gui production $_temp
     source $_temp 2>/dev/null
@@ -184,7 +184,7 @@ Save this password as it will be needed to restore the backup (same as the Passw
   SEEDRESTORE)
     # backup
     ## from dialogLightningWallet.sh
-    _temp="/var/cache/raspiblitz/temp/.temp.tmp"
+    _temp="/var/cache/raspiblesk/temp/.temp.tmp"
     clear
     /home/admin/config.scripts/cl.backup.sh cl-export-gui production $_temp
     source $_temp 2>/dev/null
@@ -199,12 +199,12 @@ Save this password as it will be needed to restore the backup (same as the Passw
     resetWallet
 
     # import seed
-    _temp="/var/cache/raspiblitz/.temp.tmp"
+    _temp="/var/cache/raspiblesk/.temp.tmp"
     /home/admin/config.scripts/cl.backup.sh seed-import-gui $_temp
     source $_temp
     /home/admin/config.scripts/cl.hsmtool.sh seed-force "$CHAIN" "${seedWords}"
     sudo rm $_temp 2>/dev/null
-    if ! sudo ls /home/bitcoin/.lightning/${CLNETWORK}/hsm_secret 2>/dev/null; then
+    if ! sudo ls /home/glcoin/.lightning/${CLNETWORK}/hsm_secret 2>/dev/null; then
       echo "# There was no hsm_secret created - exiting"
       exit 15
     fi

@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# get raspiblitz config
-source /home/admin/raspiblitz.info
-source /mnt/hdd/app-data/raspiblitz.conf
+# get raspiblesk config
+source /home/admin/raspiblesk.info
+source /mnt/hdd/app-data/raspiblesk.conf
 
 askBackupCopy()
 {
@@ -61,7 +61,7 @@ OK Reset of HDD is done.
 System will now shutdown.
 
 To start fresh please write a fresh 
-RaspiBlitz image to your SD card.
+RaspiBlesk image to your SD card.
 " 12 40
 }
 
@@ -80,12 +80,12 @@ fi
 OPTIONS+=(MIGRATION "Migrate Blitz Data to new Hardware")
 OPTIONS+=(COPY-SOURCE "Copy Blockchain Source Modus")
 if [ "${txindex}" == "1" ]; then
-  OPTIONS+=(DELETE-INDEX "Reindex Bitcoin Transaction-Index")
+  OPTIONS+=(DELETE-INDEX "Reindex Glcoin Transaction-Index")
 elif [ "${indexByteSize}" != "0" ]; then
-  OPTIONS+=(DELETE-INDEX "Delete Bitcoin Transaction-Index")
+  OPTIONS+=(DELETE-INDEX "Delete Glcoin Transaction-Index")
 fi
-OPTIONS+=(REINDEX-UTXO "Redindex Just Bitcoin Chainstate (Fast)")
-OPTIONS+=(REINDEX-FULL "Redindex Full Bitcoin Blockchain (Slow)")
+OPTIONS+=(REINDEX-UTXO "Redindex Just Glcoin Chainstate (Fast)")
+OPTIONS+=(REINDEX-FULL "Redindex Full Glcoin Blockchain (Slow)")
 OPTIONS+=(RESET-CHAIN "Delete Blockchain & Re-Download")
 #OPTIONS+=(RESET-HDD "Delete HDD Data but keep Blockchain")
 OPTIONS+=(RESET-ALL "Delete HDD completely to start fresh")
@@ -99,13 +99,13 @@ case $CHOICE in
 #    ;;
   SOFTWARE)
     echo "Generating debug logs. Be patient, this should take maximum 2 minutes .."
-    sudo rm /var/cache/raspiblitz/debug.log 2>/dev/null
-    /home/admin/config.scripts/blitz.debug.sh > /var/cache/raspiblitz/debug.log
+    sudo rm /var/cache/raspiblesk/debug.log 2>/dev/null
+    /home/admin/config.scripts/blesk.debug.sh > /var/cache/raspiblesk/debug.log
     echo "Redacting .."
-    /home/admin/config.scripts/blitz.debug.sh redact /var/cache/raspiblitz/debug.log
-    sudo chmod 640 /var/cache/raspiblitz/debug.log
-    sudo chown root:sudo /var/cache/raspiblitz/debug.log
-    cat /var/cache/raspiblitz/debug.log
+    /home/admin/config.scripts/blesk.debug.sh redact /var/cache/raspiblesk/debug.log
+    sudo chmod 640 /var/cache/raspiblesk/debug.log
+    sudo chown root:sudo /var/cache/raspiblesk/debug.log
+    cat /var/cache/raspiblesk/debug.log
     echo
     echo "Press ENTER to return to main menu."
     read key
@@ -133,7 +133,7 @@ case $CHOICE in
       /home/admin/config.scripts/cl.hsmtool.sh autounlock-off mainnet
     fi
     /home/admin/config.scripts/cl.hsmtool.sh lock mainnet
-    sudo /home/admin/config.scripts/blitz.migration.sh "export-gui"
+    sudo /home/admin/config.scripts/blesk.migration.sh "export-gui"
     echo "Press ENTER to return to main menu."
     read key
     ;;
@@ -152,7 +152,7 @@ case $CHOICE in
     ;;
   RESET-ALL)
     askBackupCopy
-    sudo /home/admin/config.scripts/blitz.data.sh reset OVERWRITE
+    sudo /home/admin/config.scripts/blesk.data.sh reset OVERWRITE
     sleep 3
     infoResetSDCard
     sudo shutdown now
@@ -175,7 +175,7 @@ case $CHOICE in
     exit 0;
     ;;
   COPY-SOURCE)
-    /home/admin/config.scripts/blitz.copychain.sh source
+    /home/admin/config.scripts/blesk.copychain.sh source
     ;;
 esac
 

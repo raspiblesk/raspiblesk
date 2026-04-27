@@ -11,7 +11,7 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
  exit 1
 fi
 
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 
 tor_conf_dir="/mnt/hdd/app-data/tor"
 torrc_services="${tor_conf_dir}/torrc.d/services"
@@ -30,14 +30,14 @@ if [ "$1" == "off" ]; then
 
   # remove double empty lines
   _temp=$(mktemp -p /dev/shm/)
-  sudo mkdir /var/cache/raspiblitz/tmp 2>/dev/null
-  sudo cp "${torrc_services}" /var/cache/raspiblitz/tmp
-  sudo chmod 777 /var/cache/raspiblitz/tmp
-  sudo chown -R admin:admin /var/cache/raspiblitz/tmp
+  sudo mkdir /var/cache/raspiblesk/tmp 2>/dev/null
+  sudo cp "${torrc_services}" /var/cache/raspiblesk/tmp
+  sudo chmod 777 /var/cache/raspiblesk/tmp
+  sudo chown -R admin:admin /var/cache/raspiblesk/tmp
   sudo awk 'NF > 0 {blank=0} NF == 0 {blank++} blank < 2' "${torrc_services}" > "${_temp}"
   sudo mv "${_temp}" "${torrc_services}"
   sudo chmod 644 "${torrc_services}"
-  sudo chown bitcoin:bitcoin "${torrc_services}"
+  sudo chown glcoin:glcoin "${torrc_services}"
 
   echo "# OK service is removed - reloading Tor ..."
   sudo systemctl reload tor@default
@@ -99,14 +99,14 @@ HiddenServicePort $toPort 127.0.0.1:$fromPort" | sudo tee -a "${torrc_services}"
   fi
 
   # remove double empty lines
-  sudo mkdir /var/cache/raspiblitz/tmp 2>/dev/null
-  sudo cp "${torrc_services}" /var/cache/raspiblitz/tmp
-  sudo chmod 777 /var/cache/raspiblitz/tmp
-  sudo chown -R admin:admin /var/cache/raspiblitz/tmp
-  sudo awk 'NF > 0 {blank=0} NF == 0 {blank++} blank < 2' "${torrc_services}" > /var/cache/raspiblitz/tmp/services
-  sudo mv /var/cache/raspiblitz/tmp/services "${torrc_services}"
+  sudo mkdir /var/cache/raspiblesk/tmp 2>/dev/null
+  sudo cp "${torrc_services}" /var/cache/raspiblesk/tmp
+  sudo chmod 777 /var/cache/raspiblesk/tmp
+  sudo chown -R admin:admin /var/cache/raspiblesk/tmp
+  sudo awk 'NF > 0 {blank=0} NF == 0 {blank++} blank < 2' "${torrc_services}" > /var/cache/raspiblesk/tmp/services
+  sudo mv /var/cache/raspiblesk/tmp/services "${torrc_services}"
   sudo chmod 644 "${torrc_services}"
-  sudo chown bitcoin:bitcoin "${torrc_services}"
+  sudo chown glcoin:glcoin "${torrc_services}"
 
   # reload tor
   echo

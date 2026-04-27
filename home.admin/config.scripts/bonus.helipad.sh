@@ -11,15 +11,15 @@ HELIPAD_DB=$HELIPAD_DATA_DIR/database.db
 HELIPAD_SOUND_DIR=$HELIPAD_DATA_DIR/sounds
 HELIPAD_HTTP_PORT=2112
 HELIPAD_HTTPS_PORT=2113
-HELIPAD_MACAROON=/mnt/hdd/app-data/lnd/data/chain/bitcoin/mainnet/admin.macaroon
+HELIPAD_MACAROON=/mnt/hdd/app-data/lnd/data/chain/glcoin/mainnet/admin.macaroon
 HELIPAD_CERT=/mnt/hdd/app-data/lnd/tls.cert
 HELIPAD_CARGO_BIN=/home/$HELIPAD_USER/.cargo/bin/cargo
 HELIPAD_BIN=$HELIPAD_HOME_DIR/.cargo/bin/helipad
 
-# check and load raspiblitz config
+# check and load raspiblesk config
 # to know which network is running
-source /home/admin/raspiblitz.info
-source /mnt/hdd/app-data/raspiblitz.conf
+source /home/admin/raspiblesk.info
+source /mnt/hdd/app-data/raspiblesk.conf
 
 # command info
 if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
@@ -43,14 +43,14 @@ if [ "$1" = "menu" ]; then
 
   if [ "${runBehindTor}" = "on" ] && [ ${#toraddress} -gt 0 ]; then
     # Info with TOR
-    /home/admin/config.scripts/blitz.display.sh qr "${toraddress}"
+    /home/admin/config.scripts/blesk.display.sh qr "${toraddress}"
     whiptail --title " Helipad " --msgbox "Open in your local web browser:
 http://${localip}:${HELIPAD_HTTP_PORT}\n
 https://${localip}:${HELIPAD_HTTPS_PORT} with Fingerprint:
 ${fingerprint}\n\n
 Hidden Service address for TOR Browser (see LCD for QR):\n${toraddress}
 " 16 67
-    /home/admin/config.scripts/blitz.display.sh hide
+    /home/admin/config.scripts/blesk.display.sh hide
   else
     # Info without TOR
     whiptail --title " Helipad " --msgbox "Open in your local web browser:
@@ -183,8 +183,8 @@ WantedBy=multi-user.target
 
     sudo systemctl enable helipad
 
-    # setting value in raspiblitz conf
-    /home/admin/config.scripts/blitz.conf.sh set helipad "on"
+    # setting value in raspiblesk conf
+    /home/admin/config.scripts/blesk.conf.sh set helipad "on"
 
     # Hidden Service for Helipad if Tor is active
     if [ "${runBehindTor}" = "on" ]; then
@@ -192,7 +192,7 @@ WantedBy=multi-user.target
         /home/admin/config.scripts/tor.onion-service.sh helipad 80 $HELIPAD_HTTP_PORT 443 $HELIPAD_HTTPS_PORT
     fi
 
-    source /home/admin/raspiblitz.info
+    source /home/admin/raspiblesk.info
     if [ "${state}" == "ready" ]; then
         echo "# OK - the helipad.service is enabled, system is ready so starting service"
         sudo systemctl start helipad
@@ -269,7 +269,7 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   echo "OK Helipad removed."
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set helipad "off"
+  /home/admin/config.scripts/blesk.conf.sh set helipad "off"
 
   exit 0
 fi

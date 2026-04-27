@@ -12,7 +12,7 @@ fi
 # 1. parameter [?newName]
 newName=$2
 
-# use default values from the raspiblitz.conf
+# use default values from the raspiblesk.conf
 source <(/home/admin/config.scripts/network.aliases.sh getvars cl $1)
 
 # run interactive if 'turn on' && no further parameters

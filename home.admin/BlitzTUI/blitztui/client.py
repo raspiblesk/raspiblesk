@@ -41,7 +41,7 @@ MACAROON_LIST = ["admin", "readonly", "invoice"]
 
 
 class AdminStub(lnrpc.LightningStub):
-    def __init__(self, network="bitcoin", chain="main"):
+    def __init__(self, network="glcoin", chain="main"):
         self.channel = get_rpc_channel(macaroon_path=build_macaroon_path("admin", network=network, chain=chain))
         super().__init__(self.channel)
 
@@ -53,7 +53,7 @@ class AdminStub(lnrpc.LightningStub):
 
 
 class ReadOnlyStub(lnrpc.LightningStub):
-    def __init__(self, network="bitcoin", chain="main"):
+    def __init__(self, network="glcoin", chain="main"):
         self.channel = get_rpc_channel(macaroon_path=build_macaroon_path("readonly", network=network, chain=chain))
         super().__init__(self.channel)
 
@@ -65,7 +65,7 @@ class ReadOnlyStub(lnrpc.LightningStub):
 
 
 class InvoiceStub(lnrpc.LightningStub):
-    def __init__(self, network="bitcoin", chain="main"):
+    def __init__(self, network="glcoin", chain="main"):
         self.channel = get_rpc_channel(macaroon_path=build_macaroon_path("invoice", network=network, chain=chain))
         super().__init__(self.channel)
 
@@ -149,7 +149,7 @@ def get_rpc_channel(host="localhost", port="10009", cert_path=None, macaroon_pat
     return grpc.secure_channel('{}:{}'.format(host, port), combined_creds)
 
 
-def build_macaroon_path(name=None, network="bitcoin", chain="main"):
+def build_macaroon_path(name=None, network="glcoin", chain="main"):
     if not name.lower() in MACAROON_LIST:
         raise Exception("name must be one of: {}".format(", ".join(MACAROON_LIST)))
 
@@ -271,7 +271,7 @@ def get_node_uri(stub):
 
 
 def main():
-    network = "bitcoin"
+    network = "glcoin"
     chain = "main"
 
     stub_readonly = ReadOnlyStub(network=network, chain=chain)

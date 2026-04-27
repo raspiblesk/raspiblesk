@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Deactivated - see https://github.com/raspiblitz/raspiblitz/issues/4122
+# Deactivated - see https://github.com/raspiblesk/raspiblesk/issues/4122
 # Needs comitted maintainer or will be removed in future versions
 
 # https://github.com/lnproxy/lnproxy/commits/main
@@ -15,7 +15,7 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
   exit 1
 fi
 
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 localip=$(hostname -I | awk '{print $1}')
 
 # menu
@@ -23,7 +23,7 @@ if [ "$1" = "menu" ]; then
 
   if systemctl is-active --quiet lnproxy; then
     torAddress=$(sudo cat /mnt/hdd/app-data/tor/lnproxy/hostname 2>/dev/null)
-    sudo /home/admin/config.scripts/blitz.display.sh qr "${torAddress}"
+    sudo /home/admin/config.scripts/blesk.display.sh qr "${torAddress}"
     whiptail --title " lnproxy server API" --msgbox "\
 Use your hidden service as a relay on the lnproxy Tor website:
 dx7pn6ehykq6cadce4bjbxn5tf64z7e3fufpxgxce7n4f5eja476cpyd.onion
@@ -36,7 +36,7 @@ curl -k https://${localip}:4748/api/{invoice}?routing_msat={budget}
 The Tor Hidden Service address to share for using the API:
 ${torAddress}/api
 " 16 78
-    sudo /home/admin/config.scripts/blitz.display.sh hide
+    sudo /home/admin/config.scripts/blesk.display.sh hide
     echo "# please wait ..."
   else
     echo "# *** LNPROXY IS NOT INSTALLED ***"
@@ -61,8 +61,8 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   sudo adduser --system --group --home /home/lnproxy lnproxy
 
   # create macaroon
-  cd /home/bitcoin || exit 1
-  sudo -u bitcoin lncli bakemacaroon --save_to lnproxy.macaroon \
+  cd /home/glcoin || exit 1
+  sudo -u glcoin lncli bakemacaroon --save_to lnproxy.macaroon \
     uri:/lnrpc.Lightning/DecodePayReq \
     uri:/lnrpc.Lightning/LookupInvoice \
     uri:/invoicesrpc.Invoices/AddHoldInvoice \
@@ -163,7 +163,7 @@ EOF
   /home/admin/config.scripts/tor.onion-service.sh lnproxy 80 4749 443 4750
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set lnproxy "on"
+  /home/admin/config.scripts/blesk.conf.sh set lnproxy "on"
 
   torAddress=$(sudo cat /mnt/hdd/app-data/tor/lnproxy/hostname 2>/dev/null)
   echo
@@ -208,7 +208,7 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   sudo ufw delete allow 4748
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set lnproxy "off"
+  /home/admin/config.scripts/blesk.conf.sh set lnproxy "off"
 
   echo "# OK, lnproxy is removed."
 

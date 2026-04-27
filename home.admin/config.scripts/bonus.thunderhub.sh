@@ -16,10 +16,10 @@ PGPsigner="apotdevin"
 PGPpubkeyLink="https://github.com/${PGPsigner}.gpg"
 PGPpubkeyFingerprint="4403F1DFBE779457"
 
-# check and load raspiblitz config
+# check and load raspiblesk config
 # to know which network is running
-source /home/admin/raspiblitz.info
-source /mnt/hdd/app-data/raspiblitz.conf 2>/dev/null
+source /home/admin/raspiblesk.info
+source /mnt/hdd/app-data/raspiblesk.conf 2>/dev/null
 
 if [ "$1" = "status" ] || [ "$1" = "menu" ]; then
 
@@ -55,7 +55,7 @@ if [ "$1" = "menu" ]; then
 
   if [ "${runBehindTor}" = "on" ] && [ ${#toraddress} -gt 0 ]; then
     # Info with TOR
-    sudo /home/admin/config.scripts/blitz.display.sh qr "${toraddress}"
+    sudo /home/admin/config.scripts/blesk.display.sh qr "${toraddress}"
     whiptail --title " ThunderHub " --msgbox "Open in your local web browser:
 http://${localip}:${httpPort}\n
 https://${localip}:${httpsPort} with Fingerprint:
@@ -63,7 +63,7 @@ ${fingerprint}\n
 Use your Password B to login.\n
 Hidden Service address for TOR Browser (see LCD for QR):\n${toraddress}
 " 16 67
-    sudo /home/admin/config.scripts/blitz.display.sh hide
+    sudo /home/admin/config.scripts/blesk.display.sh hide
   else
     # Info without TOR
     whiptail --title " ThunderHub " --msgbox "Open in your local web browser:
@@ -108,7 +108,7 @@ if [ "$1" = "install" ]; then
     # https://github.com/apotdevin/thunderhub/releases
     sudo -u thunderhub git reset --hard $THUBVERSION
 
-    sudo -u thunderhub /home/admin/config.scripts/blitz.git-verify.sh "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" || exit 1
+    sudo -u thunderhub /home/admin/config.scripts/blesk.git-verify.sh "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" || exit 1
 
     echo "Running npm install ..."
     sudo rm -r /home/thunderhub/thunderhub/node_modules 2>/dev/null
@@ -307,8 +307,8 @@ WantedBy=multi-user.target
 " | sudo tee /etc/systemd/system/thunderhub.service
     sudo systemctl enable thunderhub
 
-    # setting value in raspiblitz config
-    /home/admin/config.scripts/blitz.conf.sh set thunderhub "on"
+    # setting value in raspiblesk config
+    /home/admin/config.scripts/blesk.conf.sh set thunderhub "on"
 
     # Hidden Service for thunderhub if Tor is active
     if [ "${runBehindTor}" = "on" ]; then
@@ -361,10 +361,10 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   echo "OK ThunderHub deactivated"
 
   # disable balance sharing server side
-  /home/admin/config.scripts/blitz.conf.sh set DISABLE_BALANCE_PUSHES true /mnt/hdd/app-data/thunderhub/.env.local noquotes
+  /home/admin/config.scripts/blesk.conf.sh set DISABLE_BALANCE_PUSHES true /mnt/hdd/app-data/thunderhub/.env.local noquotes
 
-  # setting value in raspiblitz config
-  /home/admin/config.scripts/blitz.conf.sh set thunderhub "off"
+  # setting value in raspiblesk config
+  /home/admin/config.scripts/blesk.conf.sh set thunderhub "off"
 
   # needed for API/WebUI as signal that install ran thru
   echo "result='OK'"
@@ -393,7 +393,7 @@ if [ "$1" = "update" ]; then
     echo "# Reset to the latest release tag"
     TAG=$(git tag | sort -V | tail -1)
     sudo -u thunderhub git reset --hard $TAG
-    sudo -u thunderhub /home/admin/config.scripts/blitz.git-verify.sh \
+    sudo -u thunderhub /home/admin/config.scripts/blesk.git-verify.sh \
      "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" || exit 1
 
     # install deps
@@ -409,7 +409,7 @@ if [ "$1" = "update" ]; then
     sudo -u thunderhub npx next telemetry disable
 
     # disable balance sharing server side
-    /home/admin/config.scripts/blitz.conf.sh set blitzapi "on" /home/admin/raspiblitz.info
+    /home/admin/config.scripts/blesk.conf.sh set bleskapi "on" /home/admin/raspiblesk.info
 
     # build nextjs
     echo "# Building application..."

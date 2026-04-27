@@ -1,11 +1,11 @@
 #!/bin/bash
 clear
 
-# load raspiblitz config data (with backup from old config)
-source /home/admin/raspiblitz.info
-source /mnt/hdd/app-data/raspiblitz.conf
+# load raspiblesk config data (with backup from old config)
+source /home/admin/raspiblesk.info
+source /mnt/hdd/app-data/raspiblesk.conf
 if [ ${#network} -eq 0 ]; then network=$(cat .network); fi
-if [ ${#network} -eq 0 ]; then network="bitcoin"; fi
+if [ ${#network} -eq 0 ]; then network="glcoin"; fi
 if [ ${#chain} -eq 0 ]; then
   echo "gathering chain info ... please wait"
   chain=$(${network}-cli getblockchaininfo | jq -r '.chain')
@@ -15,7 +15,7 @@ source <(/home/admin/config.scripts/network.aliases.sh getvars $1 $2)
 
 # PRECHECK) check if chain is in sync
 if [ $LNTYPE = cl ];then
-  BLOCKHEIGHT=$($bitcoincli_alias getblockchaininfo|grep blocks|awk '{print $2}'|cut -d, -f1)
+  BLOCKHEIGHT=$($glcoincli_alias getblockchaininfo|grep blocks|awk '{print $2}'|cut -d, -f1)
   CLHEIGHT=$($lightningcli_alias getinfo | jq .blockheight)
   if [ $BLOCKHEIGHT -eq $CLHEIGHT ];then
     chainOutSync=0
@@ -27,7 +27,7 @@ elif [ $LNTYPE = lnd ];then
 fi
 if [ ${chainOutSync} -eq 1 ]; then
   if [ $LNTYPE = cl ];then
-    echo "# FAIL PRECHECK - '$lightningcli_alias getinfo' blockheight is different from 'bitcoind getblockchaininfo' - wait until chain is sync "
+    echo "# FAIL PRECHECK - '$lightningcli_alias getinfo' blockheight is different from 'glcoind getblockchaininfo' - wait until chain is sync "
   else
     echo "# FAIL PRECHECK - '$lncli_alias getinfo' shows 'synced_to_chain': false - wait until chain is sync "
   fi
@@ -68,9 +68,9 @@ elif [ $LNTYPE = lnd ];then
 fi
 
 # prepare coin info
-coininfo="Bitcoin"
+coininfo="Glcoin"
 if [ "$chain" = "test" ]; then
-  coininfo="TESTNET Bitcoin"
+  coininfo="TESTNET Glcoin"
 fi
 
 msg="Send ${coininfo} to address --> ${address}\n\nScan the QR code on the LCD with your mobile wallet or copy paste the address.\nThe wallet you sending from needs to support bech32 addresses.\nThis screen will not update - press DONE when send."
@@ -79,7 +79,7 @@ if [ "$chain" = "test" ]; then
 fi
 
 echo "generating QR code ... please wait"
-sudo /home/admin/config.scripts/blitz.display.sh qr "$network:${address}"
+sudo /home/admin/config.scripts/blesk.display.sh qr "$network:${address}"
 
 # raise high focus on onchain wallet balance & pending for the next 15min
 /home/admin/_cache.sh focus ln_${LNTYPE}_${chain}net_wallet_onchain_pending 0 900
@@ -94,11 +94,11 @@ whiptail --backtitle "Fund your onchain wallet" \
 
 # display QR code
 if [ $? -eq 1 ]; then
-  /home/admin/config.scripts/blitz.display.sh qr-console "$network:${address}"
+  /home/admin/config.scripts/blesk.display.sh qr-console "$network:${address}"
 fi
 
 # clean up
-sudo /home/admin/config.scripts/blitz.display.sh hide
+sudo /home/admin/config.scripts/blesk.display.sh hide
 
 # follow up info
 if [ $LNTYPE = cl ];then

@@ -1,4 +1,4 @@
-# Bootstrap the RaspiBlitz
+# Bootstrap the RaspiBlesk
 # /etc/systemd/system/bootstrap.service
 
 [Unit]

@@ -74,7 +74,7 @@ KRAKEN_BUY_AMOUNT=21
 # KRAKEN_MAX_REL_FEE=0.5 # maximum fee in % that you are willing to pay
 # KRAKEN_WITHDRAW_KEY="descriptionOfWithdrawalAddress"
 
-# Optional settings for confirmation mail – requires `blitz.notify.sh on`
+# Optional settings for confirmation mail – requires `blesk.notify.sh on`
 # KRAKEN_MAIL_SUBJECT="Sats got stacked"
 # KRAKEN_MAIL_FROM_ADDRESS="humble@satstacker.org"
 # KRAKEN_MAIL_FROM_NAME="Humble Satstacker"
@@ -118,7 +118,7 @@ echo "$result"
 
 # send email
 if [[ "${KRAKEN_MAIL_SUBJECT}" && "${KRAKEN_MAIL_FROM_ADDRESS}" && "${KRAKEN_MAIL_FROM_NAME}" ]]; then
-  /home/admin/config.scripts/blitz.notify.sh send "$result" \
+  /home/admin/config.scripts/blesk.notify.sh send "$result" \
     --subject "$KRAKEN_MAIL_SUBJECT" \
     --from-name "$KRAKEN_MAIL_FROM_NAME" \
     --from-address "$KRAKEN_MAIL_FROM_ADDRESS"
@@ -133,7 +133,7 @@ fi
     echo "Switch to the '$USERNAME' user and adapt the settings in $CONFIG_FILE"
 
     # setting value in raspi blitz config
-    /home/admin/config.scripts/blitz.conf.sh set stackingSatsKraken "on"
+    /home/admin/config.scripts/blesk.conf.sh set stackingSatsKraken "on"
   else
     echo "STACKING-SATS-KRAKEN already installed."
   fi
@@ -163,7 +163,7 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
     echo "*** REMOVING STACKING-SATS-KRAKEN ***"
 
     # setting value in raspi blitz config
-    /home/admin/config.scripts/blitz.conf.sh set stackingSatsKraken "off"
+    /home/admin/config.scripts/blesk.conf.sh set stackingSatsKraken "off"
 
     # remove config
     sudo rm -rf $APP_DATA_DIR

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
 
-## Description: This script configure bitcoin and lightning implementations to be used with tor
+## Description: This script configure glcoin and lightning implementations to be used with tor
 ## Background:
-## https://medium.com/@lopp/how-to-run-bitcoin-as-a-tor-hidden-service-on-ubuntu-cff52d543756
-## https://bitcoin.stackexchange.com/questions/70069/how-can-i-setup-bitcoin-to-be-anonymous-with-tor
+## https://medium.com/@lopp/how-to-run-glcoin-as-a-tor-hidden-service-on-ubuntu-cff52d543756
+## https://glcoin.stackexchange.com/questions/70069/how-can-i-setup-glcoin-to-be-anonymous-with-tor
 ## https://github.com/lightningnetwork/lnd/blob/master/docs/configuring_tor.md
 
 torrc="/etc/tor/torrc"
@@ -16,68 +16,68 @@ usage(){
  exit 1
 }
 
-activateBitcoinOverTor()
+activateGlcoinOverTor()
 {
   echo "*** Changing ${network} Config ***"
 
-  btcExists=$(sudo ls /home/bitcoin/."${network}"/"${network}".conf | grep -c "${network}.conf")
+  btcExists=$(sudo ls /home/glcoin/."${network}"/"${network}".conf | grep -c "${network}.conf")
   if [ "${btcExists}" -gt 0 ]; then
 
     # make sure all is turned off and removed and then activate fresh (so that also old settings get removed)
-    deactivateBitcoinOverTor
+    deactivateGlcoinOverTor
 
-    sudo chmod 777 "/home/bitcoin/.${network}/${network}.conf"
-    sudo sed -i "s/^onlynet=.*//g" "/home/bitcoin/.${network}/${network}.conf"
+    sudo chmod 777 "/home/glcoin/.${network}/${network}.conf"
+    sudo sed -i "s/^onlynet=.*//g" "/home/glcoin/.${network}/${network}.conf"
     echo "Adding Tor config to the the ${network}.conf ..."
-    sudo sed -i "s/^torpassword=.*//g" "/home/bitcoin/.${network}/${network}.conf"
-    echo "onlynet=onion" | sudo tee -a "/home/bitcoin/.${network}/${network}.conf"
-    echo "onlynet=i2p" | sudo tee -a "/home/bitcoin/.${network}/${network}.conf"
-    echo "proxy=127.0.0.1:9050" | sudo tee -a "/home/bitcoin/.${network}/${network}.conf"
-    echo "main.bind=127.0.0.1" | sudo tee -a "/home/bitcoin/.${network}/${network}.conf"
-    echo "test.bind=127.0.0.1" | sudo tee -a "/home/bitcoin/.${network}/${network}.conf"
-    echo "dnsseed=0" | sudo tee -a "/home/bitcoin/.${network}/${network}.conf"
-    echo "dns=0" | sudo tee -a "/home/bitcoin/.${network}/${network}.conf"
+    sudo sed -i "s/^torpassword=.*//g" "/home/glcoin/.${network}/${network}.conf"
+    echo "onlynet=onion" | sudo tee -a "/home/glcoin/.${network}/${network}.conf"
+    echo "onlynet=i2p" | sudo tee -a "/home/glcoin/.${network}/${network}.conf"
+    echo "proxy=127.0.0.1:9050" | sudo tee -a "/home/glcoin/.${network}/${network}.conf"
+    echo "main.bind=127.0.0.1" | sudo tee -a "/home/glcoin/.${network}/${network}.conf"
+    echo "test.bind=127.0.0.1" | sudo tee -a "/home/glcoin/.${network}/${network}.conf"
+    echo "dnsseed=0" | sudo tee -a "/home/glcoin/.${network}/${network}.conf"
+    echo "dns=0" | sudo tee -a "/home/glcoin/.${network}/${network}.conf"
 
     # remove empty lines
-    sudo sed -i '/^ *$/d' "/home/bitcoin/.${network}/${network}.conf"
-    sudo chmod 644 "/home/bitcoin/.${network}/${network}.conf"
+    sudo sed -i '/^ *$/d' "/home/glcoin/.${network}/${network}.conf"
+    sudo chmod 644 "/home/glcoin/.${network}/${network}.conf"
 
-    # copy new bitcoin.conf to admin user for cli access
-    sudo cp "/home/bitcoin/.${network}/${network}.conf" "/home/admin/.${network}/${network}.conf"
+    # copy new glcoin.conf to admin user for cli access
+    sudo cp "/home/glcoin/.${network}/${network}.conf" "/home/admin/.${network}/${network}.conf"
     sudo chown admin:admin "/home/admin/.${network}/${network}.conf"
 
   else
-    echo "BTC config does not found (yet) -  try with 'tor.network.sh btcconf-on' again later"
+    echo "GLC config does not found (yet) -  try with 'tor.network.sh btcconf-on' again later"
   fi
 }
 
-deactivateBitcoinOverTor()
+deactivateGlcoinOverTor()
 {
   # alte/tor-bezogene Settings entfernen
-  sudo sed -i "s/^onlynet=.*//g" "/home/bitcoin/.${network}/${network}.conf"
-  sudo sed -i "s/^main.addnode=.*//g" "/home/bitcoin/.${network}/${network}.conf"
-  sudo sed -i "s/^test.addnode=.*//g" "/home/bitcoin/.${network}/${network}.conf"
-  sudo sed -i "s/^proxy=.*//g" "/home/bitcoin/.${network}/${network}.conf"
-  sudo sed -i "s/^main.bind=.*//g" "/home/bitcoin/.${network}/${network}.conf"
-  sudo sed -i "s/^test.bind=.*//g" "/home/bitcoin/.${network}/${network}.conf"
-  sudo sed -i "s/^dnsseed=.*//g" "/home/bitcoin/.${network}/${network}.conf"
-  sudo sed -i "s/^dns=.*//g" "/home/bitcoin/.${network}/${network}.conf"
+  sudo sed -i "s/^onlynet=.*//g" "/home/glcoin/.${network}/${network}.conf"
+  sudo sed -i "s/^main.addnode=.*//g" "/home/glcoin/.${network}/${network}.conf"
+  sudo sed -i "s/^test.addnode=.*//g" "/home/glcoin/.${network}/${network}.conf"
+  sudo sed -i "s/^proxy=.*//g" "/home/glcoin/.${network}/${network}.conf"
+  sudo sed -i "s/^main.bind=.*//g" "/home/glcoin/.${network}/${network}.conf"
+  sudo sed -i "s/^test.bind=.*//g" "/home/glcoin/.${network}/${network}.conf"
+  sudo sed -i "s/^dnsseed=.*//g" "/home/glcoin/.${network}/${network}.conf"
+  sudo sed -i "s/^dns=.*//g" "/home/glcoin/.${network}/${network}.conf"
 
   # explizit only IPv4 & IPv6
-  echo "onlynet=ipv4" | sudo tee -a "/home/bitcoin/.${network}/${network}.conf" >/dev/null
-  echo "onlynet=ipv6" | sudo tee -a "/home/bitcoin/.${network}/${network}.conf" >/dev/null
+  echo "onlynet=ipv4" | sudo tee -a "/home/glcoin/.${network}/${network}.conf" >/dev/null
+  echo "onlynet=ipv6" | sudo tee -a "/home/glcoin/.${network}/${network}.conf" >/dev/null
 
   # remove empty lines
-  sudo sed -i '/^ *$/d' "/home/bitcoin/.${network}/${network}.conf"
+  sudo sed -i '/^ *$/d' "/home/glcoin/.${network}/${network}.conf"
 
-  sudo cp "/home/bitcoin/.${network}/${network}.conf" "/home/admin/.${network}/${network}.conf"
+  sudo cp "/home/glcoin/.${network}/${network}.conf" "/home/admin/.${network}/${network}.conf"
   sudo chown admin:admin "/home/admin/.${network}/${network}.conf"
 }
 
-# check and load raspiblitz config
+# check and load raspiblesk config
 # to know which network is running
-[ -f "/home/admin/raspiblitz.info" ] && . /home/admin/raspiblitz.info
-[ -f "/mnt/hdd/app-data/raspiblitz.conf" ] && . /mnt/hdd/app-data/raspiblitz.conf
+[ -f "/home/admin/raspiblesk.info" ] && . /home/admin/raspiblesk.info
+[ -f "/mnt/hdd/app-data/raspiblesk.conf" ] && . /mnt/hdd/app-data/raspiblesk.conf
 
 torActive=$(systemctl is-active tor@default | grep -c "^active")
 curl --socks5 127.0.0.1:9050 --socks5-hostname 127.0.0.1:9050 -m 5 -s https://check.torproject.org/api/ip | grep -q "\"IsTor\":true" && torFunctional=1
@@ -95,36 +95,36 @@ case "$1" in
   ;;
 
 
-  btcconf-on) activateBitcoinOverTor; exit 0;;
+  btcconf-on) activateGlcoinOverTor; exit 0;;
 
 
-  btcconf-off) deactivateBitcoinOverTor; exit 0;;
+  btcconf-off) deactivateGlcoinOverTor; exit 0;;
 
 
   1|on)
     echo "# switching Tor ON"
 
-    # make sure the network was set (by sourcing raspiblitz.conf)
+    # make sure the network was set (by sourcing raspiblesk.conf)
     if [ ${#network} -eq 0 ]; then
-      echo "# FAIL - unknown network due to missing raspiblitz.conf"
-      echo "# switching Tor config on for RaspiBlitz services is just possible after basic hdd/ssd setup"
+      echo "# FAIL - unknown network due to missing raspiblesk.conf"
+      echo "# switching Tor config on for RaspiBlesk services is just possible after basic hdd/ssd setup"
       echo "# but with new 'Tor by default' basic Tor socks will already be available from the start"
       exit 1
     fi
 
     # setting value in raspi blitz config
-    /home/admin/config.scripts/blitz.conf.sh set runBehindTor "on"
+    /home/admin/config.scripts/blesk.conf.sh set runBehindTor "on"
 
-    # ACTIVATE BITCOIN OVER TOR (function call)
-    activateBitcoinOverTor
+    # ACTIVATE GLCOIN OVER TOR (function call)
+    activateGlcoinOverTor
 
     # ACTIVATE APPS OVER TOR
-    . /mnt/hdd/app-data/raspiblitz.conf 2>/dev/null
+    . /mnt/hdd/app-data/raspiblesk.conf 2>/dev/null
     /home/admin/config.scripts/tor.onion-service.sh web80 80 80 443 443
     /home/admin/config.scripts/tor.onion-service.sh debuglogs 80 6969
-    [ "${BTCRPCexplorer}" = "on" ] && /home/admin/config.scripts/tor.onion-service.sh btc-rpc-explorer 80 3022 443 3023
+    [ "${GlcoinRPCexplorer}" = "on" ] && /home/admin/config.scripts/tor.onion-service.sh glc-rpc-explorer 80 3022 443 3023
     [ "${rtlWebinterface}" = "on" ] && /home/admin/config.scripts/tor.onion-service.sh RTL 80 3002 443 3003
-    [ "${BTCPayServer}" = "on" ] && /home/admin/config.scripts/tor.onion-service.sh btcpay 80 23002 443 23003
+    [ "${GlcoinPayServer}" = "on" ] && /home/admin/config.scripts/tor.onion-service.sh btcpay 80 23002 443 23003
     [ "${ElectRS}" = "on" ] && /home/admin/config.scripts/tor.onion-service.sh electrs 50002 50002 50001 50001
     [ "${LNBits}" = "on" ] && /home/admin/config.scripts/tor.onion-service.sh lnbits 80 5002 443 5003
     [ "${thunderhub}" = "on" ] && /home/admin/config.scripts/tor.onion-service.sh thunderhub 80 3012 443 3013
@@ -142,7 +142,7 @@ case "$1" in
 
     echo "Setup logrotate"
     # add logrotate config for modified Tor dir on ext. disk
-    sudo tee /etc/logrotate.d/raspiblitz-tor >/dev/null <<EOF
+    sudo tee /etc/logrotate.d/raspiblesk-tor >/dev/null <<EOF
 /mnt/hdd/app-data/tor/*log {
         su debian-tor debian-tor
         size 100M
@@ -172,13 +172,13 @@ EOF
     echo "# switching Tor OFF"
 
     # setting value in raspi blitz config
-    /home/admin/config.scripts/blitz.conf.sh set runBehindTor "off"
+    /home/admin/config.scripts/blesk.conf.sh set runBehindTor "off"
 
-    # remove "debug=tor" from bitcoin.conf
-    sudo sed -i '/^debug=tor$/d' /mnt/hdd/app-data/bitcoin/bitcoin.conf
+    # remove "debug=tor" from glcoin.conf
+    sudo sed -i '/^debug=tor$/d' /mnt/hdd/app-data/glcoin/glcoin.conf
 
-    # deactivate bitcoin over tor (function call)
-    deactivateBitcoinOverTor
+    # deactivate glcoin over tor (function call)
+    deactivateGlcoinOverTor
     echo
 
     sudo /home/admin/config.scripts/internet.sh update-publicip

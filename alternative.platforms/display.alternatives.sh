@@ -1,5 +1,5 @@
-# To run this script on your RaspiBlitz, copy the following line to the ssh terminal (after the #):
-# wget https://raw.githubusercontent.com/rootzoll/raspiblitz/dev/alternative.platforms/display.alternatives.sh && sudo bash display.alternatives.sh
+# To run this script on your RaspiBlesk, copy the following line to the ssh terminal (after the #):
+# wget https://raw.githubusercontent.com/rootzoll/raspiblesk/dev/alternative.platforms/display.alternatives.sh && sudo bash display.alternatives.sh
 
 echo "Detect Base Image ..." 
 baseimage="?"
@@ -33,10 +33,10 @@ OPTIONS=(GPIO "Install the default display available from Amazon" \
         HDMI "Install the 3.5\" HDMI display from Aliexpress" \
         SWISS "Install the Swiss version from play-zone.ch"
 )
-CHOICE=$(dialog --backtitle "RaspiBlitz - Display Install" --clear --title "Display Install" --menu "Choose a your diplay:" 10 70 6 "${OPTIONS[@]}" 2>&1 >/dev/tty)
+CHOICE=$(dialog --backtitle "RaspiBlesk - Display Install" --clear --title "Display Install" --menu "Choose a your diplay:" 10 70 6 "${OPTIONS[@]}" 2>&1 >/dev/tty)
 
 if [ "${CHOICE}" = "GPIO" ]; then
-  # *** RASPIBLITZ / LCD (at last - because makes a reboot) ***
+  # *** RASPIBLESK / LCD (at last - because makes a reboot) ***
   # based on https://www.elegoo.com/tutorial/Elegoo%203.5%20inch%20Touch%20Screen%20User%20Manual%20V1.00.2017.10.09.zip
   # revert font change
   # based on https://www.raspberrypi-spy.co.uk/2014/04/how-to-change-the-command-line-font-size/

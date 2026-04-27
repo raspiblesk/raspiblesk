@@ -1,14 +1,14 @@
-# Monitoring RaspiBlitz with Telegraf
+# Monitoring RaspiBlesk with Telegraf
     
-[telegraf](https://www.influxdata.com/time-series-platform/telegraf/) is a metric collection tool by influxData. It is opensource and can push performance data of RaspiBlitz to an external [influxDB](https://www.influxdata.com/products/influxdb-overview/) server which then can be used as a datasource for the [Grafana](https://grafana.com/grafana/)WebUI to monitor RaspiBlitz in a Dashboard like this:
+[telegraf](https://www.influxdata.com/time-series-platform/telegraf/) is a metric collection tool by influxData. It is opensource and can push performance data of RaspiBlesk to an external [influxDB](https://www.influxdata.com/products/influxdb-overview/) server which then can be used as a datasource for the [Grafana](https://grafana.com/grafana/)WebUI to monitor RaspiBlesk in a Dashboard like this:
 
 ![Grafana Dashboard Example](grafana_dashboard.png)
 
 InfluxDB & Grafana should run on separate hardware - you might use an old RaspberryPi4 for that and take a look [here](https://github.com/gcgarner/IOTstack) for a nice dockerized installation of influxDB and Grafana.
 
-### Prepare your InfluxDB for RaspiBlitz
+### Prepare your InfluxDB for RaspiBlesk
 
-Before you can start Teelegraf on RaspiBlitz you need to prepare a InfluxDB database for RaspiBlitz and create a user with password. So on your InfluxDB/Grafana machine follow the steps:
+Before you can start Teelegraf on RaspiBlesk you need to prepare a InfluxDB database for RaspiBlesk and create a user with password. So on your InfluxDB/Grafana machine follow the steps:
 
 Start the InfluxDB shell:
 ```
@@ -22,16 +22,16 @@ CREATE USER "admin" WITH PASSWORD '[ADMIN-PASSWORD]' WITH ALL PRIVILEGES;
 
 Create database & user:
 ```
-CREATE DATABASE raspiblitz;
+CREATE DATABASE raspiblesk;
 SHOW DATABASES;
-CREATE USER "raspiblitz" WITH PASSWORD '[RASPIBLITZ-PASSWORD]';
-GRANT ALL ON raspiblitz TO raspiblitz;
+CREATE USER "raspiblesk" WITH PASSWORD '[RASPIBLESK-PASSWORD]';
+GRANT ALL ON raspiblesk TO raspiblesk;
 ```
 
 If you havent yet create a read-only user for Grafana:
 ```
 CREATE USER "grafana" WITH PASSWORD '[GRAFANA-PASSWORD]';
-GRANT READ ON raspiblitz TO grafana;
+GRANT READ ON raspiblesk TO grafana;
 ```
 
 To check if all is ready:
@@ -40,7 +40,7 @@ SHOW DATABASES;
 SHOW USERS;
 ```
 
-You should see a database called `raspiblitz` and at least three users `admin, raspiblitz & grafana`.
+You should see a database called `raspiblesk` and at least three users `admin, raspiblesk & grafana`.
 
 You can now exit the InfluxDB with:
 ```
@@ -63,9 +63,9 @@ You my need to restart the InfluxDB server:
 sudo systemctl restart influxdb
 ```
 
-### Activate Telegraf on RaspiBlitz
+### Activate Telegraf on RaspiBlesk
 
-Back on your RaspiBlitz you can switch Telegraf service on under `SSH-MAINMENU > SETTINGS > Telegraf`.
+Back on your RaspiBlesk you can switch Telegraf service on under `SSH-MAINMENU > SETTINGS > Telegraf`.
 
 Enter the connection details the script asks you for.
 
@@ -73,10 +73,10 @@ _If you want to improve the service as a programmer you find the install script 
 
 ### Check Incoming Data on Grafana/InfluxDB server
 
-If install on the RaspiBlitz went thru OK you can go back to your Grafana/InfluxDB server and see if it received some basic CPU data:
+If install on the RaspiBlesk went thru OK you can go back to your Grafana/InfluxDB server and see if it received some basic CPU data:
 ```
 influx -username admin -password '[ADMIN-PASSWORD]'
-USE raspiblitz;
+USE raspiblesk;
 SHOW MEASUREMENTS;
 ```
 
@@ -108,7 +108,7 @@ HTTP:
 Auth: 
   Leave default unless specific settings are needed.
 InfluxDB Details:
-  Database: raspiblitz
+  Database: raspiblesk
   User: grafana
   Password: [GRAFANA-PASSWORD]
 HTTP Method: POST (recommended)
@@ -134,7 +134,7 @@ We will need your personal datasource UID in the next step.
 
 ### Create Grafana Dashboard
 
-Open the json data for the Dashboard in a new browser tab - following this link: https://raw.githubusercontent.com/raspiblitz/raspiblitz/refs/heads/dev/home.admin/assets/telegraf/raspiblitz-grafana-dashboard.json 
+Open the json data for the Dashboard in a new browser tab - following this link: https://raw.githubusercontent.com/raspiblesk/raspiblesk/refs/heads/dev/home.admin/assets/telegraf/raspiblesk-grafana-dashboard.json 
 
 Copy all JSON data (to paste it later).
 

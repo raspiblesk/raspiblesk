@@ -35,24 +35,24 @@
 * The images are built in GitHub actions
 * To see the downloadable artifacts will need to log in to GitHub
 * Find the latest successful build of the default arm64 image:
-https://github.com/raspiblitz/raspiblitz/actions/workflows/arm64-rpi-lean-image.yml?query=workflow%3Aarm64-rpi-lean-image-build+is%3Asuccess+branch%3Adev
+https://github.com/raspiblesk/raspiblesk/actions/workflows/arm64-rpi-lean-image.yml?query=workflow%3Aarm64-rpi-lean-image-build+is%3Asuccess+branch%3Adev
 * unpack the artifact to the same directory
   ```
-  unzip ./raspiblitz-arm64-rpi-image-*.zip
+  unzip ./raspiblesk-arm64-rpi-image-*.zip
   ```
-* The resulting `raspiblitz-arm64-rpi-lean.img.gz` can be written to an SDcard directly with Balena Etcher
+* The resulting `raspiblesk-arm64-rpi-lean.img.gz` can be written to an SDcard directly with Balena Etcher
 
 
 ## Ready made images for amd64 (x86)
 * The images are built in GitHub actions
 * To see the downloadable artifacts will need to log in to GitHub
 * Find the latest successful build of the default amd64 image:
-https://github.com/rootzoll/raspiblitz/actions/workflows/amd64-lean-image.yml?query=workflow%3Aamd64-lean-image-build+branch%3Adev+is%3Asuccess++
+https://github.com/rootzoll/raspiblesk/actions/workflows/amd64-lean-image.yml?query=workflow%3Aamd64-lean-image-build+branch%3Adev+is%3Asuccess++
   ```
   # unpack the artifact to the same directory
-  unzip ./raspiblitz-amd64-image-*.zip
+  unzip ./raspiblesk-amd64-image-*.zip
   # unpack the image
-  gzip -dkv raspiblitz-amd64-debian-lean.qcow2.gz
+  gzip -dkv raspiblesk-amd64-debian-lean.qcow2.gz
   # install qemu-utils
   sudo apt install -y qemu-utils
   ```
@@ -78,27 +78,27 @@ https://github.com/rootzoll/raspiblitz/actions/workflows/amd64-lean-image.yml?qu
 #### Option 1 - write the .qcow2 file directly to disk with `qemu-image dd`
 * requires less disk space - the .qcow2 volume is 8.1 GB
   ```
-  sudo qemu-img dd if=./raspiblitz-amd64-debian-lean.qcow2 of=${disk} bs=4M
+  sudo qemu-img dd if=./raspiblesk-amd64-debian-lean.qcow2 of=${disk} bs=4M
   ```
 
 #### Option 2 - convert the .qcow2 volume to a raw disk image
 * the raw .img is 30GB
   ```
   # convert
-  qemu-img convert ./raspiblitz-amd64-debian-lean.qcow2 ./raspiblitz-amd64-debian-lean.img
+  qemu-img convert ./raspiblesk-amd64-debian-lean.qcow2 ./raspiblesk-amd64-debian-lean.img
   ```
 * identify the connected disk with `lsblk` e.g., `/dev/sdk`
 * use [Balena Etcher](https://www.balena.io/etcher/)
 * or `dd` to write the .img to disk
   ```
-  sudo dd if=./raspiblitz-amd64-debian-lean.img of=${disk} bs=4M status=progress
+  sudo dd if=./raspiblesk-amd64-debian-lean.img of=${disk} bs=4M status=progress
   ```
 
 ### The first boot
 #### Lean image with Gnome desktop (default image)
 * log in on screen:
   * username: `admin`
-  * password: `raspiblitz`
+  * password: `raspiblesk`
 * start a terminal for guidance
 * alternatively connect with ssh over the LAN with the same username and password
 
@@ -119,7 +119,7 @@ https://github.com/rootzoll/raspiblitz/actions/workflows/amd64-lean-image.yml?qu
   # extend the physical volume to size of the lvm partition
   sudo pvresize ${disk}5
   # extend the root lvm to the full free space and resize the filesystem
-  sudo lvextend -r -l +100%FREE /dev/mapper/raspiblitz--amd64--vg-root
+  sudo lvextend -r -l +100%FREE /dev/mapper/raspiblesk--amd64--vg-root
   ```
 * GUI with GParted
   ```
@@ -130,7 +130,7 @@ https://github.com/rootzoll/raspiblitz/actions/workflows/amd64-lean-image.yml?qu
   # resize the extended partition to the full size of the disk
   # extend the lvm to the full free space and resize the filesystem (extends the swap space by default)
   # in CLI: extend the root lvm
-  sudo lvextend -r -l +100%FREE /dev/mapper/raspiblitz--amd64--vg-root
+  sudo lvextend -r -l +100%FREE /dev/mapper/raspiblesk--amd64--vg-root
   ```
 
 #### Add wifi driver (optional)
@@ -147,7 +147,7 @@ https://github.com/rootzoll/raspiblitz/actions/workflows/amd64-lean-image.yml?qu
   ```
 
 ## Local build
-with the [Makefile](https://github.com/rootzoll/raspiblitz/blob/dev/Makefile)
+with the [Makefile](https://github.com/rootzoll/raspiblesk/blob/dev/Makefile)
 * needs ~20 GB free space
 * tested on:
   * Ubuntu Live (jammy)
@@ -161,8 +161,8 @@ with the [Makefile](https://github.com/rootzoll/raspiblitz/blob/dev/Makefile)
   # install git and make
   apt update && apt install -y git make
   # download the repo (or your fork)
-  git clone https://github.com/rootzoll/raspiblitz
-  cd raspiblitz
+  git clone https://github.com/rootzoll/raspiblesk
+  cd raspiblesk
   # checkout the desired branch
   git checkout dev
   ```
@@ -200,7 +200,7 @@ with the [Makefile](https://github.com/rootzoll/raspiblitz/blob/dev/Makefile)
 ### After the boot
 * press any key to get to a login prompt after the splash screen
   * username: `admin`
-  * password: `raspiblitz`
+  * password: `raspiblesk`
 
 ### Connect to wifi from the command line (optional)
 * if the wifi driver is included in the FOSS Debian distro
@@ -220,8 +220,8 @@ with the [Makefile](https://github.com/rootzoll/raspiblitz/blob/dev/Makefile)
 * can open a browser and go to:
   * http://localhost
 * can also open the WebUI on another computer
-  * Find the the RaspiBlitz_IP in your router dashboard, in the terminal prompt or with `hostname -I`
-  * open: http://RaspiBlitz_IP
+  * Find the the RaspiBlesk_IP in your router dashboard, in the terminal prompt or with `hostname -I`
+  * open: http://RaspiBlesk_IP
 
 ## Workflow notes
 The github workflow files are the equivalent of the Makefile commands run locally.
@@ -269,4 +269,4 @@ After the image is built (and there is no exit with errors) the next steps are:
   cat 2022-09-22-raspios-bullseye-arm64.img.xz.sha256
   ```
 ### Flashing
-* using `qemu-img dd bs=4M if=raspiblitz-amd64-debian-lean.qcow2 of=/dev/sdd` changed the UUID so it won't boot without editing GRUB
+* using `qemu-img dd bs=4M if=raspiblesk-amd64-debian-lean.qcow2 of=/dev/sdd` changed the UUID so it won't boot without editing GRUB

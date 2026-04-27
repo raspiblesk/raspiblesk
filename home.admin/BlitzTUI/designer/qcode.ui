@@ -64,7 +64,7 @@ font: 24pt &quot;Arial&quot;;</string>
     <string/>
    </property>
    <property name="pixmap">
-    <pixmap resource="../resources.qrc">:/RaspiBlitz/images/RaspiBlitz_Logo_Berry.png</pixmap>
+    <pixmap resource="../resources.qrc">:/RaspiBlesk/images/RaspiBlesk_Logo_Berry.png</pixmap>
    </property>
    <property name="scaledContents">
     <bool>true</bool>
@@ -113,7 +113,7 @@ font: 24pt &quot;Arial&quot;;</string>
      <string/>
     </property>
     <property name="pixmap">
-     <pixmap resource="../resources.qrc">:/RaspiBlitz/images/RaspiBlitz_Logo_Stacked.png</pixmap>
+     <pixmap resource="../resources.qrc">:/RaspiBlesk/images/RaspiBlesk_Logo_Stacked.png</pixmap>
     </property>
     <property name="scaledContents">
      <bool>true</bool>
@@ -139,7 +139,7 @@ font: 24pt &quot;Arial&quot;;</string>
     <string/>
    </property>
    <property name="pixmap">
-    <pixmap resource="../resources.qrc">:/RaspiBlitz/images/RaspiBlitz_Logo_Stacked.png</pixmap>
+    <pixmap resource="../resources.qrc">:/RaspiBlesk/images/RaspiBlesk_Logo_Stacked.png</pixmap>
    </property>
    <property name="scaledContents">
     <bool>true</bool>

@@ -1,12 +1,12 @@
-# RaspiBlitz: systemd unit for lnd
+# RaspiBlesk: systemd unit for lnd
 # based on https://github.com/lightningnetwork/lnd/blob/master/contrib/init/lnd.service
 
 [Unit]
 Description=Lightning Network Daemon
 
-# Make sure lnd starts after bitcoind is ready
-Requires=bitcoind.service
-After=bitcoind.service
+# Make sure lnd starts after glcoind is ready
+Requires=glcoind.service
+After=glcoind.service
 
 # for use with sendmail alert
 #OnFailure=systemd-sendmail@%n
@@ -16,10 +16,10 @@ ExecStartPre=-/home/admin/config.scripts/lnd.check.sh prestart mainnet
 ExecStart=/usr/local/bin/lnd --configfile=/mnt/hdd/app-data/lnd/lnd.conf
 # avoid hanging on stop
 # ExecStop=/usr/local/bin/lncli stop
-PIDFile=/home/bitcoin/lnd.pid
+PIDFile=/home/glcoin/lnd.pid
 
-User=bitcoin
-Group=bitcoin
+User=glcoin
+Group=glcoin
 
 # Try restarting lnd if it stops due to a failure
 Restart=always

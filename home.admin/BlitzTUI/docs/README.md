@@ -1,6 +1,6 @@
 # BlitzTUI Documentation (mainly for developers)
 
-BlitzTUI is a part of the RaspiBlitz project and implements a Touch User Interface in PyQt5.
+BlitzTUI is a part of the RaspiBlesk project and implements a Touch User Interface in PyQt5.
 
 Make sure that PyQt5 is installed on the system
 
@@ -60,12 +60,12 @@ index-servers=
     pypitest
 
 [pypi]
-username = RaspiBlitz
+username = RaspiBlesk
 password = <REDACTED>
 
 [pypitest]
 repository = https://test.pypi.org/legacy/
-username = RaspiBlitz-Test
+username = RaspiBlesk-Test
 password = <REDACTED>
 ```
 
@@ -80,7 +80,7 @@ Apparently there is an incompatibility with the current version (as of writing t
 an error regarding `undefined symbol: __atomic_exchange_8`:
 
 ```
-(python3-env-lnd) admin@raspiblitz:~/raspiblitz/home.admin/BlitzTUI $ python3
+(python3-env-lnd) admin@raspiblesk:~/raspiblesk/home.admin/BlitzTUI $ python3
 Python 3.7.3 (default, Apr  3 2019, 05:39:12)
 [GCC 8.2.0] on linux
 Type "help", "copyright", "credits" or "license" for more information.
@@ -98,7 +98,7 @@ It is expected that this is resolved soon-ish.
 ## Directory tree
 
 ```
-admin@raspiblitz:~/raspiblitz/home.admin/BlitzTUI $ tree
+admin@raspiblesk:~/raspiblesk/home.admin/BlitzTUI $ tree
 .
 ├── blitztui
 │   ├── client.py
@@ -119,8 +119,8 @@ admin@raspiblitz:~/raspiblitz/home.admin/BlitzTUI $ tree
 ├── CHANGELOG.md
 ├── data
 │   ├── lnd.conf
-│   ├── raspiblitz.conf
-│   ├── raspiblitz.info
+│   ├── raspiblesk.conf
+│   ├── raspiblesk.info
 │   ├── Wordlist-Adjectives-Common-Audited-Len-3-6.txt
 │   └── Wordlist-Nouns-Common-Audited-Len-3-6.txt
 ├── designer
@@ -137,23 +137,23 @@ admin@raspiblitz:~/raspiblitz/home.admin/BlitzTUI $ tree
 ├── images
 │   ├── blank_318x318.png
 │   ├── Paid_Stamp.png
-│   ├── RaspiBlitz_Logo_Berry.png
-│   ├── RaspiBlitz_Logo_Condensed_270.png
-│   ├── RaspiBlitz_Logo_Condensed_90.png
-│   ├── RaspiBlitz_Logo_Condensed_Negative.png
-│   ├── RaspiBlitz_Logo_Condensed.png
-│   ├── RaspiBlitz_Logo_Icon_Negative.png
-│   ├── RaspiBlitz_Logo_Icon.png
-│   ├── RaspiBlitz_Logo_Main_270.png
-│   ├── RaspiBlitz_Logo_Main_90.png
-│   ├── RaspiBlitz_Logo_Main_Negative.png
-│   ├── RaspiBlitz_Logo_Main.png
-│   ├── RaspiBlitz_Logo_Stacked_270.png
-│   ├── RaspiBlitz_Logo_Stacked_90.png
-│   ├── RaspiBlitz_Logo_Stacked_Negative_270.png
-│   ├── RaspiBlitz_Logo_Stacked_Negative_90.png
-│   ├── RaspiBlitz_Logo_Stacked_Negative.png
-│   └── RaspiBlitz_Logo_Stacked.png
+│   ├── RaspiBlesk_Logo_Berry.png
+│   ├── RaspiBlesk_Logo_Condensed_270.png
+│   ├── RaspiBlesk_Logo_Condensed_90.png
+│   ├── RaspiBlesk_Logo_Condensed_Negative.png
+│   ├── RaspiBlesk_Logo_Condensed.png
+│   ├── RaspiBlesk_Logo_Icon_Negative.png
+│   ├── RaspiBlesk_Logo_Icon.png
+│   ├── RaspiBlesk_Logo_Main_270.png
+│   ├── RaspiBlesk_Logo_Main_90.png
+│   ├── RaspiBlesk_Logo_Main_Negative.png
+│   ├── RaspiBlesk_Logo_Main.png
+│   ├── RaspiBlesk_Logo_Stacked_270.png
+│   ├── RaspiBlesk_Logo_Stacked_90.png
+│   ├── RaspiBlesk_Logo_Stacked_Negative_270.png
+│   ├── RaspiBlesk_Logo_Stacked_Negative_90.png
+│   ├── RaspiBlesk_Logo_Stacked_Negative.png
+│   └── RaspiBlesk_Logo_Stacked.png
 ├── LICENSE
 ├── make.cmd
 ├── Makefile

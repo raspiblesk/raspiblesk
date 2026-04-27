@@ -76,7 +76,7 @@ if [ "$1" == "off" ]; then
   exit 0
 fi
 
-# https://github.com/rootzoll/raspiblitz/issues/560
+# https://github.com/rootzoll/raspiblesk/issues/560
 # when calling this it will backup the wifi config to HDD/SSD (if WIFI is active)
 # or when WIFI is inactive but a backup on HDD/SSD exists restore this
 if [ "$1" == "backup-restore" ]; then
@@ -102,7 +102,7 @@ if [ "$1" == "backup-restore" ]; then
   # check if mem copy of wifi config is available (for restore only)
   # this should be available if a backup on HDD exists and HDD is not mounted yet but was inspected by datadrive script
   memRestoreConfigAvailable=0
-  if [ -d /var/cache/raspiblitz/hdd-inspect/wifi ] && [ "$(ls -A /var/cache/raspiblitz/hdd-inspect/wifi)" ]; then
+  if [ -d /var/cache/raspiblesk/hdd-inspect/wifi ] && [ "$(ls -A /var/cache/raspiblesk/hdd-inspect/wifi)" ]; then
     memRestoreConfigAvailable=1
   fi
   echo "memRestoreConfigAvailable=${memRestoreConfigAvailable}"
@@ -119,7 +119,7 @@ if [ "$1" == "backup-restore" ]; then
     fi
     exit 0
   elif [ ${hddRestoreConfigAvailable} -eq 1 ]; then
-    # RESTORE backuped wifi settings from HDD to RaspiBlitz
+    # RESTORE backuped wifi settings from HDD to RaspiBlesk
     echo "# restoring old wifi settings from HDD ... wait 15 secounds to connect"
     sudo cp -a /mnt/hdd/app-data/wifi/* /etc/NetworkManager/system-connections/
     sudo chmod 600 /etc/NetworkManager/system-connections/*
@@ -131,9 +131,9 @@ if [ "$1" == "backup-restore" ]; then
     echo "wifiBackup=0"
     exit 0
   elif [ ${memRestoreConfigAvailable} -eq 1 ]; then
-    # RESTORE backuped wifi settings from MEMCOPY to RaspiBlitz
+    # RESTORE backuped wifi settings from MEMCOPY to RaspiBlesk
     echo "# restoring old wifi settings from MEMCOPY ... wait 15 secounds to connect"
-    sudo cp -a /var/cache/raspiblitz/hdd-inspect/wifi/* /etc/NetworkManager/system-connections/
+    sudo cp -a /var/cache/raspiblesk/hdd-inspect/wifi/* /etc/NetworkManager/system-connections/
     sudo chmod 600 /etc/NetworkManager/system-connections/*
     sudo nmcli radio wifi on
     sleep 10

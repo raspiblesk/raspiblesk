@@ -229,7 +229,7 @@ WantedBy=multi-user.target
     echo "# OK - the poold.service is enabled, to start manually use: sudo systemctl start poold"
   fi
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set pool "on"
+  /home/admin/config.scripts/blesk.conf.sh set pool "on"
 
   isInstalled=$(sudo -u pool /usr/local/bin/poold  | grep -c pool)
   if [ ${isInstalled} -gt 0 ]; then
@@ -251,7 +251,7 @@ fi
 if [ "$1" = "0" ] || [ "$1" = "off" ]; then
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set pool "off"
+  /home/admin/config.scripts/blesk.conf.sh set pool "off"
 
   isInstalled=$(sudo ls /etc/systemd/system/poold.service 2>/dev/null | grep -c 'poold.service')
   if [ ${isInstalled} -eq 1 ]; then

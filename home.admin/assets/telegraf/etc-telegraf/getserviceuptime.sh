@@ -9,7 +9,7 @@
 # collect the service uptimes into variables
 # some of the variables may contain "" as the pidof/pgrep may fail due to non-existens of that process
 #
- bitcoind_uptime=$(ps -p `pidof bitcoind`                                                   -o etimes='' 2>/dev/null | tr -d '[:space:]')
+ glcoind_uptime=$(ps -p `pidof glcoind`                                                   -o etimes='' 2>/dev/null | tr -d '[:space:]')
       lnd_uptime=$(ps -p `pidof lnd`                                                        -o etimes='' 2>/dev/null | tr -d '[:space:]')
   electrs_uptime=$(ps -p `pidof electrs`                                                    -o etimes='' 2>/dev/null | tr -d '[:space:]')
  telegraf_uptime=$(ps -p `pidof telegraf`                                                   -o etimes='' 2>/dev/null | tr -d '[:space:]')
@@ -22,7 +22,7 @@
 # whenever a variable contains a valid integer...spit out a line in influx-line-format
 # (see https://stackoverflow.com/a/19116862 for details "Test whether string is a valid integer")
 #
-if [ "$bitcoind_uptime" -eq "$bitcoind_uptime" ] 2>/dev/null; then echo "service_uptime,service=bitcoind uptime=${bitcoind_uptime}i"            ;fi
+if [ "$glcoind_uptime" -eq "$glcoind_uptime" ] 2>/dev/null; then echo "service_uptime,service=glcoind uptime=${glcoind_uptime}i"            ;fi
 if [      "$lnd_uptime" -eq      "$lnd_uptime" ] 2>/dev/null; then echo "service_uptime,service=lnd uptime=${lnd_uptime}i"                      ;fi
 if [  "$electrs_uptime" -eq  "$electrs_uptime" ] 2>/dev/null; then echo "service_uptime,service=electrs uptime=${electrs_uptime}i"              ;fi
 if [ "$telegraf_uptime" -eq "$telegraf_uptime" ] 2>/dev/null; then echo "service_uptime,service=telegraf uptime=${telegraf_uptime}i"            ;fi

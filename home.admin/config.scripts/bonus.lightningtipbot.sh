@@ -15,14 +15,14 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
   exit 1
 fi
 
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 
 isInstalled=$(sudo ls /etc/systemd/system/lightningtipbot.service 2>/dev/null | grep -c 'lightningtipbot.service')
 
 # switch on
 if [ "$1" = "menu" ]; then
   if [ ${isInstalled} -eq 1 ]; then
-    whiptail --title " LightningTipBot " --msgbox "A tip bot and Bitcoin Lightning wallet on Telegram.\n
+    whiptail --title " LightningTipBot " --msgbox "A tip bot and Glcoin Lightning wallet on Telegram.\n
 Its a service running in the background - use to monitor:
 sudo journalctl -fu lightningtipbot\n
 For more details and further information see:
@@ -123,7 +123,7 @@ WantedBy=multi-user.target
     echo "Please edit your config file: sudo nano /home/lightningtipbot/LightningTipBot/config.yaml"
     echo "Start the service when done: sudo systemctl start lightningtipbot"
     # setting value in raspi blitz config
-    /home/admin/config.scripts/blitz.conf.sh set lightningtipbot "on"
+    /home/admin/config.scripts/blesk.conf.sh set lightningtipbot "on"
   else
     echo "# Failed to build LightningTipBot"
     exit 1
@@ -173,7 +173,7 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   fi
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set lightningtipbot "off"
+  /home/admin/config.scripts/blesk.conf.sh set lightningtipbot "off"
 
   exit 0
 fi

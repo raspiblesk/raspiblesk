@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# based on: https://github.com/rootzoll/raspiblitz/issues/100#issuecomment-465997126
-# based on: https://github.com/rootzoll/raspiblitz/issues/386
+# based on: https://github.com/rootzoll/raspiblesk/issues/100#issuecomment-465997126
+# based on: https://github.com/rootzoll/raspiblesk/issues/386
 
 if [ $# -eq 0 ]; then
  echo "script set the port LND is running on"
@@ -31,14 +31,14 @@ if [ ${portnumber} -gt 65535 ]; then
 fi
 
 # check if TOR is on
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 if [ "${runBehindTor}" = "on" ]; then
   echo "FAIL - portnumber cannot be changed if TOR is ON (not implemented)"
   exit 1
 fi
 
-# add to raspiblitz.config (so it can survive update)
-/home/admin/config.scripts/blitz.conf.sh set lndPort "${portnumber}"
+# add to raspiblesk.config (so it can survive update)
+/home/admin/config.scripts/blesk.conf.sh set lndPort "${portnumber}"
 
 # enable service again
 echo "enable service again"

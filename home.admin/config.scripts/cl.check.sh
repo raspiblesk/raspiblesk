@@ -12,7 +12,7 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ "$1" = "-help" ];
 fi
 
 # load variables
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 
 source <(/home/admin/config.scripts/network.aliases.sh getvars cl $2)
 
@@ -24,43 +24,43 @@ source <(/home/admin/config.scripts/network.aliases.sh getvars cl $2)
 
 if [ "$1" == "prestart" ]; then
 
-  # make sure plugins are loaded https://github.com/rootzoll/raspiblitz/issues/2953
-  if [ $(grep -c "^plugin-dir=/home/bitcoin/${netprefix}cl-plugins-enabled" <${CLCONF}) -eq 0 ]; then
-    echo "plugin-dir=/home/bitcoin/${netprefix}cl-plugins-enabled" | tee -a ${CLCONF}
+  # make sure plugins are loaded https://github.com/rootzoll/raspiblesk/issues/2953
+  if [ $(grep -c "^plugin-dir=/home/glcoin/${netprefix}cl-plugins-enabled" <${CLCONF}) -eq 0 ]; then
+    echo "plugin-dir=/home/glcoin/${netprefix}cl-plugins-enabled" | tee -a ${CLCONF}
   fi
 
-  # do not announce 127.0.0.1 https://github.com/rootzoll/raspiblitz/issues/2634
+  # do not announce 127.0.0.1 https://github.com/rootzoll/raspiblesk/issues/2634
   if [ $(grep -c "^announce-addr=127.0.0.1" <${CLCONF}) -gt 0 ]; then
     sed -i "/^announce-addr=127.0.0.1/d" ${CLCONF}
   fi
 
   if [ $(grep -c "^clboss" <${CLCONF}) -gt 0 ]; then
-    if [ ! -f /home/bitcoin/${netprefix}cl-plugins-enabled/clboss ] || [ "$(eval echo \$${netprefix}clboss)" != "on" ]; then
+    if [ ! -f /home/glcoin/${netprefix}cl-plugins-enabled/clboss ] || [ "$(eval echo \$${netprefix}clboss)" != "on" ]; then
       echo "# The clboss plugin is not present but in config"
       sed -i "/^clboss/d" ${CLCONF}
-      rm -rf /home/bitcoin/${netprefix}cl-plugins-enabled/clboss
+      rm -rf /home/glcoin/${netprefix}cl-plugins-enabled/clboss
     fi
   fi
 
   if [ $(grep -c "^http-pass" <${CLCONF}) -gt 0 ]; then
-    if [ ! -f /home/bitcoin/cl-plugins-enabled/c-lightning-http-plugin ] || [ "${clHTTPplugin}" != "on" ]; then
+    if [ ! -f /home/glcoin/cl-plugins-enabled/c-lightning-http-plugin ] || [ "${clHTTPplugin}" != "on" ]; then
       echo "# The clHTTPplugin is not present but in config"
       sed -i "/^http-pass/d" ${CLCONF}
-      rm -rf /home/bitcoin/cl-plugins-enabled/c-lightning-http-plugin
+      rm -rf /home/glcoin/cl-plugins-enabled/c-lightning-http-plugin
     fi
   fi
 
   if [ $(grep -c "^feeadjuster" <${CLCONF}) -gt 0 ]; then
-    if [ ! -f /home/bitcoin/${netprefix}cl-plugins-enabled/feeadjuster.py ] || [ "$(eval echo \$${netprefix}feeadjuster)" != "on" ]; then
+    if [ ! -f /home/glcoin/${netprefix}cl-plugins-enabled/feeadjuster.py ] || [ "$(eval echo \$${netprefix}feeadjuster)" != "on" ]; then
       echo "# The feeadjuster plugin is not present but in config"
       sed -i "/^feeadjuster/d" ${CLCONF}
-      rm -rf /home/bitcoin/${netprefix}cl-plugins-enabled/feeadjuster.py
+      rm -rf /home/glcoin/${netprefix}cl-plugins-enabled/feeadjuster.py
     fi
   fi
 
-  # https://github.com/rootzoll/raspiblitz/issues/3007
+  # https://github.com/rootzoll/raspiblesk/issues/3007
   # add for test networks as well if needed on mainnet
-  if [ "${blitzapi}" = "on" ] ||
+  if [ "${bleskapi}" = "on" ] ||
     [ "${LNBitsFunding}" = "${netprefix}cl" ] ||
     [ "${BTCPayServer}" = "on" ]; then
     if [ $(grep -c "^rpc-file-mode=0660" <${CLCONF}) -eq 0 ]; then
@@ -68,7 +68,7 @@ if [ "$1" == "prestart" ]; then
     fi
   fi
 
-  if [ -f /home/bitcoin/${netprefix}cl-plugins-enabled/cln-grpc ] ||
+  if [ -f /home/glcoin/${netprefix}cl-plugins-enabled/cln-grpc ] ||
     [ -f /usr/local/libexec/c-lightning/plugins/cln-grpc ] ||
     [ "$(eval echo \$${netprefix}cln-grpc-port)" != "off" ]; then
     if [ $(grep -c "^grpc-port" <${CLCONF}) -eq 0 ]; then
@@ -80,10 +80,10 @@ if [ "$1" == "prestart" ]; then
   else
     echo "# The cln-grpc plugin is not present but in config"
     sed -i "/^grpc-port/d" ${CLCONF}
-    rm -rf /home/bitcoin/${netprefix}cl-plugins-enabled/cln-grpc
+    rm -rf /home/glcoin/${netprefix}cl-plugins-enabled/cln-grpc
   fi
 
-  if [ -f /home/bitcoin/${netprefix}cl-plugins-enabled/clnrest ] ||
+  if [ -f /home/glcoin/${netprefix}cl-plugins-enabled/clnrest ] ||
     [ -f /usr/local/libexec/c-lightning/plugins/clnrest ]; then
     if [ $(grep -c "^clnrest-port" <${CLCONF}) -eq 0 ]; then
       echo "# Create clnrest-port entry"
@@ -100,7 +100,7 @@ if [ "$1" == "prestart" ]; then
     echo "# The clnrest plugin is not present but in config"
     sed -i "/^clnrest-port/d" ${CLCONF}
     sed -i "/^clnrest-host/d" ${CLCONF}
-    rm -rf /home/bitcoin/${netprefix}cl-plugins-enabled/clnrest
+    rm -rf /home/glcoin/${netprefix}cl-plugins-enabled/clnrest
   fi
 
   exit 0
@@ -115,7 +115,7 @@ fi
 if [ "$1" == "poststart" ]; then
 
   # log info
-  info=$(ls -la /mnt/hdd/app-data/.lightning/bitcoin/lightning-rpc)
+  info=$(ls -la /mnt/hdd/app-data/.lightning/glcoin/lightning-rpc)
   logger "${info}"
 
   exit 0

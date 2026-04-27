@@ -1,11 +1,11 @@
 variable "pack" { default = "lean" }
-variable "github_user" { default = "raspiblitz" }
+variable "github_user" { default = "raspiblesk" }
 variable "branch" { default = "dev" }
 variable "image_link" { default = "https://downloads.raspberrypi.org/raspios_arm64/images/raspios_arm64-2025-05-13/2025-05-13-raspios-bookworm-arm64.img.xz" }
 variable "image_checksum" { default = "1162c2a47c2ebda34c7ebeafc4afb71910a05b368d0721ae3736928e60ba5047" }
 variable "image_size" { default = "24G" }
 
-source "arm" "raspiblitz-arm64-rpi" {
+source "arm" "raspiblesk-arm64-rpi" {
   file_checksum_type    = "sha256"
   file_checksum         = var.image_checksum
   file_target_extension = "xz"
@@ -29,7 +29,7 @@ source "arm" "raspiblitz-arm64-rpi" {
     start_sector = "532480"
     type         = "83"
   }
-  image_path                   = "raspiblitz-arm64-rpi-${var.pack}.img"
+  image_path                   = "raspiblesk-arm64-rpi-${var.pack}.img"
   image_size                   = var.image_size
   image_type                   = "dos"
   qemu_binary_destination_path = "/usr/bin/qemu-arm-static"
@@ -37,7 +37,16 @@ source "arm" "raspiblitz-arm64-rpi" {
 }
 
 build {
-  sources = ["source.arm.raspiblitz-arm64-rpi"]
+  sources = ["source.arm.raspiblesk-arm64-rpi"]
+
+  dynamic "provisioner" {
+    for_each = var.glcoin_source_path != "" ? [1] : []
+    labels   = ["file"]
+    content {
+      source      = var.glcoin_source_path
+      destination = "/tmp/glcoin-src"
+    }
+  }
 
   provisioner "shell" {
     inline = [
@@ -59,7 +68,7 @@ build {
       "branch=${var.branch}",
       "pack=${var.pack}"
     ]
-    script = "./build.raspiblitz.sh"
+    script = "./build.raspiblesk.sh"
   }
 
   provisioner "shell" {

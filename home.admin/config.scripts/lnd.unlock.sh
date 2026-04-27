@@ -8,9 +8,9 @@ if [ "$1" == "-h" ] || [ "$1" == "help" ]; then
  exit 1
 fi
 
-# load raspiblitz info & conf
-source /home/admin/raspiblitz.info
-source /mnt/hdd/app-data/raspiblitz.conf
+# load raspiblesk info & conf
+source /home/admin/raspiblesk.info
+source /mnt/hdd/app-data/raspiblesk.conf
 
 # 1. parameter (default is unlock)
 action="$1"
@@ -74,7 +74,7 @@ manualEntry=0
 if [ ${#passwordC} -eq 0 ]; then
     echo "# manual input"
     manualEntry=1
-    passwordC=$(whiptail --passwordbox "\nEnter Password C to unlock wallet:\n" 9 52 "" --title " LND Wallet " --backtitle "RaspiBlitz" 3>&1 1>&2 2>&3)
+    passwordC=$(whiptail --passwordbox "\nEnter Password C to unlock wallet:\n" 9 52 "" --title " LND Wallet " --backtitle "RaspiBlesk" 3>&1 1>&2 2>&3)
 fi
 
 loopCount=0
@@ -110,7 +110,7 @@ while [ ${fallback} -eq 0 ]
 
         echo "# wrong password"
         if [ ${manualEntry} -eq 1 ]; then
-            passwordC=$(whiptail --passwordbox "\nEnter Password C again:\n" 9 52 "" --title " Password was Wrong " --backtitle "RaspiBlitz - LND Wallet" 3>&1 1>&2 2>&3)
+            passwordC=$(whiptail --passwordbox "\nEnter Password C again:\n" 9 52 "" --title " Password was Wrong " --backtitle "RaspiBlesk - LND Wallet" 3>&1 1>&2 2>&3)
         else
             echo "error='wrong password'"
             exit 1

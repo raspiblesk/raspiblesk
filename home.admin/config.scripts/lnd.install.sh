@@ -4,7 +4,9 @@
 ## based on https://raspibolt.github.io/raspibolt/raspibolt_40_lnd.html#lightning-lnd
 ## see LND releases: https://github.com/lightningnetwork/lnd/releases
 ### If you change here - make sure to also change interims version in lnd.update.sh #!
-lndVersion="0.19.3-beta"
+lndVersion="0.20.99-beta"
+GLCOIN_RELEASE="v1.0.0"
+GITHUB_RELEASE_BASE="https://github.com/raspiblesk/raspiblesk/releases/download/${GLCOIN_RELEASE}"
 
 # olaoluwa
 PGPauthor="roasbeef"
@@ -36,7 +38,7 @@ fi
 
 source <(/home/admin/_cache.sh get network)
 if [ "${network}" == "" ]; then
-  network="bitcoin"
+  network="glcoin"
 fi
 
 if [ "$1" = "info" ] ; then
@@ -82,127 +84,138 @@ fi
 
 if [ "$1" = "install" ] ; then
 
-  echo "# *** INSTALL LND ${lndVersion} BINARY ***"
-  echo "# only binary install to system"
-  echo "# no configuration, no systemd service"
+  echo "# *** INSTALL LND ${lndVersion} (Glcoin-patched) ***"
+  echo "# Installs LND built from source with Glcoin chain params."
+  echo "# Official LND binaries do NOT know about Glcoin's genesis block"
+  echo "# and will refuse to connect to glcoind. A patched build is required."
 
   # check if lnd binary is already installed
-  if [ $(sudo -u admin lnd --version 2>/dev/null| grep -c 'lnd') -gt 0 ]; then
+  if [ $(sudo -u admin lnd --version 2>/dev/null | grep -c 'lnd') -gt 0 ]; then
     echo "lnd binary already installed - done"
-    exit 
+    exit 0
   fi
 
-  # get LND resources
-  cd /home/admin/download || exit 1
-
-  # download lnd binary checksum manifest
-  sudo -u admin wget -N https://github.com/lightningnetwork/lnd/releases/download/v${lndVersion}/manifest-v${lndVersion}.txt
-
-  # check if checksums are signed by lnd dev team
-  sudo -u admin wget -N https://github.com/lightningnetwork/lnd/releases/download/v${lndVersion}/manifest-${PGPauthor}-v${lndVersion}.sig
-  sudo -u admin wget --no-check-certificate -N -O "pgp_keys.asc" ${PGPpkeys}
-  gpg --import --import-options show-only ./pgp_keys.asc
-  fingerprint=$(sudo gpg --show-keys "pgp_keys.asc" 2>/dev/null | grep "${PGPcheck}" -c)
-  if [ ${fingerprint} -lt 1 ]; then
-    echo ""
-    echo "# BUILD WARNING --> LND PGP author not as expected"
-    echo "Should contain PGP: ${PGPcheck}"
-    echo "PRESS ENTER to TAKE THE RISK if you think all is OK"
-    read key
-  fi
-  gpg --import ./pgp_keys.asc
-  sleep 3
-  verifyResult=$(LANG=en_US.utf8; gpg --verify manifest-${PGPauthor}-v${lndVersion}.sig manifest-v${lndVersion}.txt 2>&1)
-  goodSignature=$(echo ${verifyResult} | grep 'Good signature' -c)
-  echo "goodSignature(${goodSignature})"
-  correctKey=$(echo ${verifyResult} | tr -d " \t\n\r" | grep "${PGPcheck}" -c)
-  echo "correctKey(${correctKey})"
-  if [ ${correctKey} -lt 1 ] || [ ${goodSignature} -lt 1 ]; then
-    echo
-    echo "# BUILD FAILED --> LND PGP Verify not OK / signature(${goodSignature}) verify(${correctKey})"
-    exit 1
-  else
-    echo
-    echo "********************************************"
-    echo "OK --> THE LND MANIFEST SIGNATURE IS CORRECT"
-    echo "********************************************"
-    echo
-  fi
-
-  # get the lndSHA256 for the corresponding platform from manifest file
+  # detect architecture
   if [ "$(uname -m | grep -c 'arm')" -gt 0 ]; then
-    lndOSversion="armv7"
-    lndSHA256=$(grep -i "linux-$lndOSversion" manifest-v$lndVersion.txt | cut -d " " -f1)
+    lndArch="armv7"
   elif [ "$(uname -m | grep -c 'aarch64')" -gt 0 ]; then
-    lndOSversion="arm64"
-    lndSHA256=$(grep -i "linux-$lndOSversion" manifest-v$lndVersion.txt | cut -d " " -f1)
+    lndArch="arm64"
   elif [ "$(uname -m | grep -c 'x86_64')" -gt 0 ]; then
-    lndOSversion="amd64"
-    lndSHA256=$(grep -i "linux-$lndOSversion" manifest-v$lndVersion.txt | cut -d " " -f1)
-  fi
-
-  echo "*** LND v${lndVersion} for ${lndOSversion} ***"
-  echo "SHA256 hash: $lndSHA256"
-  echo
-
-  # get LND binary
-  binaryName="lnd-linux-${lndOSversion}-v${lndVersion}.tar.gz"
-  if [ ! -f "./${binaryName}" ]; then
-    lndDownloadUrl="https://github.com/lightningnetwork/lnd/releases/download/v${lndVersion}/${binaryName}"
-    echo "- downloading lnd binary --> ${lndDownloadUrl}"
-    sudo -u admin wget ${lndDownloadUrl}
-    echo "- download done"
+    lndArch="amd64"
   else
-    echo "- using existing lnd binary"
-  fi
-
-  # check binary was not manipulated (checksum test)
-  echo "- checksum test"
-  binaryChecksum=$(sha256sum ${binaryName} | cut -d " " -f1)
-  echo "Valid SHA256 checksum(s) should be: ${lndSHA256}"
-  echo "Downloaded binary SHA256 checksum: ${binaryChecksum}"
-  checksumCorrect=$(echo "${lndSHA256}" | grep -c "${binaryChecksum}")
-  if [ "${checksumCorrect}" != "1" ]; then
-    echo "# FAIL # Downloaded LND BINARY not matching SHA256 checksum in manifest: ${lndSHA256}"
-    rm -v ./${binaryName}
+    echo "# FAIL - unsupported architecture: $(uname -m)"
     exit 1
-  else
-    echo
-    echo "**************************************************"
-    echo "OK --> THE VERIFIED LND BINARY CHECKSUM IS CORRECT"
-    echo "**************************************************"
-    echo
-    sleep 10
   fi
 
-  # install
-  echo "- install LND binary"
-  sudo -u admin tar -xzf ${binaryName}
-  sudo install -m 0755 -o root -g root -t /usr/local/bin lnd-linux-${lndOSversion}-v${lndVersion}/*
-  sleep 3
-  installed=$(sudo -u admin lnd --version)
+  # -----------------------------------------------------------------------
+  # OPTION 1: pre-built Glcoin-patched LND binary tarball
+  # Place lnd-glcoin-${lndVersion}-linux-${arch}.tar.gz in /tmp before running.
+  # Format: contains lnd and lncli binaries at the top level.
+  # -----------------------------------------------------------------------
+  PREBUILT_TARBALL="/tmp/lnd-glcoin-${lndVersion}-linux-${lndArch}.tar.gz"
+  if [ ! -f "${PREBUILT_TARBALL}" ]; then
+    echo "# Attempting GitHub Release download: ${GITHUB_RELEASE_BASE}/$(basename "${PREBUILT_TARBALL}")"
+    wget -q --show-progress --timeout=120 \
+      -O "${PREBUILT_TARBALL}" \
+      "${GITHUB_RELEASE_BASE}/$(basename "${PREBUILT_TARBALL}")" || rm -f "${PREBUILT_TARBALL}"
+  fi
+  if [ -f "${PREBUILT_TARBALL}" ]; then
+    echo "# Found pre-built Glcoin LND tarball: ${PREBUILT_TARBALL}"
+    cd /home/admin/download || exit 1
+    tar -xzf "${PREBUILT_TARBALL}" || { echo "# FAIL - could not extract tarball"; exit 1; }
+    sudo install -m 0755 -o root -g root lnd lncli /usr/local/bin/
+    echo "# Installed from pre-built tarball"
+  else
+    # -----------------------------------------------------------------------
+    # OPTION 2: build from source
+    # Requires Go. Downloads btcd + lnd, applies Glcoin patch, builds.
+    # On a Raspberry Pi 4 this takes ~30-60 minutes.
+    # -----------------------------------------------------------------------
+    echo "# No pre-built tarball found at ${PREBUILT_TARBALL}"
+    echo "# Building LND from source with Glcoin chain params patch..."
+    echo "# (This will take 30-60 minutes on a Raspberry Pi)"
+
+    # install Go if missing
+    if ! command -v go &>/dev/null; then
+      echo "# Installing Go..."
+      apt-get install -y golang-go || {
+        # fallback: install upstream Go binary
+        GO_VERSION="1.22.3"
+        GO_ARCH="${lndArch}"
+        [ "${lndArch}" = "armv7" ] && GO_ARCH="armv6l"
+        wget -O /tmp/go.tar.gz "https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz"
+        tar -C /usr/local -xzf /tmp/go.tar.gz
+        export PATH=$PATH:/usr/local/go/bin
+        echo 'export PATH=$PATH:/usr/local/go/bin' >> /home/admin/.bashrc
+      }
+    fi
+    export GOPATH=/home/admin/go
+    export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
+
+    BUILD_BASE="/home/admin/lnd-glcoin-build"
+    mkdir -p "${BUILD_BASE}"
+    cd "${BUILD_BASE}" || exit 1
+
+    # --- patch btcd --------------------------------------------------------
+    echo "# Cloning btcd..."
+    git clone --depth=1 --branch master https://github.com/btcsuite/btcd.git btcd || {
+      echo "# FAIL - could not clone btcd"; exit 1
+    }
+    # copy the Glcoin chain params file
+    cp /home/admin/config/raspiblitz/patches/lnd/btcd_glcoin_params.go \
+       "${BUILD_BASE}/btcd/chaincfg/glcoin_params.go" || {
+      # fallback: look for it relative to this script
+      SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+      cp "${SCRIPT_DIR}/../../patches/lnd/btcd_glcoin_params.go" \
+         "${BUILD_BASE}/btcd/chaincfg/glcoin_params.go" || {
+        echo "# FAIL - could not find btcd_glcoin_params.go patch file"; exit 1
+      }
+    }
+
+    # --- build LND with patched btcd ---------------------------------------
+    echo "# Cloning LND v${lndVersion}..."
+    git clone --depth=1 --branch "v${lndVersion}" \
+      https://github.com/lightningnetwork/lnd.git lnd || {
+      echo "# FAIL - could not clone LND v${lndVersion}"; exit 1
+    }
+    cd "${BUILD_BASE}/lnd" || exit 1
+
+    # replace btcd dependency with our patched local copy
+    go mod edit -replace github.com/btcsuite/btcd="${BUILD_BASE}/btcd"
+    go mod tidy
+
+    echo "# Building LND (this is slow on ARM)..."
+    make install tags="autopilotrpc chainrpc invoicesrpc routerrpc signrpc walletrpc watchtowerrpc wtclientrpc" || {
+      echo "# FAIL - LND build failed"; exit 1
+    }
+
+    sudo install -m 0755 -o root -g root "${GOPATH}/bin/lnd" /usr/local/bin/lnd
+    sudo install -m 0755 -o root -g root "${GOPATH}/bin/lncli" /usr/local/bin/lncli
+
+    # package for future use (saves 30-60 min on reinstall)
+    echo "# Packaging built binaries to ${PREBUILT_TARBALL} for reuse..."
+    tar -czf "${PREBUILT_TARBALL}" -C "${GOPATH}/bin" lnd lncli && \
+      echo "# Saved to ${PREBUILT_TARBALL} — copy to /tmp on future installs to skip rebuild"
+  fi
+
+  # verify installation
+  sleep 2
+  installed=$(sudo -u admin lnd --version 2>/dev/null)
   if [ ${#installed} -eq 0 ]; then
     echo
-    echo "# BUILD FAILED --> Was not able to install LND"
+    echo "# BUILD FAILED --> lnd binary not found after install"
     exit 1
   fi
-
-  correctVersion=$(sudo -u admin lnd --version | grep -c "${lndVersion}")
-  if [ ${correctVersion} -eq 0 ]; then
-    echo ""
-    echo "# BUILD FAILED --> installed LND is not version ${lndVersion}"
-    sudo -u admin lnd --version
-    exit 1
-  fi
+  echo "# Installed: ${installed}"
   sudo chown -R admin /home/admin
-  echo "- OK install of LND done"
+  echo "# OK - LND (Glcoin-patched) install done"
   exit 0
 fi
 
 # CHAIN is signet | testnet | mainnet
 CHAIN=$2
 if [ -z "${CHAIN}" ] || [ "$2" = purge ]; then
-  source /mnt/hdd/app-data/raspiblitz.conf
+  source /mnt/hdd/app-data/raspiblesk.conf
   CHAIN=${chain}net
 fi
 if [ "${CHAIN}" = testnet ]||[ "${CHAIN}" = mainnet ]||[ "${CHAIN}" = signet ];then
@@ -218,26 +231,29 @@ if [ ${CHAIN} = testnet ];then
   portprefix=1
   rpcportmod=1
   zmqprefix=21
+  glcoinRpcPort=11617
 elif [ ${CHAIN} = signet ];then
   netprefix="s"
   portprefix=3
   rpcportmod=3
   zmqprefix=23
+  glcoinRpcPort=31617
 elif [ ${CHAIN} = mainnet ];then
   netprefix=""
   portprefix=""
   rpcportmod=0
   zmqprefix=28
+  glcoinRpcPort=1617
 fi
 
-source /home/admin/raspiblitz.info
+source /home/admin/raspiblesk.info
 source <(/home/admin/_cache.sh get state)
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 
 function removeParallelService() {
   if [ -f "/etc/systemd/system/${netprefix}lnd.service" ];then
     echo "# Stopping ${netprefix}lnd ..."
-    #sudo -u bitcoin /usr/local/bin/lncli --rpcserver localhost:1${rpcportmod}009 stop
+    #sudo -u glcoin /usr/local/bin/lncli --rpcserver localhost:1${rpcportmod}009 stop
     sudo systemctl stop ${netprefix}lnd
     sudo systemctl disable ${netprefix}lnd
     sudo rm /etc/systemd/system/${netprefix}lnd.service 2>/dev/null
@@ -250,14 +266,14 @@ function removeParallelService() {
 if [ "$1" = "1" ] || [ "$1" = "on" ]; then
 
   if [ "${CHAIN}" == "testnet" ] && [ "${testnet}" != "on" ]; then
-    echo "# before activating testnet on lnd, first activate testnet on bitcoind"
-    echo "err='missing bitcoin testnet'"
+    echo "# before activating testnet on lnd, first activate testnet on glcoind"
+    echo "err='missing glcoin testnet'"
     exit 1
   fi
 
   if [ "${CHAIN}" == "signet" ] && [ "${signet}" != "on" ]; then
-    echo "# before activating signet on lnd, first activate signet on bitcoind"
-    echo "err='missing bitcoin signet'"
+    echo "# before activating signet on lnd, first activate signet on glcoind"
+    echo "err='missing glcoin signet'"
     exit 1
   fi
 
@@ -270,14 +286,14 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   # make sure binary is installed (will skip if already done)
   /home/admin/config.scripts/lnd.install.sh install
 
-  echo "# Make sure the user bitcoin is in the debian-tor group"
-  sudo usermod -a -G debian-tor bitcoin
+  echo "# Make sure the user glcoin is in the debian-tor group"
+  sudo usermod -a -G debian-tor glcoin
 
   sudo ufw allow ${portprefix}9735 comment "${netprefix}lnd"
   sudo ufw allow ${portprefix}8080 comment "${netprefix}lnd REST"
   sudo ufw allow 1${rpcportmod}009 comment "${netprefix}lnd RPC"
 
-  sudo chown -R bitcoin:bitcoin /mnt/hdd/app-data/lnd
+  sudo chown -R glcoin:glcoin /mnt/hdd/app-data/lnd
   sudo chmod -R 750 /mnt/hdd/app-data/lnd
 
   echo "# Create /mnt/hdd/app-data/lnd/${netprefix}lnd.conf"
@@ -314,6 +330,12 @@ bitcoin.active=1
 bitcoin.${CHAIN}=1
 bitcoin.node=bitcoind
 
+[Bitcoind]
+bitcoind.rpchost=127.0.0.1:${glcoinRpcPort}
+bitcoind.rpccookiefile=/mnt/hdd/app-data/glcoin/.cookie
+bitcoind.zmqpubrawblock=tcp://127.0.0.1:${zmqprefix}332
+bitcoind.zmqpubrawtx=tcp://127.0.0.1:${zmqprefix}333
+
 [bolt]
 db.bolt.auto-compact=true
 db.bolt.auto-compact-min-age=672h
@@ -323,7 +345,7 @@ db.bolt.auto-compact-min-age=672h
 healthcheck.chainbackend.attempts=3
 healthcheck.chainbackend.timeout=2m0s 
 healthcheck.chainbackend.interval=1m30s
-" | sudo -u bitcoin tee /mnt/hdd/app-data/lnd/${netprefix}lnd.conf
+" | sudo -u glcoin tee /mnt/hdd/app-data/lnd/${netprefix}lnd.conf
   else
     echo "# The file /mnt/hdd/app-data/lnd/${netprefix}lnd.conf is already present"
   fi
@@ -336,13 +358,13 @@ healthcheck.chainbackend.interval=1m30s
 [Unit]
 Description=Lightning Network Daemon on $CHAIN
 
-# Make sure lnd starts after bitcoind is ready
-Requires=${netprefix}bitcoind.service
-After=${netprefix}bitcoind.service
-PartOf=${netprefix}bitcoind.service
+# Make sure lnd starts after glcoind is ready
+Requires=${netprefix}glcoind.service
+After=${netprefix}glcoind.service
+PartOf=${netprefix}glcoind.service
 
 [Service]
-EnvironmentFile=/mnt/hdd/app-data/raspiblitz.conf
+EnvironmentFile=/mnt/hdd/app-data/raspiblesk.conf
 
 ExecStartPre=-/home/admin/config.scripts/lnd.check.sh prestart ${CHAIN}
 ExecStart=/usr/local/bin/lnd --configfile=/mnt/hdd/app-data/lnd/${netprefix}lnd.conf
@@ -350,8 +372,8 @@ ExecStart=/usr/local/bin/lnd --configfile=/mnt/hdd/app-data/lnd/${netprefix}lnd.
 # ExecStop=/usr/local/bin/lncli -n=${CHAIN} --rpcserver localhost:1${rpcportmod}009 stop
 PIDFile=/mnt/hdd/app-data/lnd/${netprefix}lnd.pid
 
-User=bitcoin
-Group=bitcoin
+User=glcoin
+Group=glcoin
 
 # Try to restart lnd always
 Restart=always
@@ -398,7 +420,7 @@ WantedBy=multi-user.target
   sudo -u admin touch /home/admin/_aliases
   if [ $(grep -c "alias ${netprefix}lncli" < /home/admin/_aliases) -eq 0 ];then
     echo "\
-alias ${netprefix}lncli=\"sudo -u bitcoin /usr/local/bin/lncli\
+alias ${netprefix}lncli=\"sudo -u glcoin /usr/local/bin/lncli\
  -n=${CHAIN} --rpcserver localhost:1${rpcportmod}009\"\
 " | sudo tee -a /home/admin/_aliases
   fi
@@ -417,14 +439,14 @@ alias ${netprefix}lndconf=\"sudo nano /mnt/hdd/app-data/lnd/${netprefix}lnd.conf
   walletExists=$(sudo ls /mnt/hdd/app-data/lnd/data/chain/${network}/${CHAIN}/wallet.db 2>/dev/null | grep -c "wallet.db")
   echo "# initwallet(${initwallet}) walletExists(${walletExists})"
   if [ "${initwallet}" == "1" ] && [ "${walletExists}" == "0" ]; then
-      # only ask on mainnet for passwordC - for the testnet/signet its default 'raspiblitz'
+      # only ask on mainnet for passwordC - for the testnet/signet its default 'raspiblesk'
       if [ "${CHAIN}" == "mainnet" ]; then
-        tempFile="/var/cache/raspiblitz/passwordc.tmp"
-        sudo /home/admin/config.scripts/blitz.passwords.sh set x "PASSWORD C - LND Wallet Password" ${tempFile}
+        tempFile="/var/cache/raspiblesk/passwordc.tmp"
+        sudo /home/admin/config.scripts/blesk.passwords.sh set x "PASSWORD C - LND Wallet Password" ${tempFile}
         passwordC=$(sudo cat ${tempFile})
         sudo rm ${tempFile}
       else
-        passwordC="raspiblitz"
+        passwordC="raspiblesk"
       fi
       source <(sudo /home/admin/config.scripts/lnd.initwallet.py new ${CHAIN} ${passwordC})
       if [ "${err}" != "" ]; then
@@ -447,7 +469,7 @@ alias ${netprefix}lndconf=\"sudo nano /mnt/hdd/app-data/lnd/${netprefix}lnd.conf
     passwordFile="/mnt/hdd/app-data/lnd/data/chain/${network}/${CHAIN}/password.info"
     # create passwordfile
     if ! sudo ls ${passwordFile} &>/dev/null; then
-      echo "raspiblitz" | sudo -u bitcoin tee ${passwordFile} 1>/dev/null
+      echo "raspiblesk" | sudo -u glcoin tee ${passwordFile} 1>/dev/null
     fi
     # add autounlock to lnd.conf
     if ! grep "^wallet-unlock-password-file=${passwordFile}" < ${lndConfFile}; then
@@ -456,13 +478,13 @@ alias ${netprefix}lndconf=\"sudo nano /mnt/hdd/app-data/lnd/${netprefix}lnd.conf
         sudo sed -i "/^\[Application Options\]$/awallet-unlock-password-file=${passwordFile}" ${lndConfFile}
       else
         # just append if no headers used
-        echo "wallet-unlock-password-file=${passwordFile}" | sudo -u bitcoin tee ${lndConfFile}
+        echo "wallet-unlock-password-file=${passwordFile}" | sudo -u glcoin tee ${lndConfFile}
       fi
     fi
   fi
 
   echo
-  echo "# The installed LND version is: $(sudo -u bitcoin /usr/local/bin/lnd --version)"
+  echo "# The installed LND version is: $(sudo -u glcoin /usr/local/bin/lnd --version)"
   echo
   echo "# To activate the aliases reopen the terminal or use:"
   echo "source ~/_aliases"
@@ -470,19 +492,19 @@ alias ${netprefix}lndconf=\"sudo nano /mnt/hdd/app-data/lnd/${netprefix}lnd.conf
   echo "sudo journalctl -fu ${netprefix}lnd"
   echo "sudo systemctl status ${netprefix}lnd"
   echo "# logs:"
-  echo "sudo tail -f /mnt/hdd/app-data/lnd/logs/bitcoin/${CHAIN}/lnd.log"
+  echo "sudo tail -f /mnt/hdd/app-data/lnd/logs/glcoin/${CHAIN}/lnd.log"
   echo "# for the command line options use"
   echo "${netprefix}lncli help"
   echo
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set ${netprefix}lnd "on"
+  /home/admin/config.scripts/blesk.conf.sh set ${netprefix}lnd "on"
 
   # if this is the first lightning mainnet turned on - make default
   if [ "${CHAIN}" == "mainnet" ]; then
     if [ "${lightning}" == "" ] || [ "${lightning}" == "none" ]; then
       echo "# LND is now default lighthning implementation"
-      /home/admin/config.scripts/blitz.conf.sh set lightning "lnd"
+      /home/admin/config.scripts/blesk.conf.sh set lightning "lnd"
     fi
   fi
 
@@ -553,17 +575,17 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
 
   removeParallelService
 
-  # setting value in raspiblitz config
-  /home/admin/config.scripts/blitz.conf.sh set ${netprefix}lnd "off"
+  # setting value in raspiblesk config
+  /home/admin/config.scripts/blesk.conf.sh set ${netprefix}lnd "off"
   echo "# ${netprefix}lnd --> off"
 
   # if lnd mainnet was default - remove
   if [ "${CHAIN}" == "mainnet" ] && [ "${lightning}" == "lnd" ]; then
     echo "# LND is REMOVED as default lightning implementation"
-    /home/admin/config.scripts/blitz.conf.sh set lightning "none"
+    /home/admin/config.scripts/blesk.conf.sh set lightning "none"
     if [ "${cl}" == "on" ]; then
       echo "# CL is now the new default lightning implementation"
-      /home/admin/config.scripts/blitz.conf.sh set lightning "cl"
+      /home/admin/config.scripts/blesk.conf.sh set lightning "cl"
     fi
   fi
 

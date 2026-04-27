@@ -2,10 +2,10 @@
 
 # command info
 if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
- echo "Interim optional LND updates between RaspiBlitz releases."
+ echo "Interim optional LND updates between RaspiBlesk releases."
  echo "lnd.update.sh [info|verified|reckless]"
  echo "info -> get actual state and possible actions"
- echo "verified -> only do recommended updates by RaspiBlitz team"
+ echo "verified -> only do recommended updates by RaspiBlesk team"
  echo "  binary will be checked by signature and checksum"
  echo "reckless -> if you just want to update to the latest release"
  echo "  published on LND GitHub releases (RC or final) without any"
@@ -16,7 +16,7 @@ fi
 # 1. parameter [info|verified|reckless]
 mode="$1"
 
-# RECOMMENDED UPDATE BY RASPIBLITZ TEAM
+# RECOMMENDED UPDATE BY RASPIBLESK TEAM
 # comment will be shown as "BEWARE Info" when option is choosen (can be multiple lines)
 lndUpdateVersion="" # example: 0.13.2-beta .. keep empty if no newer version as sd card build is available
 lndUpdateComment="Please keep in mind that downgrading afterwards is not tested. Also not all additional apps are fully tested with the this update - but it looked good on first tests."
@@ -58,7 +58,7 @@ if [ $(uname -m | grep -c 'i386\|i486\|i586\|i686\|i786') -eq 1 ] ; then
 fi
 
 # installed LND version
-lndInstalledVersion=$(sudo -u bitcoin lncli --version | cut -d " " -f3)
+lndInstalledVersion=$(sudo -u glcoin lncli --version | cut -d " " -f3)
 # example: '0.14.1-beta'
 lndInstalledVersionMajor=$(echo "${lndInstalledVersion}" | cut -d "-" -f1 | cut -d "." -f1)
 lndInstalledVersionMain=$(echo "${lndInstalledVersion}" | cut -d "-" -f1 | cut -d "." -f2)
@@ -128,8 +128,8 @@ if [ "${mode}" = "verified" ]; then
     echo "# checking for fixed version update: askedFor(${fixedUpdateVersion}) available(${lndUpdateVersion})"
     if [ "${fixedUpdateVersion}" != "${lndUpdateVersion}" ]; then
       echo "warn='required update version does not match'"
-      echo "# this is normal when the recovery script of a new RaspiBlitz version checks for an old update - just ignore"
-      /home/admin/config.scripts/blitz.conf.sh delete lndInterimsUpdate
+      echo "# this is normal when the recovery script of a new RaspiBlesk version checks for an old update - just ignore"
+      /home/admin/config.scripts/blesk.conf.sh delete lndInterimsUpdate
       exit 1
     else
       echo "# OK - update version is matching"
@@ -251,11 +251,11 @@ fi
 # JOINED INSTALL (verified & RECKLESS)
 if [ "${mode}" = "verified" ] || [ "${mode}" = "reckless" ]; then
 
-  echo "# mark update in raspiblitz config"
-  /home/admin/config.scripts/blitz.conf.sh set lndInterimsUpdate "${lndInterimsUpdateNew}"
+  echo "# mark update in raspiblesk config"
+  /home/admin/config.scripts/blesk.conf.sh set lndInterimsUpdate "${lndInterimsUpdateNew}"
 
   echo "# OK LND Installed"
-  echo "# NOTE: RaspiBlitz may need to reboot now"
+  echo "# NOTE: RaspiBlesk may need to reboot now"
   exit 0
 
 else

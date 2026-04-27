@@ -14,7 +14,7 @@ fi
 
 echo "# bonus.specter.sh $1 $2"
 
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 if [ $# -gt 1 ]; then
   CHAIN=$2
   chain=${CHAIN::-3}
@@ -68,20 +68,20 @@ if [ "$1" = "menu" ]; then
   if [ "${runBehindTor}" = "on" ] && [ ${#toraddress} -gt 0 ]; then
 
     # Tor
-    sudo /home/admin/config.scripts/blitz.display.sh qr "${toraddress}"
+    sudo /home/admin/config.scripts/blesk.display.sh qr "${toraddress}"
     whiptail --title " Specter Desktop " --msgbox "Open in your local web browser & accept self-signed cert:
 https://${localIP}:25441
 
 SHA1 Thumb/Fingerprint:
 ${fingerprint}
 
-Login with the Pin being Password B. If you have connected to a different Bitcoin RPC Endpoint, the Pin is the configured RPCPassword.
+Login with the Pin being Password B. If you have connected to a different Glcoin RPC Endpoint, the Pin is the configured RPCPassword.
 
 Hidden Service address for TOR Browser (QR see LCD):
 https://${toraddress}
 Unfortunately the camera is currently not usable via Tor, though.
 " 18 74
-    sudo /home/admin/config.scripts/blitz.display.sh hide
+    sudo /home/admin/config.scripts/blesk.display.sh hide
   else
 
     # IP + Domain
@@ -91,7 +91,7 @@ https://${localIP}:25441
 SHA1 Thumb/Fingerprint:
 ${fingerprint}
 
-Login with the PIN being Password B. If you have connected to a different Bitcoin RPC Endpoint, the PIN is the configured RPCPassword.\n
+Login with the PIN being Password B. If you have connected to a different Glcoin RPC Endpoint, the PIN is the configured RPCPassword.\n
 Activate TOR to access the web block explorer from outside your local network.
 " 15 74
   fi
@@ -101,7 +101,7 @@ Activate TOR to access the web block explorer from outside your local network.
 fi
 
 # blockfilterindex
-# add blockfilterindex with default value (0) to bitcoin.conf if missing
+# add blockfilterindex with default value (0) to glcoin.conf if missing
 if ! grep -Eq "^blockfilterindex=.*" /mnt/hdd/app-data/${network}/${network}.conf; then
   echo "blockfilterindex=0" | sudo tee -a /mnt/hdd/app-data/${network}/${network}.conf >/dev/null
 fi
@@ -121,11 +121,11 @@ function configure_specter {
   fi
 
   # Set the active node alias based on the chain
-  # Always use raspiblitz_${chain}net format, never "default"
-  active_alias="raspiblitz_${chain}net"
+  # Always use raspiblesk_${chain}net format, never "default"
+  active_alias="raspiblesk_${chain}net"
 
-  # Get Bitcoin RPC credentials early to use for Specter auth
-  echo "# Getting Bitcoin RPC credentials"
+  # Get Glcoin RPC credentials early to use for Specter auth
+  echo "# Getting Glcoin RPC credentials"
   RPCUSER=$(sudo cat /mnt/hdd/app-data/${network}/${network}.conf | grep rpcuser | cut -c 9-)
   PASSWORD_B=$(sudo cat /mnt/hdd/app-data/${network}/${network}.conf | grep rpcpassword | cut -c 13-)
 
@@ -174,26 +174,26 @@ EOF
   sudo mv /home/admin/users.json /home/specter/.specter/users.json
   sudo chown specter:specter /home/specter/.specter/users.json
 
-  echo "# Adding the raspiblitz_${chain}net node to Specter"
+  echo "# Adding the raspiblesk_${chain}net node to Specter"
 
   # Set the port based on the chain
   if [ "${chain}" = "main" ]; then
-    PORT="8332"
+    PORT="1617"
   elif [ "${chain}" = "test" ]; then
-    PORT="18332"
+    PORT="11617"
   elif [ "${chain}" = "sig" ]; then
-    PORT="38332"
+    PORT="31617"
   fi
 
-  echo "# Connect Specter to the raspiblitz_${chain}net node"
-  cat >/home/admin/raspiblitz_${chain}net.json <<EOF
+  echo "# Connect Specter to the raspiblesk_${chain}net node"
+  cat >/home/admin/raspiblesk_${chain}net.json <<EOF
 {
     "python_class": "cryptoadvance.specter.node.Node",
-    "fullpath": "/home/specter/.specter/nodes/raspiblitz_${chain}net.json",
-    "name": "raspiblitz_${chain}net",
-    "alias": "raspiblitz_${chain}net",
+    "fullpath": "/home/specter/.specter/nodes/raspiblesk_${chain}net.json",
+    "name": "raspiblesk_${chain}net",
+    "alias": "raspiblesk_${chain}net",
     "autodetect": false,
-    "datadir": "/mnt/hdd/app-storage/bitcoin",
+    "datadir": "/mnt/hdd/app-storage/glcoin",
     "user": "${RPCUSER}",
     "password": "${PASSWORD_B}",
     "port": "${PORT}",
@@ -201,7 +201,7 @@ EOF
     "protocol": "http"
 }
 EOF
-  sudo mv /home/admin/raspiblitz_${chain}net.json /home/specter/.specter/nodes/raspiblitz_${chain}net.json
+  sudo mv /home/admin/raspiblesk_${chain}net.json /home/specter/.specter/nodes/raspiblesk_${chain}net.json
   sudo chown -RL specter:specter /home/specter/
 }
 
@@ -220,7 +220,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   isInstalled=$(sudo ls /etc/systemd/system/specter.service 2>/dev/null | grep -c 'specter.service' || /bin/true)
   if [ ${isInstalled} -eq 0 ]; then
 
-    echo "#    --> Enable wallets in Bitcoin Core"
+    echo "#    --> Enable wallets in Glcoin Core"
     /home/admin/config.scripts/network.wallet.sh on
 
     echo "#    --> Installing prerequisites"
@@ -236,14 +236,14 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     echo "# add the user to the debian-tor group"
     sudo usermod -a -G debian-tor specter
 
-    echo "# add the user to the bitcoin group"
-    sudo usermod -a -G bitcoin specter
+    echo "# add the user to the glcoin group"
+    sudo usermod -a -G glcoin specter
 
     # store data on the disk
     sudo mkdir -p /mnt/hdd/app-data/.specter 2>/dev/null
     # move old Specter data to app-data (except .env)
-    sudo mv -f /home/bitcoin/.specter/* /mnt/hdd/app-data/.specter/ 2>/dev/null
-    sudo rm -rf /home/bitcoin/.specter 2>/dev/null
+    sudo mv -f /home/glcoin/.specter/* /mnt/hdd/app-data/.specter/ 2>/dev/null
+    sudo rm -rf /home/glcoin/.specter 2>/dev/null
     # symlink to specter user
     sudo chown -R specter:specter /mnt/hdd/app-data/.specter
     sudo ln -s /mnt/hdd/app-data/.specter /home/specter/ 2>/dev/null
@@ -339,7 +339,7 @@ EOF
 
     # KeepKey
     cat >/home/admin/51-usb-keepkey.rules <<EOF
-# KeepKey: Your Private Bitcoin Vault
+# KeepKey: Your Private Glcoin Vault
 # http://www.keepkey.com/
 # Put this file into /usr/lib/udev/rules.d or /etc/udev/rules.d
 
@@ -357,7 +357,7 @@ EOF
     sudo udevadm trigger
     sudo udevadm control --reload-rules
     sudo groupadd plugdev || /bin/true
-    sudo usermod -aG plugdev bitcoin
+    sudo usermod -aG plugdev glcoin
     sudo usermod -aG plugdev specter
 
     # install service
@@ -374,7 +374,7 @@ After=${network}d.service
 ExecStart=/home/specter/.env/bin/python3 -m cryptoadvance.specter server --host 0.0.0.0 --cert=/home/specter/.specter/cert.pem --key=/home/specter/.specter/key.pem
 User=specter
 Environment=PATH=/home/specter/.specter.env/bin:/home/specter/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/sbin:/bin
-Environment=RASPIBLITZ_SPECTER_RPC_LOGIN_BITCOIN_CONF_LOCATION=/mnt/hdd/app-data/bitcoin
+Environment=RASPIBLESK_SPECTER_RPC_LOGIN_GLCOIN_CONF_LOCATION=/mnt/hdd/app-data/glcoin
 Restart=always
 TimeoutSec=120
 RestartSec=30
@@ -408,7 +408,7 @@ EOF
   fi
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set specter "on"
+  /home/admin/config.scripts/blesk.conf.sh set specter "on"
 
   # Hidden Service for SERVICE if Tor is active
   if [ "${runBehindTor}" = "on" ]; then
@@ -418,19 +418,19 @@ EOF
   fi
 
   # blockfilterindex on
-  # check txindex (parsed and sourced from bitcoin network config above)
+  # check txindex (parsed and sourced from glcoin network config above)
   if [ "${blockfilterindex}" = "0" ]; then
     sudo sed -i "s/^blockfilterindex=.*/blockfilterindex=1/g" /mnt/hdd/app-data/${network}/${network}.conf
     echo "# switching blockfilterindex=1"
-    isBitcoinRunning=$(systemctl is-active ${network}d | grep -c "^active")
-    if [ ${isBitcoinRunning} -eq 1 ]; then
+    isGlcoinRunning=$(systemctl is-active ${network}d | grep -c "^active")
+    if [ ${isGlcoinRunning} -eq 1 ]; then
       echo "# ${network}d is running - so restarting"
       sudo systemctl restart ${network}d
     else
       echo "# ${network}d is not running - so NOT restarting"
     fi
     echo "# The indexing takes ~10h on an RPi4 with SSD"
-    echo "# check with: sudo cat /mnt/hdd/app-data/bitcoin/debug.log | grep filter"
+    echo "# check with: sudo cat /mnt/hdd/app-data/glcoin/debug.log | grep filter"
   else
     echo "# blockfilterindex is already active"
   fi
@@ -444,7 +444,7 @@ fi
 if [ "$1" = "0" ] || [ "$1" = "off" ]; then
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set specter "off"
+  /home/admin/config.scripts/blesk.conf.sh set specter "off"
 
   # Hidden Service if Tor is active
   if [ "${runBehindTor}" = "on" ]; then
@@ -475,7 +475,7 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
     deleteData="0"
   fi
   if [ "${deleteData}" == "" ]; then
-    if (whiptail --title "Delete Data?" --yes-button "Keep Data" --no-button "Delete Data" --yesno "Do you want to delete all data related to Specter? This includes the Bitcoin Core wallets managed by Specter." 0 0); then
+    if (whiptail --title "Delete Data?" --yes-button "Keep Data" --no-button "Delete Data" --yesno "Do you want to delete all data related to Specter? This includes the Glcoin Core wallets managed by Specter." 0 0); then
       deleteData="0"
     else
       deleteData="1"
@@ -485,10 +485,10 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   # execute on delete data
   if [ "${deleteData}" == "1" ]; then
     echo "#    --> Removing wallets in core"
-    bitcoin-cli listwallets | jq -r .[] | tail -n +2
-    for i in $(bitcoin-cli listwallets | jq -r .[] | tail -n +2); do
+    glcoin-cli listwallets | jq -r .[] | tail -n +2
+    for i in $(glcoin-cli listwallets | jq -r .[] | tail -n +2); do
       name=$(echo $i | cut -d"/" -f2)
-      bitcoin-cli unloadwallet specter/$name
+      glcoin-cli unloadwallet specter/$name
     done
     echo "#    --> Removing the /mnt/hdd/app-data/.specter"
     sudo rm -rf /mnt/hdd/app-data/.specter

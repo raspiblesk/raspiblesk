@@ -8,8 +8,8 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
   exit 1
 fi
 
-# check and load raspiblitz config to know which network is running
-source /mnt/hdd/app-data/raspiblitz.conf
+# check and load raspiblesk config to know which network is running
+source /mnt/hdd/app-data/raspiblesk.conf
 
 # check and install qrencode if not present
 if [ $(dpkg-query -l | grep "ii  qrencode" | wc -l) = 0 ]; then
@@ -25,15 +25,15 @@ if [ "$1" = on ]; then
   clnNeedsRestart=0
   if ! grep "^clnrest-port=${portprefix}7378" "${CLCONF}" >/dev/null; then
     echo "# setting clnrest-port=${portprefix}7378"
-    sudo /home/admin/config.scripts/blitz.conf.sh set "clnrest-port" "${portprefix}7378" "${CLCONF}" "noquotes"
+    sudo /home/admin/config.scripts/blesk.conf.sh set "clnrest-port" "${portprefix}7378" "${CLCONF}" "noquotes"
     clnNeedsRestart=1
   fi
   if ! grep "^clnrest-host=0.0.0.0" "${CLCONF}" >/dev/null; then
     echo "# setting clnrest-host=0.0.0.0"
-    sudo /home/admin/config.scripts/blitz.conf.sh set "clnrest-host" "0.0.0.0" "${CLCONF}" "noquotes"
+    sudo /home/admin/config.scripts/blesk.conf.sh set "clnrest-host" "0.0.0.0" "${CLCONF}" "noquotes"
     clnNeedsRestart=1
   fi
-  source /home/admin/raspiblitz.info
+  source /home/admin/raspiblesk.info
   if [ "${state}" == "ready" ] && [ ${clnNeedsRestart} -eq 1 ]; then
     echo "# OK the system is ready so restarting ${netprefix}lightningd to activate the clnrest plugin"
     sudo systemctl restart ${netprefix}lightningd
@@ -68,7 +68,7 @@ if [ "$1" = connect ]; then
   function showStepByStepQR() {
     clear
     echo
-    sudo /home/admin/config.scripts/blitz.display.sh qr "${toraddress}"
+    sudo /home/admin/config.scripts/blesk.display.sh qr "${toraddress}"
     echo "The Tor address is shown as a QRcode below and on the LCD"
     echo "Scan it to your phone with a QR scanner app and paste it to: 'Host'"
     echo
@@ -84,8 +84,8 @@ if [ "$1" = connect ]; then
     echo
     echo "# Press enter to continue to show the Rune"
     read -r
-    sudo /home/admin/config.scripts/blitz.display.sh hide
-    sudo /home/admin/config.scripts/blitz.display.sh qr "${rune}"
+    sudo /home/admin/config.scripts/blesk.display.sh hide
+    sudo /home/admin/config.scripts/blesk.display.sh qr "${rune}"
     clear
     echo
     echo "The Rune is shown as a QRcode below and on the LCD"
@@ -97,7 +97,7 @@ if [ "$1" = connect ]; then
     echo
     echo "# Press enter to hide the QRcode from the LCD"
     read -r
-    sudo /home/admin/config.scripts/blitz.display.sh hide
+    sudo /home/admin/config.scripts/blesk.display.sh hide
     exit 0
   }
 
@@ -106,7 +106,7 @@ if [ "$1" = connect ]; then
     # clnrest://http://your_hidden_service.onion:your_port?&rune=your_rune
     clear
     echo
-    sudo /home/admin/config.scripts/blitz.display.sh qr "${clnresttor}"
+    sudo /home/admin/config.scripts/blesk.display.sh qr "${clnresttor}"
     echo "The string to connect over Tor is shown as a QRcode below and on the LCD"
     echo "Scan it to Zeus using the CLNrest option"
     echo
@@ -117,8 +117,8 @@ if [ "$1" = connect ]; then
     echo
     echo "# Press enter to show the string to connect over LAN"
     read -r
-    sudo /home/admin/config.scripts/blitz.display.sh hide
-    sudo /home/admin/config.scripts/blitz.display.sh qr "${clnrestlan}"
+    sudo /home/admin/config.scripts/blesk.display.sh hide
+    sudo /home/admin/config.scripts/blesk.display.sh qr "${clnrestlan}"
     clear
     echo
     echo "The string to connect over the local the network is shown as a QRcode below and on the LCD"
@@ -133,7 +133,7 @@ if [ "$1" = connect ]; then
     echo
     echo "# Press enter to hide the QRcode from the LCD"
     read -r
-    sudo /home/admin/config.scripts/blitz.display.sh hide
+    sudo /home/admin/config.scripts/blesk.display.sh hide
     exit 0
   }
 

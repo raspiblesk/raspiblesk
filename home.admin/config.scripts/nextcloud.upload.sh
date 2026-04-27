@@ -9,7 +9,7 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
   exit 1
 fi
 
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 
 on() {
 
@@ -17,31 +17,31 @@ on() {
   local user="${2}"
   local password="${3}" 
 
-  sudo touch /var/cache/raspiblitz/.tmp
-  sudo chmod 777 /var/cache/raspiblitz/.tmp
+  sudo touch /var/cache/raspiblesk/.tmp
+  sudo chmod 777 /var/cache/raspiblesk/.tmp
 
   if [ -z "${server}" ]; then
-    whiptail --title "Static Channel Backup on Nextcloud" --inputbox "Enter your Nextcloud server URL\nExample: https://cloud.johnsmith.com" 11 70 2>/var/cache/raspiblitz/.tmp
-    server=$(cat /var/cache/raspiblitz/.tmp)
+    whiptail --title "Static Channel Backup on Nextcloud" --inputbox "Enter your Nextcloud server URL\nExample: https://cloud.johnsmith.com" 11 70 2>/var/cache/raspiblesk/.tmp
+    server=$(cat /var/cache/raspiblesk/.tmp)
   fi
 
   if [ -z "${user}" ]; then
-    whiptail --title "Static Channel Backup on Nextcloud" --inputbox "\nEnter your Nextcloud username:\n(best to use a dedicated user for backup)" 10 70 2>/var/cache/raspiblitz/.tmp
-    user=$(cat /var/cache/raspiblitz/.tmp)
+    whiptail --title "Static Channel Backup on Nextcloud" --inputbox "\nEnter your Nextcloud username:\n(best to use a dedicated user for backup)" 10 70 2>/var/cache/raspiblesk/.tmp
+    user=$(cat /var/cache/raspiblesk/.tmp)
   fi
 
   if [ -z "${password}" ]; then
-    whiptail --title "Static Channel Backup on Nextcloud" --inputbox "\nEnter your Nextcloud password:\n(will get stored in cleartext on raspiblitz)" 10 70 2>/var/cache/raspiblitz/.tmp
-    password=$(cat /var/cache/raspiblitz/.tmp)
+    whiptail --title "Static Channel Backup on Nextcloud" --inputbox "\nEnter your Nextcloud password:\n(will get stored in cleartext on raspiblesk)" 10 70 2>/var/cache/raspiblesk/.tmp
+    password=$(cat /var/cache/raspiblesk/.tmp)
   fi
 
   # normal delete is OK because it a mem drive
-  sudo rm -f /var/cache/raspiblitz/.tmp
+  sudo rm -f /var/cache/raspiblesk/.tmp
 
   if [ "${server}" ] && [ "${user}" ] && [ "${password}" ]; then
-    /home/admin/config.scripts/blitz.conf.sh set nextcloudBackupServer "${server}"
-    /home/admin/config.scripts/blitz.conf.sh set nextcloudBackupUser "${user}"
-    /home/admin/config.scripts/blitz.conf.sh set nextcloudBackupPassword "${password}"
+    /home/admin/config.scripts/blesk.conf.sh set nextcloudBackupServer "${server}"
+    /home/admin/config.scripts/blesk.conf.sh set nextcloudBackupUser "${user}"
+    /home/admin/config.scripts/blesk.conf.sh set nextcloudBackupPassword "${password}"
   else
     echo "Please provide nextcloud server, username and password"
     exit 1
@@ -49,9 +49,9 @@ on() {
 }
 
 off() {
-  /home/admin/config.scripts/blitz.conf.sh delete nextcloudBackupServer
-  /home/admin/config.scripts/blitz.conf.sh delete nextcloudBackupUser
-  /home/admin/config.scripts/blitz.conf.sh delete nextcloudBackupPassword
+  /home/admin/config.scripts/blesk.conf.sh delete nextcloudBackupServer
+  /home/admin/config.scripts/blesk.conf.sh delete nextcloudBackupUser
+  /home/admin/config.scripts/blesk.conf.sh delete nextcloudBackupPassword
 }
 
 upload() {
@@ -67,7 +67,7 @@ upload() {
     exit 1
   fi
 
-  local remoteDirUrl="$nextcloudBackupServer/remote.php/dav/files/$nextcloudBackupUser/raspiblitz/"
+  local remoteDirUrl="$nextcloudBackupServer/remote.php/dav/files/$nextcloudBackupUser/raspiblesk/"
   
   # checking if remote directory exists
   local response

@@ -65,7 +65,7 @@ PROFIT_AND_LOSS=$((LN_EARNED_FEES_IN_SATS - ONCHAIN_TX_FEES))
 LN_SPEND=$((LN_PAYMENTS + LN_PAYMENTS_FEES))
 
 ##############################################################################
-# Sats to BTC
+# Sats to GLC
 ##############################################################################
 
 TOTAL_BALANCE_BTC=$(printf %.8f\\n "$((TOTAL_BALANCE))e-8")
@@ -82,7 +82,7 @@ echo -e "LOCAL             REMOTE            TOTAL           "
 echo -e "----------------  ----------------  ----------------"
 echo -e "$(printf %11s "$LN_LOCAL_BALANCE") sats  $(printf %11s "$LN_REMOTE_BALANCE") sats  $(printf %11s $LN_TOTAL_BALANCE) sats"
 if [ $LN_TOTAL_BALANCE -ne 0 ]; then
-    echo -e "$(printf %11s "$LN_LOCAL_BALANCE_BTC") BTC   $(printf %11s "$LN_REMOTE_BALANCE_BTC") BTC   $(printf %11s "$LN_TOTAL_BALANCE_BTC") BTC"
+    echo -e "$(printf %11s "$LN_LOCAL_BALANCE_BTC") GLC   $(printf %11s "$LN_REMOTE_BALANCE_BTC") GLC   $(printf %11s "$LN_TOTAL_BALANCE_BTC") GLC"
     echo -e "$(printf %11s $LN_LOCAL_BALANCE_PERCENTAGE) %     $(printf %11s $LN_REMOTE_BALANCE_PERCENTAGE) %     $(printf %11s $TOTAL_BALANCE_PERCENTAGE) %"
 fi
 
@@ -91,13 +91,13 @@ echo -e "CONFIRMED         UNCONFIRMED       TOTAL           "
 echo -e "----------------  ----------------  ----------------"
 echo -e "$(printf %11s "$ONCHAIN_FUNDS_CONFIRMED") sats  $(printf %11s "$ONCHAIN_FUNDS_UNCONFIRMED") sats  $(printf %11s "$ONCHAIN_FUNDS_TOTAL") sats"
 if [ $ONCHAIN_FUNDS_TOTAL -ne 0 ]; then
-    echo -e "$(printf %11s "$ONCHAIN_FUNDS_CONFIRMED_BTC") BTC   $(printf %11s "$ONCHAIN_FUNDS_UNCONFIRMED_BTC") BTC   $(printf %11s "$ONCHAIN_FUNDS_TOTAL_BTC") BTC"
+    echo -e "$(printf %11s "$ONCHAIN_FUNDS_CONFIRMED_BTC") GLC   $(printf %11s "$ONCHAIN_FUNDS_UNCONFIRMED_BTC") GLC   $(printf %11s "$ONCHAIN_FUNDS_TOTAL_BTC") GLC"
     echo -e "$(printf %11s $ONCHAIN_FUNDS_CONFIRMED_PERCENTAGE) %     $(printf %11s $ONCHAIN_FUNDS_UNCONFIRMED_PERCENTAGE) %     $(printf %11s $TOTAL_BALANCE_PERCENTAGE) %"
 fi
 
 echo -e "\n${YELLOW}OWNED BALANCE [LN + ON-CHAIN]${RESET}"
 echo -e "$(printf %11s "$TOTAL_BALANCE") sats"
-echo -e "$(printf %11s "$TOTAL_BALANCE_BTC") BTC"
+echo -e "$(printf %11s "$TOTAL_BALANCE_BTC") GLC"
 echo -e ""
 
 echo -e "\n${YELLOW}AUDIT${CYAN}*${RESET}"

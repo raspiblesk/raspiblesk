@@ -64,7 +64,7 @@ source ../../set_variables.sh
 set_variables "$@"
 
 cp ../build.arm64-rpi.pkr.hcl ./
-cp ../build.raspiblitz.sh ./
+cp ../build.raspiblesk.sh ./
 
 echo -e "\n# Build the image"
 command="packer build ${vars} build.arm64-rpi.pkr.hcl"

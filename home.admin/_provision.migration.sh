@@ -7,14 +7,14 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # LOGFILE - store debug logs of bootstrap
-logFile="/home/admin/raspiblitz.log"
+logFile="/home/admin/raspiblesk.log"
 
 # INFOFILE - state data from bootstrap
-infoFile="/home/admin/raspiblitz.info"
+infoFile="/home/admin/raspiblesk.info"
 source ${infoFile}
 
 # SETUPFILE - data from setup process
-source /var/cache/raspiblitz/temp/raspiblitz.setup
+source /var/cache/raspiblesk/temp/raspiblesk.setup
 
 # CACHEDATA - import needed data from cache 
 source <(/home/admin/_cache.sh get hddGotMigrationData hddVersionLND)
@@ -26,34 +26,34 @@ echo "###################################" >> ${logFile}
 /home/admin/_cache.sh set message "Provision Migration"
 
 if [ "${hddGotMigrationData}" == "" ]; then
-  /home/admin/config.scripts/blitz.error.sh _provision.migration.sh "missing-migrationdata" "missing hddGotMigrationData" "" ${logFile}
+  /home/admin/config.scripts/blesk.error.sh _provision.migration.sh "missing-migrationdata" "missing hddGotMigrationData" "" ${logFile}
   exit 2
 fi
 
 err=""
 nodenameUpperCase=$(echo "${hddGotMigrationData}" | tr "[a-z]" "[A-Z]")
 echo "**************************************************" >> ${logFile}
-echo "MIGRATION FROM ${nodenameUpperCase} TO RASPIBLITZ" >> ${logFile}
+echo "MIGRATION FROM ${nodenameUpperCase} TO RASPIBLESK" >> ${logFile}
 echo "**************************************************" >> ${logFile}
 echo "- started ..." >> ${logFile}
-/home/admin/config.scripts/blitz.migration.sh migration-${hddGotMigrationData} >> ${logFile}
+/home/admin/config.scripts/blesk.migration.sh migration-${hddGotMigrationData} >> ${logFile}
 if [ "$?" != "0" ]; then
-    /home/admin/config.scripts/blitz.error.sh _provision.migration.sh "migration-failed" "see provision migration logs" "Recover funds with fresh sd card using seed words + static channel backup." ${logFile}
+    /home/admin/config.scripts/blesk.error.sh _provision.migration.sh "migration-failed" "see provision migration logs" "Recover funds with fresh sd card using seed words + static channel backup." ${logFile}
     exit 3
 fi
 
-# make sure a raspiblitz.conf exists after migration
-confExists=$(ls /mnt/hdd/app-data/raspiblitz.conf 2>/dev/null | grep -c "raspiblitz.conf")
+# make sure a raspiblesk.conf exists after migration
+confExists=$(ls /mnt/hdd/app-data/raspiblesk.conf 2>/dev/null | grep -c "raspiblesk.conf")
 if [ "${confExists}" != "1" ]; then
-    /home/admin/config.scripts/blitz.error.sh _provision.migration.sh "missing-config" "no /mnt/hdd/app-data/raspiblitz.conf" "After runningn migration process - no raspiblitz.conf abvailable." ${logFile}
+    /home/admin/config.scripts/blesk.error.sh _provision.migration.sh "missing-config" "no /mnt/hdd/app-data/raspiblesk.conf" "After runningn migration process - no raspiblesk.conf abvailable." ${logFile}
     exit 6
 fi
 
 # make sure for the rest of the setup info is set correctly
-/home/admin/config.scripts/blitz.conf.sh set network "bitcoin"
-/home/admin/config.scripts/blitz.conf.sh set chain "main"
+/home/admin/config.scripts/blesk.conf.sh set network "glcoin"
+/home/admin/config.scripts/blesk.conf.sh set chain "main"
 echo "Provisioning ${network} Mainnet - run config script" >> ${logFile}
-/home/admin/config.scripts/bitcoin.install.sh on mainnet >> ${logFile} 2>&1
+/home/admin/config.scripts/glcoin.install.sh on mainnet >> ${logFile} 2>&1
 
 # set Password B
 echo "## SETTING PASSWORD B" >> ${logFile}
@@ -61,13 +61,13 @@ if [ "${setPasswordB}" == "1" ]; then
  if [ "${passwordB}" != "" ]; then
     # set password B as RPC password
     echo "# setting PASSWORD B" >> ${logFile}
-    /home/admin/config.scripts/blitz.passwords.sh set b "${passwordB}" >> ${logFile}
+    /home/admin/config.scripts/blesk.passwords.sh set b "${passwordB}" >> ${logFile}
  else
-    /home/admin/config.scripts/blitz.error.sh _provision.migration.sh "missing-passwordb" "FAIL: Password B should be set but was empty! Running with default." "" ${logFile}
+    /home/admin/config.scripts/blesk.error.sh _provision.migration.sh "missing-passwordb" "FAIL: Password B should be set but was empty! Running with default." "" ${logFile}
     exit 4
  fi
 else
-  /home/admin/config.scripts/blitz.error.sh _provision.migration.sh "missing-setpasswordb" "setPasswordB!=1 this not normal on migration! Running with default." "" ${logFile}
+  /home/admin/config.scripts/blesk.error.sh _provision.migration.sh "missing-setpasswordb" "setPasswordB!=1 this not normal on migration! Running with default." "" ${logFile}
   exit 5
 fi
 

@@ -3,9 +3,9 @@
 # https://github.com/Ride-The-Lightning/RTL/releases
 RTLVERSION="v0.15.2"
 
-# check and load raspiblitz config
+# check and load raspiblesk config
 # to know which network is running
-source /mnt/hdd/app-data/raspiblitz.conf 2>/dev/null
+source /mnt/hdd/app-data/raspiblesk.conf 2>/dev/null
 
 # command info
 if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
@@ -48,7 +48,7 @@ echo "# RTLHTTP(${RTLHTTP})"
 # construct needed variable elements
 configEntry="${netprefix}${typeprefix}rtlWebinterface"
 systemdService="${netprefix}${typeprefix}RTL"
-dependsOn="bitcoind"
+dependsOn="glcoind"
 if [ "${LNTYPE}" == "cl" ]; then
   dependsOn="${netprefix}lightningd"
 elif [ "${LNTYPE}" == "lnd" ]; then
@@ -104,7 +104,7 @@ if [ "$1" = "menu" ]; then
 
   # info with Tor
   if [ "${runBehindTor}" = "on" ] && [ ${#toraddress} -gt 0 ]; then
-    sudo /home/admin/config.scripts/blitz.display.sh qr "${toraddress}"
+    sudo /home/admin/config.scripts/blesk.display.sh qr "${toraddress}"
     whiptail --title "Ride The Lightning (RTL - $LNTYPE - $CHAIN)" --msgbox "Open in your local web browser:
 http://${localip}:${RTLHTTP}\n
 https://${localip}:$((RTLHTTP + 1)) with Fingerprint:
@@ -112,7 +112,7 @@ ${fingerprint}\n
 Use your Password B to login.\n
 Hidden Service address for Tor Browser (QRcode on LCD):\n${toraddress}
 " 16 67
-    sudo /home/admin/config.scripts/blitz.display.sh hide
+    sudo /home/admin/config.scripts/blesk.display.sh hide
 
   # info without Tor
   else
@@ -150,7 +150,7 @@ if [ "$1" = "install" ]; then
     sudo adduser --system --group --home /home/rtl rtl || exit 1
   fi
 
-  sudo usermod -a -G bitcoin rtl
+  sudo usermod -a -G glcoin rtl
 
   # download source code and set to tag release
   echo "# Get the RTL Source Code"
@@ -160,7 +160,7 @@ if [ "$1" = "install" ]; then
   # check https://github.com/Ride-The-Lightning/RTL/releases/
   sudo -u rtl git reset --hard $RTLVERSION
 
-  sudo -u rtl /home/admin/config.scripts/blitz.git-verify.sh "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" "${RTLVERSION}" || exit 1
+  sudo -u rtl /home/admin/config.scripts/blesk.git-verify.sh "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" "${RTLVERSION}" || exit 1
 
   # from https://github.com/Ride-The-Lightning/RTL/commits/master
   # git checkout 917feebfa4fb583360c140e817c266649307ef72
@@ -253,8 +253,8 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   else
     echo "# install of codebase is needed first"
     if ! /home/admin/config.scripts/bonus.rtl.sh install; then
-      echo "# FAIL - install of RTL code failed, setting ${configEntry} off in the raspiblitz.conf"
-      /home/admin/config.scripts/blitz.conf.sh set ${configEntry} "off"
+      echo "# FAIL - install of RTL code failed, setting ${configEntry} off in the raspiblesk.conf"
+      /home/admin/config.scripts/blesk.conf.sh set ${configEntry} "off"
       exit 1
     fi
   fi
@@ -326,8 +326,8 @@ WantedBy=multi-user.target
     /home/admin/config.scripts/cl-plugin.clnrest.sh on ${CHAIN}
 
     # for CLN make sure user rtl is allowed to create and access admin runes
-    echo "# adding user rtl to group bitcoin"
-    sudo /usr/sbin/usermod --append --groups bitcoin rtl
+    echo "# adding user rtl to group glcoin"
+    sudo /usr/sbin/usermod --append --groups glcoin rtl
     echo "# symlink .lightning to rtl home"
     sudo rm -rf /home/rtl/.lightning
     sudo ln -s /mnt/hdd/app-data/.lightning /home/rtl/
@@ -363,7 +363,7 @@ WantedBy=multi-user.target
   sudo /home/admin/config.scripts/bonus.rtl.sh connect-services
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set ${configEntry} "on"
+  /home/admin/config.scripts/blesk.conf.sh set ${configEntry} "on"
 
   sudo systemctl enable ${systemdService}
   sudo systemctl start ${systemdService}
@@ -550,7 +550,7 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   sudo rm -f /mnt/hdd/app-data/rtl/${systemdService}/RTL-Config.json
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set ${configEntry} "off"
+  /home/admin/config.scripts/blesk.conf.sh set ${configEntry} "off"
 
   # remove nginx symlinks
   sudo rm -f /etc/nginx/sites-enabled/${netprefix}${typeprefix}rtl_ssl.conf 2>/dev/null

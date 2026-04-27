@@ -3,8 +3,8 @@
 echo "Starting the main menu ..."
 
 # MAIN MENU AFTER SETUP
-source /home/admin/raspiblitz.info
-source /mnt/hdd/app-data/raspiblitz.conf
+source /home/admin/raspiblesk.info
+source /mnt/hdd/app-data/raspiblesk.conf
 
 # FUNCTIONS
 
@@ -44,7 +44,7 @@ fi
 
 # BASIC MENU INFO
 WIDTH=66
-BACKTITLE="RaspiBlitz"
+BACKTITLE="RaspiBlesk"
 TITLE=""
 MENU="Choose one of the following options:"
 OPTIONS=()
@@ -61,7 +61,7 @@ fi
 BACKTITLE="${internet_localip} / ${hostname} / ${network} ${plus}"
 
 # Basic Options
-OPTIONS+=(INFO "RaspiBlitz Status Screen")
+OPTIONS+=(INFO "RaspiBlesk Status Screen")
 
 # if LND is active
 if [ "${lightning}" == "lnd" ] || [ "${lnd}" == "on" ]; then
@@ -80,7 +80,7 @@ fi
 if [ "${crtlWebinterface}" == "on" ]; then
   OPTIONS+=(CRTL "Core Lightning RTL Webinterface")
 fi
-if [ "${BTCPayServer}" == "on" ]; then
+if [ "${GlcoinPayServer}" == "on" ]; then
   OPTIONS+=(BTCPAY "BTCPay Server Info")
 fi
 if [ "${lit}" == "on" ]; then
@@ -95,8 +95,8 @@ fi
 if [ "${fulcrum}" == "on" ]; then
   OPTIONS+=(FULCRUM "Fulcrum Electrum Server")
 fi
-if [ "${BTCRPCexplorer}" == "on" ]; then
-  OPTIONS+=(EXPLORE "BTC RPC Explorer")
+if [ "${GlcoinRPCexplorer}" == "on" ]; then
+  OPTIONS+=(EXPLORE "GLC RPC Explorer")
 fi
 if [ "${LNBits}" == "on" ]; then
   if [ "${LNBitsFunding}" == "lnd" ] || [ "${LNBitsFunding}" == "tlnd" ] || [ "${LNBitsFunding}" == "slnd" ] || [ "${LNBitsFunding}" == "" ]; then
@@ -172,7 +172,7 @@ if [ "${labelbase}" == "on" ]; then
   OPTIONS+=(LABELBASE "Labelbase (UTXO labeling)")
 fi
 if [ "${publicpool}" == "on" ]; then
-  OPTIONS+=(PUBLICPOOL "Public Pool (Bitcoin Solo Mining)")
+  OPTIONS+=(PUBLICPOOL "Public Pool (Glcoin Solo Mining)")
 fi
 if [ "${tailscale}" == "on" ]; then
   OPTIONS+=(TAILSCALE "Tailscale VPN")
@@ -206,9 +206,9 @@ fi
 
 # final Options
 OPTIONS+=(REPAIR "Repair Options")
-OPTIONS+=(UPDATE "Check/Prepare RaspiBlitz Update")
-OPTIONS+=(REBOOT "Reboot RaspiBlitz")
-OPTIONS+=(OFF "PowerOff RaspiBlitz")
+OPTIONS+=(UPDATE "Check/Prepare RaspiBlesk Update")
+OPTIONS+=(REBOOT "Reboot RaspiBlesk")
+OPTIONS+=(OFF "PowerOff RaspiBlesk")
 
 CHOICE_HEIGHT=$(("${#OPTIONS[@]}/2+1"))
 HEIGHT=$((CHOICE_HEIGHT+6))
@@ -260,7 +260,7 @@ case $CHOICE in
             ;;
         SCREEN)
             dialog --title 'Touchscreen Calibration' --msgbox 'Choose OK and then follow the instructions on touchscreen for calibration.\n\nBest is to use a stylus for accurate touchscreen interaction.' 9 48
-            /home/admin/config.scripts/blitz.touchscreen.sh calibrate
+            /home/admin/config.scripts/blesk.touchscreen.sh calibrate
             ;;
         LRTL)
             /home/admin/config.scripts/bonus.rtl.sh menu lnd mainnet
@@ -272,7 +272,7 @@ case $CHOICE in
             /home/admin/config.scripts/bonus.btcpayserver.sh menu
             ;;
         EXPLORE)
-            /home/admin/config.scripts/bonus.btc-rpc-explorer.sh menu
+            /home/admin/config.scripts/bonus.glc-rpc-explorer.sh menu
             ;;
         ELECTRS)
             /home/admin/config.scripts/bonus.electrs.sh menu
@@ -365,7 +365,7 @@ case $CHOICE in
             /home/admin/00parallelChainsMenu.sh
             ;;
         SUBSCRIBE)
-            /home/admin/config.scripts/blitz.subscriptions.py
+            /home/admin/config.scripts/blesk.subscriptions.py
             ;;
         SERVICES)
             /home/admin/00settingsMenuServices.sh
@@ -377,7 +377,7 @@ case $CHOICE in
             /home/admin/98repairMenu.sh
             ;;
         PASSWORD)
-            sudo /home/admin/config.scripts/blitz.passwords.sh set
+            sudo /home/admin/config.scripts/blesk.passwords.sh set
             ;;
         UPDATE)
             /home/admin/99updateMenu.sh
@@ -389,7 +389,7 @@ case $CHOICE in
 	          if [ $confirmationReboot -eq 0 ]; then
                clear
                echo ""
-               sudo /home/admin/config.scripts/blitz.shutdown.sh reboot
+               sudo /home/admin/config.scripts/blesk.shutdown.sh reboot
                echo ""
                echo "If your SSH session does not close automatically:"
                echo "  Press Ctrl+C to disconnect."
@@ -403,7 +403,7 @@ case $CHOICE in
 	          if [ $confirmationShutdown -eq 0 ]; then
                clear
                echo ""
-               sudo /home/admin/config.scripts/blitz.shutdown.sh
+               sudo /home/admin/config.scripts/blesk.shutdown.sh
                echo ""
                echo "If your SSH session does not close automatically:"
                echo "  Press Ctrl+C to disconnect."
@@ -412,7 +412,7 @@ case $CHOICE in
             ;;
         DELETE)
             sudo /home/admin/XXcleanHDD.sh
-            sudo /home/admin/config.scripts/blitz.shutdown.sh reboot
+            sudo /home/admin/config.scripts/blesk.shutdown.sh reboot
             exit 1
             ;;
         *)

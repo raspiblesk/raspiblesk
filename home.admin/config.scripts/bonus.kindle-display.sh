@@ -20,7 +20,7 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
  exit 1
 fi
 
-source /home/admin/raspiblitz.info
+source /home/admin/raspiblesk.info
 source <(/home/admin/_cache.sh get state)
 
 # switch on
@@ -72,10 +72,10 @@ DISPLAY_SERVER_PORT=$SERVER_PORT
 # Require Tor for outside API calls
 DISPLAY_FORCE_TOR=true
 
-# Bitcoin RPC credentials for getting the blockcount.
+# Glcoin RPC credentials for getting the blockcount.
 # Omit these setting to use blockchain.info as a fallback.
-DISPLAY_BITCOIN_RPC_USER="$RPC_USER"
-DISPLAY_BITCOIN_RPC_PASS="$RPC_PASS"
+DISPLAY_GLCOIN_RPC_USER="$RPC_USER"
+DISPLAY_GLCOIN_RPC_PASS="$RPC_PASS"
 
 # Exchange rates to show.
 # Use identifiers supported by BTCPay/Kraken, e.g. EUR, CHF
@@ -142,7 +142,7 @@ EOF
     echo "# enable kindle-display service"
     sudo systemctl enable kindle-display
 
-    # https://github.com/rootzoll/raspiblitz/issues/1375
+    # https://github.com/rootzoll/raspiblesk/issues/1375
     if [ "${state}" == "ready" ]; then
       echo "# starting kindle-display service"
       sudo systemctl start kindle-display
@@ -165,7 +165,7 @@ PATH=/bin:/usr/bin:/usr/local/bin
     echo "Switch to the '$USERNAME' user and adapt the settings in $CONFIG_FILE"
 
     # setting value in raspi blitz config
-    /home/admin/config.scripts/blitz.conf.sh set kindleDisplay "on"
+    /home/admin/config.scripts/blesk.conf.sh set kindleDisplay "on"
   else
     echo "KINDLE-DISPLAY already installed."
   fi
@@ -224,7 +224,7 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
     echo "*** REMOVING KINDLE-DISPLAY ***"
 
     # setting value in raspi blitz config
-    /home/admin/config.scripts/blitz.conf.sh set kindleDisplay "off"
+    /home/admin/config.scripts/blesk.conf.sh set kindleDisplay "off"
 
     # uninstall service
     sudo systemctl stop kindle-display

@@ -6,11 +6,11 @@ _temp=$(mktemp -p /dev/shm/)
 _error=$(mktemp -p /dev/shm/)
 sudo chmod 7777 ${_error} 2>/dev/null
 
-# load raspiblitz config data (with backup from old config)
-source /home/admin/raspiblitz.info
-source /mnt/hdd/app-data/raspiblitz.conf
+# load raspiblesk config data (with backup from old config)
+source /home/admin/raspiblesk.info
+source /mnt/hdd/app-data/raspiblesk.conf
 if [ ${#network} -eq 0 ]; then network=$(cat .network); fi
-if [ ${#network} -eq 0 ]; then network="bitcoin"; fi
+if [ ${#network} -eq 0 ]; then network="glcoin"; fi
 if [ ${#chain} -eq 0 ]; then
   echo "gathering chain info ... please wait"
   chain=$(${network}-cli getblockchaininfo | jq -r '.chain')
@@ -22,7 +22,7 @@ source <(/home/admin/config.scripts/network.aliases.sh getvars $LNTYPE ${chain}n
 # check if chain is in sync
 if [ $LNTYPE = cl ]; then
   lncommand="${netprefix}lightning-cli"
-  BLOCKHEIGHT=$($bitcoincli_alias getblockchaininfo | grep blocks | awk '{print $2}' | cut -d, -f1)
+  BLOCKHEIGHT=$($glcoincli_alias getblockchaininfo | grep blocks | awk '{print $2}' | cut -d, -f1)
   CLHEIGHT=$($lightningcli_alias getinfo | jq .blockheight)
   if [ $BLOCKHEIGHT -eq $CLHEIGHT ]; then
     cmdChainInSync=1
@@ -120,7 +120,7 @@ else
     rhash=$(echo "$result" | grep r_hash | cut -d '"' -f4)
     payReq=$(echo "$result" | grep payment_request | cut -d '"' -f4)
   fi
-  sudo /home/admin/config.scripts/blitz.display.sh qr "${payReq}"
+  sudo /home/admin/config.scripts/blesk.display.sh qr "${payReq}"
 
   if [ $(sudo dpkg-query -l | grep "ii  qrencode" | wc -l) = 0 ]; then
     sudo apt-get install qrencode -y >/dev/null
@@ -161,8 +161,8 @@ else
       echo $result
       echo
       echo "OK the Invoice was paid - returning to menu."
-      sudo /home/admin/config.scripts/blitz.display.sh hide
-      sudo /home/admin/config.scripts/blitz.display.sh image /home/admin/raspiblitz/pictures/ok.png
+      sudo /home/admin/config.scripts/blesk.display.sh hide
+      sudo /home/admin/config.scripts/blesk.display.sh image /home/admin/raspiblesk/pictures/ok.png
       sleep 2
       break
     fi
@@ -181,7 +181,7 @@ else
 
   done
 
-  sudo /home/admin/config.scripts/blitz.display.sh hide
+  sudo /home/admin/config.scripts/blesk.display.sh hide
 
 fi
 echo "Press ENTER to return to main menu."

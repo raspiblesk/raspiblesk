@@ -14,7 +14,7 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
  exit 1
 fi
 
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 
 # show info menu
 if [ "$1" = "menu" ]; then
@@ -28,7 +28,7 @@ https://github.com/alexbosworth/balanceofsatoshis/blob/master/README.md
 
   whiptail --title " Info Balance of Satoshis" --yes-button "OK" --no-button "OPTIONS" --yesno "${text}" 10 75
   result=$?
-  sudo /home/admin/config.scripts/blitz.display.sh hide
+  sudo /home/admin/config.scripts/blesk.display.sh hide
   echo "option (${result}) - please wait ..."
 
   # exit when user presses OK to close menu
@@ -235,7 +235,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   sudo -u bos bash -c 'echo "source <(bos completion bash)" >> /home/bos/.bashrc'
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set bos "on"
+  /home/admin/config.scripts/blesk.conf.sh set bos "on"
 
   echo "# Usage: https://github.com/alexbosworth/balanceofsatoshis/blob/master/README.md"
   echo "# To start type: 'sudo su bos' in the command line."
@@ -250,7 +250,7 @@ fi
 if [ "$1" = "0" ] || [ "$1" = "off" ]; then
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set bos "off"
+  /home/admin/config.scripts/blesk.conf.sh set bos "off"
 
   echo "*** REMOVING BALANCE OF SATOSHIS ***"
   sudo userdel -rf bos

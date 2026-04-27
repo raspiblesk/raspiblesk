@@ -1,8 +1,8 @@
-# Monitor the RaspiBlitz
+# Monitor the RaspiBlesk
 # /etc/systemd/system/background.service
 
 [Unit]
-Description=RaspiBlitz Background Monitoring Service
+Description=RaspiBlesk Background Monitoring Service
 Wants=network.target
 After=network.target
 

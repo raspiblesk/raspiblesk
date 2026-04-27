@@ -4,7 +4,7 @@
 # Build your SD card image based on: 2024-03-15-raspios-bookworm-arm64.img.xz
 # https://downloads.raspberrypi.org/raspios_arm64/images/raspios_arm64-2025-05-13/
 # SHA256: 1162c2a47c2ebda34c7ebeafc4afb71910a05b368d0721ae3736928e60ba5047
-# also change in: raspiblitz/ci/arm64-rpi/build.arm64-rpi.pkr.hcl
+# also change in: raspiblesk/ci/arm64-rpi/build.arm64-rpi.pkr.hcl
 # PGP fingerprint: 8738CD6B956F460C - to check signature:
 # curl -O https://www.raspberrypi.org/raspberrypi_downloads.gpg.key && gpg --import ./raspberrypi_downloads.gpg.key && gpg --verify *.sig
 # setup fresh SD card with image above - login via SSH and run this script:
@@ -27,14 +27,14 @@ if [ "$1" != "-EXPORT" ] && [ "$1" != "EXPORT" ]; then
   source /etc/default/locale
 fi
 
-defaultRepo="raspiblitz" # user that hosts a `raspiblitz` repo
-defaultBranch="v1.12" # latest version branch
+defaultRepo="raspiblesk" # user that hosts a `raspiblesk` repo
+defaultBranch="v0.12" # latest version branch
 
 defaultAPIuser="fusion44"
 defaultAPIrepo="blitz_api"
 
-defaultWEBUIuser="raspiblitz"
-defaultWEBUIrepo="raspiblitz-web"
+defaultWEBUIuser="raspiblesk"
+defaultWEBUIrepo="raspiblesk-web"
 
 me="${0##/*}"
 
@@ -53,7 +53,7 @@ Options:
   -h, --help                               this help info
   -i, --interaction [0|1]                  interaction before proceeding with execution (default: 1)
   -f, --fatpack [0|1]                      fatpack mode (default: 1)
-  -u, --github-user [raspiblitz|other]     github user to be checked from the repo (default: ${defaultRepo})
+  -u, --github-user [raspiblesk|other]     github user to be checked from the repo (default: ${defaultRepo})
   -b, --branch [v1.7|v1.8]                 branch to be built on (default: ${defaultBranch})
   -d, --display [lcd|hdmi|headless]        display class (default: lcd)
   -t, --tweak-boot-drive [0|1]             tweak boot drives (default: 1)
@@ -86,7 +86,7 @@ if [[ ":$PATH:" != *":/usr/bin:"* ]]; then
 fi
 
 if [ "$1" = "-EXPORT" ] || [ "$1" = "EXPORT" ]; then
-  activeBranch=$(git -C /home/admin/raspiblitz branch --show-current 2>/dev/null)
+  activeBranch=$(git -C /home/admin/raspiblesk branch --show-current 2>/dev/null)
   echo "activeBranch='${activeBranch}'"
   if [ "${activeBranch}" == "" ]; then
     activeBranch="${defaultBranch}"
@@ -223,16 +223,16 @@ range_argument fatpack "0" "1" "false" "true"
 
 # GITHUB-USERNAME
 # ---------------------------------------
-# could be any valid github-user that has a fork of the raspiblitz repo - 'rootzoll' is default
-# The 'raspiblitz' repo of this user is used to provisioning sd card with raspiblitz assets/scripts later on.
+# could be any valid github-user that has a fork of the raspiblesk repo - 'rootzoll' is default
+# The 'raspiblesk' repo of this user is used to provisioning sd card with raspiblesk assets/scripts later on.
 : "${github_user:=$defaultRepo}"
-curl --header "X-GitHub-Api-Version:2022-11-28" -s "https://api.github.com/repos/${github_user}/raspiblitz" | grep -q "\"message\": \"Not Found\"" && error_msg "Repository 'raspiblitz' not found for user '${github_user}"
+curl --header "X-GitHub-Api-Version:2022-11-28" -s "https://api.github.com/repos/${github_user}/raspiblesk" | grep -q "\"message\": \"Not Found\"" && error_msg "Repository 'raspiblesk' not found for user '${github_user}"
 
 # GITHUB-BRANCH
 # -------------------------------------
-# could be any valid branch or tag of the given GITHUB-USERNAME forked raspiblitz repo
+# could be any valid branch or tag of the given GITHUB-USERNAME forked raspiblesk repo
 : "${branch:=$defaultBranch}"
-curl --header "X-GitHub-Api-Version:2022-11-28" -s "https://api.github.com/repos/${github_user}/raspiblitz/branches/${branch}" | grep -q "\"message\": \"Branch not found\"" && error_msg "Repository 'raspiblitz' for user '${github_user}' does not contain branch '${branch}'"
+curl --header "X-GitHub-Api-Version:2022-11-28" -s "https://api.github.com/repos/${github_user}/raspiblesk/branches/${branch}" | grep -q "\"message\": \"Branch not found\"" && error_msg "Repository 'raspiblesk' for user '${github_user}' does not contain branch '${branch}'"
 
 # DISPLAY-CLASS
 # ----------------------------------------
@@ -255,7 +255,7 @@ range_argument tweak_boot_drive "0" "1" "false" "true"
 : "${wifi_region:=US}"
 
 echo "*****************************************"
-echo "*     RASPIBLITZ BOOT IMAGE SETUP       *"
+echo "*     RASPIBLESK BOOT IMAGE SETUP       *"
 echo "*****************************************"
 echo "For details on optional parameters - call with '--help' or check source code."
 
@@ -313,7 +313,7 @@ if [ "${interaction}" = "true" ]; then
   read -r installRaspiblitzAnswer
   [ "$installRaspiblitzAnswer" != "yes" ] && exit 1
 fi
-echo -e "Building RaspiBlitz ...\n"
+echo -e "Building RaspiBlesk ...\n"
 sleep 3 ## give time to cancel
 
 export DEBIAN_FRONTEND=noninteractive
@@ -393,7 +393,7 @@ echo -e "\n*** SOFTWARE UPDATE ***"
 # autossh telnet vnstat -> network tools bandwidth monitoring for future statistics
 # parted dosfstools -> prepare for format data drive
 # btrfs-progs -> prepare for BTRFS data drive raid
-# fbi -> prepare for display graphics mode. https://github.com/rootzoll/raspiblitz/pull/334
+# fbi -> prepare for display graphics mode. https://github.com/rootzoll/raspiblesk/pull/334
 # sysbench -> prepare for powertest
 # build-essential -> check for build dependencies on Ubuntu, Armbian
 # dialog -> dialog bc python3-dialog
@@ -410,7 +410,7 @@ echo -e "\n*** SOFTWARE UPDATE ***"
 general_utils="sudo htop git curl bash-completion vim jq dphys-swapfile bsdmainutils autossh telnet vnstat parted dosfstools fbi sysbench build-essential dialog bc python3-dialog unzip whois fdisk lsb-release smartmontools rsyslog qrencode dnsutils"
 # add btrfs-progs if not bookworm on aarch64
 [ "${architecture}" = "aarch64" ] && ! grep "12 (bookworm)" < /etc/os-release && general_utils="${general_utils} btrfs-progs"
-# python3-mako --> https://github.com/rootzoll/raspiblitz/issues/3441
+# python3-mako --> https://github.com/rootzoll/raspiblesk/issues/3441
 python_dependencies="python3-venv python3-dev python3-wheel python3-jinja2 python3-pip python3-mako"
 server_utils="rsync net-tools xxd netcat-openbsd openssh-client openssh-sftp-server sshpass psmisc ufw sqlite3"
 [ "${architecture}" = "amd64" ] && amd64_dependencies="network-manager" # add amd64 dependency
@@ -468,7 +468,7 @@ else
 fi
 
 # don't protect system packages from pip install
-# tracking issue: https://github.com/raspiblitz/raspiblitz/issues/4170
+# tracking issue: https://github.com/raspiblesk/raspiblesk/issues/4170
 for PYTHONDIR in /usr/lib/python3.*; do
   if [ -f "$PYTHONDIR/EXTERNALLY-MANAGED" ]; then
     rm "$PYTHONDIR/EXTERNALLY-MANAGED"
@@ -519,14 +519,14 @@ if [ "${baseimage}" = "raspios_arm64" ]; then
   # set WIFI country so boot does not block
   # this will undo the softblock of rfkill on RaspiOS
   [ "${wifi_region}" != "off" ] && raspi-config nonint do_wifi_country $wifi_region
-  # see https://github.com/rootzoll/raspiblitz/issues/428#issuecomment-472822840
+  # see https://github.com/rootzoll/raspiblesk/issues/428#issuecomment-472822840
 
   if ! grep "Raspiblitz" $raspi_configfile; then
     echo "# Adding Raspiblitz Edits to $raspi_configfile"
     echo | tee -a $raspi_configfile
     echo "# Raspiblitz" | tee -a $raspi_configfile
     # ensure that kernel8.img is used to set PAGE_SIZE to 4K
-    # https://github.com/raspiblitz/raspiblitz/issues/4346
+    # https://github.com/raspiblesk/raspiblesk/issues/4346
     if [ -f /boot/kernel8.img ] || [ -f /boot/firmware/kernel8.img ]; then
       echo 'kernel=kernel8.img' | tee -a $raspi_configfile
     fi
@@ -540,8 +540,8 @@ if [ "${baseimage}" = "raspios_arm64" ]; then
   fi
 
   # run fsck on sd root partition on every startup to prevent "maintenance login" screen
-  # see: https://github.com/rootzoll/raspiblitz/issues/782#issuecomment-564981630
-  # see https://github.com/rootzoll/raspiblitz/issues/1053#issuecomment-600878695
+  # see: https://github.com/rootzoll/raspiblesk/issues/782#issuecomment-564981630
+  # see https://github.com/rootzoll/raspiblesk/issues/1053#issuecomment-600878695
   # use command to check last fsck check: tune2fs -l /dev/mmcblk0p2
   if [ "${tweak_boot_drive}" == "true" ]; then
     echo "* running tune2fs"
@@ -574,10 +574,10 @@ if [ "${baseimage}" = "raspios_arm64" ]; then
   echo "[Login]" | tee /etc/systemd/logind.conf.d/safeshutdown.conf
   echo "HandlePowerKey=ignore" | tee -a /etc/systemd/logind.conf.d/safeshutdown.conf
   # sudoers
-  echo 'nobody ALL=(ALL) NOPASSWD: /home/admin/config.scripts/blitz.shutdown.sh' |
+  echo 'nobody ALL=(ALL) NOPASSWD: /home/admin/config.scripts/blesk.shutdown.sh' |
     tee -a /etc/sudoers
   # triggerhappy
-  echo 'KEY_POWER    1    sudo /home/admin/config.scripts/blitz.shutdown.sh' |
+  echo 'KEY_POWER    1    sudo /home/admin/config.scripts/blesk.shutdown.sh' |
     tee /etc/triggerhappy/triggers.d/powerbutton.conf
 fi
 
@@ -595,8 +595,8 @@ echo -e "\n*** CONFIG ***"
 # based on https://raspibolt.github.io/raspibolt/raspibolt_20_pi.html#raspi-config
 
 # set new default password for root user
-echo "root:raspiblitz" | chpasswd
-echo "pi:raspiblitz" | chpasswd
+echo "root:raspiblesk" | chpasswd
+echo "pi:raspiblesk" | chpasswd
 
 # Auto-Login if RaspberryPi
 # (just kicks in if auto-login of pi is activated in HDMI or LCD mode)
@@ -606,7 +606,7 @@ if [ "${baseimage}" = "raspios_arm64" ]; then
   if [ ${autostartDone} -eq 0 ]; then
     # bash autostart for pi
     # run as exec to dont allow easy physical access by keyboard
-    # see https://github.com/rootzoll/raspiblitz/issues/54
+    # see https://github.com/rootzoll/raspiblesk/issues/54
     bash -c 'echo "# automatic start the LCD info loop" >> /home/pi/.bashrc'
     bash -c 'echo "SCRIPT=\"sudo /home/admin/00infoLCD.sh\"" >> /home/pi/.bashrc'
     bash -c 'echo "# replace shell with script => logout when exiting script" >> /home/pi/.bashrc'
@@ -678,11 +678,11 @@ service rsyslog restart
 
 echo -e "\n*** ADDING MAIN USER admin ***"
 # based on https://raspibolt.org/system-configuration.html#add-users
-# using the default password 'raspiblitz'
+# using the default password 'raspiblesk'
 adduser --disabled-password --gecos "" admin
 # make the home folder world readable
 chmod 0755 /home/admin
-echo "admin:raspiblitz" | chpasswd
+echo "admin:raspiblesk" | chpasswd
 adduser admin sudo
 chsh admin -s /bin/bash
 # configure sudo for usage without password entry
@@ -696,52 +696,52 @@ else
   echo -e "\nOK group admin exists"
 fi
 
-echo -e "\n*** ADDING SERVICE USER bitcoin"
+echo -e "\n*** ADDING SERVICE USER glcoin"
 # based on https://raspibolt.org/guide/raspberry-pi/system-configuration.html
 # create user and set default password for user
-adduser --system --group --shell /bin/bash --home /home/bitcoin bitcoin
+adduser --system --group --shell /bin/bash --home /home/glcoin glcoin
 # copy the skeleton files for login
-sudo -u bitcoin cp -r /etc/skel/. /home/bitcoin/
-echo "bitcoin:raspiblitz" | chpasswd
+sudo -u glcoin cp -r /etc/skel/. /home/glcoin/
+echo "glcoin:raspiblesk" | chpasswd
 # make home directory readable
-chmod 755 /home/bitcoin
-usermod -a -G bitcoin admin
+chmod 755 /home/glcoin
+usermod -a -G glcoin admin
 
-# WRITE BASIC raspiblitz.info to sdcard
-# if further info gets added .. make sure to keep that on: blitz.release.sh
-touch /home/admin/raspiblitz.info
-echo "baseimage=${baseimage}" | tee raspiblitz.info
-echo "cpu=${cpu}" | tee -a raspiblitz.info
-echo "displayClass=headless" | tee -a raspiblitz.info
-mv raspiblitz.info /home/admin/
-chmod 755 /home/admin/raspiblitz.info
-chown admin:admin /home/admin/raspiblitz.info
+# WRITE BASIC raspiblesk.info to sdcard
+# if further info gets added .. make sure to keep that on: blesk.release.sh
+touch /home/admin/raspiblesk.info
+echo "baseimage=${baseimage}" | tee raspiblesk.info
+echo "cpu=${cpu}" | tee -a raspiblesk.info
+echo "displayClass=headless" | tee -a raspiblesk.info
+mv raspiblesk.info /home/admin/
+chmod 755 /home/admin/raspiblesk.info
+chown admin:admin /home/admin/raspiblesk.info
 
 echo -e "\n*** SHELL SCRIPTS & ASSETS ***"
-# copy raspiblitz repo from github
+# copy raspiblesk repo from github
 cd /home/admin/ || exit 1
 sudo -u admin git config --global user.name "${github_user}" || exit 1
 sudo -u admin git config --global user.email "johndoe@example.com" || exit 1
 sudo -u admin git config --global http.postBuffer 524288000 || exit 1
-sudo -u admin rm -rf /home/admin/raspiblitz
-sudo -u admin git clone -b "${branch}" https://github.com/${github_user}/raspiblitz.git || exit 1
-sudo -u admin cp -r /home/admin/raspiblitz/home.admin/*.* /home/admin || exit 1
-sudo -u admin cp /home/admin/raspiblitz/home.admin/.tmux.conf /home/admin || exit 1
-sudo -u admin cp -r /home/admin/raspiblitz/home.admin/assets /home/admin/ || exit 1
+sudo -u admin rm -rf /home/admin/raspiblesk
+sudo -u admin git clone -b "${branch}" https://github.com/${github_user}/raspiblesk.git || exit 1
+sudo -u admin cp -r /home/admin/raspiblesk/home.admin/*.* /home/admin || exit 1
+sudo -u admin cp /home/admin/raspiblesk/home.admin/.tmux.conf /home/admin || exit 1
+sudo -u admin cp -r /home/admin/raspiblesk/home.admin/assets /home/admin/ || exit 1
 sudo -u admin chmod +x *.sh || exit 1
-sudo -u admin cp -r /home/admin/raspiblitz/home.admin/config.scripts /home/admin/ || exit 1
+sudo -u admin cp -r /home/admin/raspiblesk/home.admin/config.scripts /home/admin/ || exit 1
 sudo -u admin chmod +x /home/admin/config.scripts/*.sh || exit 1
-sudo -u admin cp -r /home/admin/raspiblitz/home.admin/setup.scripts /home/admin/ || exit 1
+sudo -u admin cp -r /home/admin/raspiblesk/home.admin/setup.scripts /home/admin/ || exit 1
 sudo -u admin chmod +x /home/admin/setup.scripts/*.sh || exit 1
-sudo -u admin git config --global --add safe.directory /home/admin/raspiblitz
+sudo -u admin git config --global --add safe.directory /home/admin/raspiblesk
 # Also configure safe.directory for root user in case root processes need to access the repo
-git config --global --add safe.directory /home/admin/raspiblitz
+git config --global --add safe.directory /home/admin/raspiblesk
 
 # install newest version of BlitzPy
-blitzpy_wheel=$(ls -tR /home/admin/raspiblitz/home.admin/BlitzPy/dist | grep -E "any.whl" | tail -n 1)
+blitzpy_wheel=$(ls -tR /home/admin/raspiblesk/home.admin/BlitzPy/dist | grep -E "any.whl" | tail -n 1)
 blitzpy_version=$(echo "${blitzpy_wheel}" | grep -oE "([0-9]\.[0-9]\.[0-9])")
 echo -e "\n*** INSTALLING BlitzPy Version: ${blitzpy_version} ***"
-sudo -H /usr/bin/python -m pip install "/home/admin/raspiblitz/home.admin/BlitzPy/dist/${blitzpy_wheel}" >/dev/null 2>&1
+sudo -H /usr/bin/python -m pip install "/home/admin/raspiblesk/home.admin/BlitzPy/dist/${blitzpy_wheel}" >/dev/null 2>&1
 
 # make sure lndlibs are patched for compatibility for both Python2 and Python3
 file="/home/admin/config.scripts/lndlibs/lightning_pb2_grpc.py"
@@ -752,22 +752,22 @@ file="/home/admin/config.scripts/lndlibs/lightning_pb2_grpc.py"
 bash -c "echo 'PATH=\$PATH:/sbin' >> /etc/profile"
 
 # replace boot splash image when raspbian
-[ -d /usr/share/plymouth ] && [ "${baseimage}" = "raspios_arm64" ] && { echo "* replacing boot splash"; cp /home/admin/raspiblitz/pictures/splash.png /usr/share/plymouth/themes/pix/splash.png; }
+[ -d /usr/share/plymouth ] && [ "${baseimage}" = "raspios_arm64" ] && { echo "* replacing boot splash"; cp /home/admin/raspiblesk/pictures/splash.png /usr/share/plymouth/themes/pix/splash.png; }
 
-echo -e "\n*** RASPIBLITZ EXTRAS ***"
+echo -e "\n*** RASPIBLESK EXTRAS ***"
 
 # screen for background processes
-# tmux for multiple (detachable/background) sessions when using SSH https://github.com/rootzoll/raspiblitz/issues/990
+# tmux for multiple (detachable/background) sessions when using SSH https://github.com/rootzoll/raspiblesk/issues/990
 # fzf install a command-line fuzzy finder (https://github.com/junegunn/fzf)
 apt_install tmux screen fzf
 
 bash -c "echo '' >> /home/admin/.bashrc"
-bash -c "echo '# https://github.com/rootzoll/raspiblitz/issues/1784' >> /home/admin/.bashrc"
+bash -c "echo '# https://github.com/rootzoll/raspiblesk/issues/1784' >> /home/admin/.bashrc"
 bash -c "echo 'NG_CLI_ANALYTICS=ci' >> /home/admin/.bashrc"
 
-# raspiblitz custom command prompt #2400
+# raspiblesk custom command prompt #2400
 if ! grep -Eq "^[[:space:]]*PS1.*₿" /home/admin/.bashrc; then
-    sed -i '/^unset color_prompt force_color_prompt$/i # raspiblitz custom command prompt https://github.com/rootzoll/raspiblitz/issues/2400' /home/admin/.bashrc
+    sed -i '/^unset color_prompt force_color_prompt$/i # raspiblesk custom command prompt https://github.com/rootzoll/raspiblesk/issues/2400' /home/admin/.bashrc
     sed -i '/^unset color_prompt force_color_prompt$/i raspiIp=$(hostname -I | cut -d " " -f1)' /home/admin/.bashrc
     sed -i '/^unset color_prompt force_color_prompt$/i if [ "$color_prompt" = yes ]; then' /home/admin/.bashrc
     sed -i '/^unset color_prompt force_color_prompt$/i \    PS1=\x27${debian_chroot:+($debian_chroot)}\\[\\033[00;33m\\]\\u@$raspiIp:\\[\\033[00;34m\\]\\w\\[\\033[01;35m\\]$(__git_ps1 "(%s)") \\[\\033[01;33m\\]₿\\[\\033[00m\\] \x27' /home/admin/.bashrc
@@ -796,7 +796,7 @@ if [ ${autostartDone} -eq 0 ]; then
   bash -c "echo '# automatically start main menu for admin unless' >> /home/admin/.bashrc"
   bash -c "echo '# when running in a tmux session' >> /home/admin/.bashrc"
   bash -c "echo 'if [ -z \"\$TMUX\" ]; then' >> /home/admin/.bashrc"
-  bash -c "echo '    ./00raspiblitz.sh newsshsession' >> /home/admin/.bashrc"
+  bash -c "echo '    ./00raspiblesk.sh newsshsession' >> /home/admin/.bashrc"
   bash -c "echo 'fi' >> /home/admin/.bashrc"
   echo "autostart added to $homeFile"
 else
@@ -821,18 +821,18 @@ sed --in-place -i "25s/.*/session required pam_limits.so/" /etc/pam.d/common-ses
 bash -c "echo '# end of pam-auth-update config' >> /etc/pam.d/common-session-noninteractive"
 
 # Increase maximum number of inotify instances
-bash -c "echo '# RaspiBlitz Edit: Set maximum number of inotify instances (8192 recommended for min 2GB RAM)' >> /etc/sysctl.conf"
+bash -c "echo '# RaspiBlesk Edit: Set maximum number of inotify instances (8192 recommended for min 2GB RAM)' >> /etc/sysctl.conf"
 bash -c "echo 'fs.inotify.max_user_instances=8192' >> /etc/sysctl.conf"
 
 # Activate overcommit_memory
-bash -c "echo '# RaspiBlitz Edit: Use overcommit to prevent system crashes' >> /etc/sysctl.conf"
+bash -c "echo '# RaspiBlesk Edit: Use overcommit to prevent system crashes' >> /etc/sysctl.conf"
 bash -c "echo 'vm.overcommit_memory=1' >> /etc/sysctl.conf"
 
 # *** fail2ban ***
 # based on https://raspibolt.org/security.html#fail2ban
 echo "*** HARDENING ***"
 apt_install --no-install-recommends python3-systemd fail2ban
-# https://github.com/raspiblitz/raspiblitz/issues/4044
+# https://github.com/raspiblesk/raspiblesk/issues/4044
 if [ ! -f /var/log/auth.log ]; then
   touch /var/log/auth.log
 fi
@@ -868,7 +868,7 @@ if [ "${baseimage}" = "raspios_arm64"  ] || [ "${baseimage}" = "debian" ]; then
   sed -i "s/^dtoverlay=${dtoverlay}/# dtoverlay=${dtoverlay}/g" ${raspi_configfile}
 
   # I2C fix (make sure dtparam=i2c_arm is not on)
-  # see: https://github.com/rootzoll/raspiblitz/issues/1058#issuecomment-739517713
+  # see: https://github.com/rootzoll/raspiblesk/issues/1058#issuecomment-739517713
   sed -i "s/^dtparam=i2c_arm=.*//g" ${raspi_configfile}
 fi
 
@@ -894,25 +894,25 @@ echo
 /home/admin/config.scripts/tor.install.sh install || exit 1
 
 ###########
-# BITCOIN #
+# GLCOIN #
 ###########
 echo
-/home/admin/config.scripts/bitcoin.install.sh install || exit 1
+/home/admin/config.scripts/glcoin.install.sh install || exit 1
 
 #######
 # I2P #
 #######
 echo
-/home/admin/config.scripts/blitz.i2pd.sh install || exit 1
+/home/admin/config.scripts/blesk.i2pd.sh install || exit 1
 
 # *** BLITZ WEB SERVICE ***
 echo "Provisioning BLITZ WEB SERVICE"
-/home/admin/config.scripts/blitz.web.sh http-on || exit 1
+/home/admin/config.scripts/blesk.web.sh http-on || exit 1
 
 # *** FATPACK *** (can be activated by parameter - see details at start of script)
 if ${fatpack}; then
   echo "* FATPACK activated"
-  /home/admin/config.scripts/blitz.fatpack.sh
+  /home/admin/config.scripts/blesk.fatpack.sh
   if [ $? -gt 0 ]; then
     echo "FATPACK FAILED - please check the output above."
     exit 1
@@ -932,40 +932,40 @@ if [ ${#byteSizeList} -eq 0 ] || [ ${byteSizeList} -lt 10240 ]; then
 fi
 chown admin:admin /home/admin/fallback.bitnodes.nodes
 
-# check fallback list bitcoin core
+# check fallback list glcoin core
 # update on releases manually in asset folder with:
-# curl https://raw.githubusercontent.com/bitcoin/bitcoin/master/contrib/seeds/nodes_main.txt -o ./fallback.bitcoin.nodes
-byteSizeList=$(sudo -u admin stat -c %s /home/admin/fallback.bitcoin.nodes)
+# curl https://raw.githubusercontent.com/glcoin/glcoin/master/contrib/seeds/nodes_main.txt -o ./fallback.glcoin.nodes
+byteSizeList=$(sudo -u admin stat -c %s /home/admin/fallback.glcoin.nodes)
 if [ ${#byteSizeList} -eq 0 ] || [ ${byteSizeList} -lt 10240 ]; then
-  echo "Using fallback list from repo: bitcoin core"
-  rm /home/admin/fallback.bitcoin.nodes 2>/dev/null
-  cp /home/admin/assets/fallback.bitcoin.nodes /home/admin/fallback.bitcoin.nodes
+  echo "Using fallback list from repo: glcoin core"
+  rm /home/admin/fallback.glcoin.nodes 2>/dev/null
+  cp /home/admin/assets/fallback.glcoin.nodes /home/admin/fallback.glcoin.nodes
 fi
-chown admin:admin /home/admin/fallback.bitcoin.nodes
+chown admin:admin /home/admin/fallback.glcoin.nodes
 
 echo
-echo "*** raspiblitz.info ***"
-cat /home/admin/raspiblitz.info
+echo "*** raspiblesk.info ***"
+cat /home/admin/raspiblesk.info
 
-# *** RASPIBLITZ IMAGE READY INFO ***
+# *** RASPIBLESK IMAGE READY INFO ***
 echo -e "\n**********************************************"
 echo "BASIC SD CARD BUILD DONE"
 echo -e "**********************************************\n"
-echo "Your SD Card Image for RaspiBlitz is ready (might still do display config)."
+echo "Your SD Card Image for RaspiBlesk is ready (might still do display config)."
 echo "Take the chance & look through the output above if you can spot any errors or warnings."
 echo -e "\nIMPORTANT IF YOU WANT TO MAKE A RELEASE IMAGE FROM THIS BUILD:"
-echo "1. login fresh --> user:admin password:raspiblitz"
+echo "1. login fresh --> user:admin password:raspiblesk"
 echo -e "2. run --> release\n"
 
 # make sure that at least the code is available (also if no internet)
 echo "** DISPLAY(${display})"
-/home/admin/config.scripts/blitz.display.sh prepare-install || exit 1
+/home/admin/config.scripts/blesk.display.sh prepare-install || exit 1
 # (do last - because it might trigger reboot)
 if [ "${display}" != "headless" ] || [ "${baseimage}" = "raspios_arm64" ]; then
   echo "*** ADDITIONAL DISPLAY OPTIONS ***"
-  echo "- calling: blitz.display.sh set-display ${display}"
-  /home/admin/config.scripts/blitz.display.sh set-display ${display} || exit 1
-  /home/admin/config.scripts/blitz.display.sh rotate 1 || exit 1
+  echo "- calling: blesk.display.sh set-display ${display}"
+  /home/admin/config.scripts/blesk.display.sh set-display ${display} || exit 1
+  /home/admin/config.scripts/blesk.display.sh rotate 1 || exit 1
 fi
 
 echo "# BUILD DONE - see above"

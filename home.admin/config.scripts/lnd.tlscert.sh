@@ -189,7 +189,7 @@ if [ "$1" = "refresh" ]; then
   # stop lnd and let outside decide to restart or not
   sudo systemctl stop lnd
   sudo chmod 664 ${TLSPATH}/tls.cert
-  sudo chown bitcoin:bitcoin "/mnt/hdd/app-data/lnd/tls.cert"
+  sudo chown glcoin:glcoin "/mnt/hdd/app-data/lnd/tls.cert"
 
   echo "# OK TLS certs are fresh - start of LND service needed"
   exit

@@ -3,7 +3,7 @@
 # https://github.com/getAlby/lightning-browser-extension
 
 # command info
-echo "config script to connect to Alby - The Bitcoin Lightning App for your Browser"
+echo "config script to connect to Alby - The Glcoin Lightning App for your Browser"
 
 
 # 1. TOR or IP (optional - default IP)
@@ -12,16 +12,16 @@ if [ "$1" == "tor" ]; then
   forceTOR=1
 fi
 
-# check and load raspiblitz config
+# check and load raspiblesk config
 # to know which network is running
-source /home/admin/raspiblitz.info
-source /mnt/hdd/app-data/raspiblitz.conf
+source /home/admin/raspiblesk.info
+source /mnt/hdd/app-data/raspiblesk.conf
 
 # generate data parts
 hex_macaroon=$(sudo xxd -plain /mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/admin.macaroon | tr -d '\n')
 cert=$(sudo grep -v 'CERTIFICATE' /mnt/hdd/app-data/lnd/tls.cert | tr -d '=' | tr '/+' '_-' | tr -d '\n')
 
-#### ADAPT PARAMETERS BASED RASPIBLITZ CONFIG
+#### ADAPT PARAMETERS BASED RASPIBLESK CONFIG
 
 # get the local IP as default host
 if [ ${#host} -eq 0 ]; then
@@ -71,9 +71,9 @@ whiptail --title " Alby - The Lightning App for your Browser" --msgbox "Visit ht
 
 Then open Alby and add a new lightning account.
 
-Select RaspiBlitz.
+Select RaspiBlesk.
 
-Your RaspiBlitz connection details for Alby will be shown on the next screen.
+Your RaspiBlesk connection details for Alby will be shown on the next screen.
 
 " 16 67
 

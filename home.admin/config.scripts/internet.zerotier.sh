@@ -9,7 +9,7 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
   exit 1
 fi
 
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 
 # show info menu
 if [ "$1" = "menu" ]; then
@@ -46,7 +46,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     trap 'rm -f "$_temp"' EXIT
     _temp=$(mktemp -p /dev/shm/)
 
-    dialog --backtitle "RaspiBlitz - Settings" \
+    dialog --backtitle "RaspiBlesk - Settings" \
       --title "Join ZeroTier Network" \
       --inputbox "\nPlease enter the ZeroTier networkID to connect to:" 10 60 2>"$_temp"
 
@@ -68,7 +68,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   $(curl -s 'https://raw.githubusercontent.com/zerotier/ZeroTierOne/master/doc/contact%40zerotier.com.gpg' | gpg --import)
   if z=$(curl -s 'https://install.zerotier.com/' | gpg); then echo "$z" | sudo bash 1>&2; fi
 
-  echo "# ZeroTier is now installed on your RaspiBlitz"
+  echo "# ZeroTier is now installed on your RaspiBlesk"
   echo "# Joining zerotier network: ${networkID}"
 
   joinOK=$(sudo zerotier-cli join ${networkID} | grep -c '200 join OK')
@@ -77,7 +77,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
 
     # setting value in raspi blitz config
 
-    /home/admin/config.scripts/blitz.conf.sh set zerotier "${networkID}"
+    /home/admin/config.scripts/blesk.conf.sh set zerotier "${networkID}"
 
     # adding zero tier IP to LND TLS cert
     # sudo /home/admin/config.scripts/lnd.tlscert.sh ip-add 172.X
@@ -85,7 +85,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     # sudo /home/admin/config.scripts/lnd.credentials.sh sync "${chain:-main}net"
 
     if [ $sshUI -eq 1 ]; then
-      dialog --msgbox "Your RaspiBlitz joined the ZeroTier network." 6 46
+      dialog --msgbox "Your RaspiBlesk joined the ZeroTier network." 6 46
     else
       echo "# OK, ZeroTier is joined."
     fi
@@ -111,7 +111,7 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   sudo -u admin sudo apt -y purge zerotier-one 1>&2
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set zerotier "off"
+  /home/admin/config.scripts/blesk.conf.sh set zerotier "off"
 
   echo "# OK, ZeroTier is removed."
   exit 0

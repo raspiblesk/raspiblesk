@@ -40,8 +40,8 @@ fi
 # echoing comments is useful for logs - but start output with # when not a key=value
 echo "# Running: 'bonus.${APPID}.sh $*'"
 
-# check & load raspiblitz config
-source /mnt/hdd/app-data/raspiblitz.conf
+# check & load raspiblesk config
+source /mnt/hdd/app-data/raspiblesk.conf
 
 #########################
 # INFO
@@ -226,7 +226,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     sudo -u ${APPID} git reset --hard $GITHUB_TAG
   fi
   if [ "${GITHUB_SIGN_AUTHOR}" != "" ]; then
-    sudo -u ${APPID} /home/admin/config.scripts/blitz.git-verify.sh \
+    sudo -u ${APPID} /home/admin/config.scripts/blesk.git-verify.sh \
      "${GITHUB_SIGN_AUTHOR}" "${GITHUB_SIGN_PUBKEYLINK}" "${GITHUB_SIGN_FINGERPRINT}" "${GITHUB_TAG}" || exit 1
   fi
 
@@ -274,8 +274,8 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   echo "
 [Unit]
 Description=${APPID}
-Wants=bitcoind
-After=bitcoind
+Wants=glcoind
+After=glcoind
 
 [Service]
 WorkingDirectory=/home/${APPID}
@@ -310,7 +310,7 @@ WantedBy=multi-user.target
   keystoreExists=$(sudo ls /mnt/hdd/app-data/fints/keystore.jks 2>/dev/null | grep -c 'keystore.jks')
   if [ ${keystoreExists} -eq 0 ]; then
     echo "# creating keystore"
-    sudo -u fints keytool -genkey -keyalg RSA -alias fints -keystore /mnt/hdd/app-data/fints/keystore.jks -storepass raspiblitz -noprompt -dname "CN=raspiblitz, OU=IT, O=raspiblitz, L=world, S=world, C=BZ"
+    sudo -u fints keytool -genkey -keyalg RSA -alias fints -keystore /mnt/hdd/app-data/fints/keystore.jks -storepass raspiblesk -noprompt -dname "CN=raspiblesk, OU=IT, O=raspiblesk, L=world, S=world, C=BZ"
   else
     echo "# keystore already exists"
   fi
@@ -335,7 +335,7 @@ WantedBy=multi-user.target
   sudo sed -i "s/^rdh_port =.*/rdh_port = ${PORT_CLEAR}/g" /home/fints/config/fuelifints.properties
   sudo sed -i "s/^ssl_port =.*/ssl_port = ${PORT_SSL}/g" /home/fints/config/fuelifints.properties
   sudo sed -i "s/^keystore_location =.*/keystore_location = \/mnt\/hdd\/app-data\/fints\/keystore.jks/g" /home/fints/config/fuelifints.properties
-  sudo sed -i "s/^keystore_password =.*/keystore_password = raspiblitz/g" /home/fints/config/fuelifints.properties
+  sudo sed -i "s/^keystore_password =.*/keystore_password = raspiblesk/g" /home/fints/config/fuelifints.properties
 
   # config app basics: blz.banking2.properties.example: blz needs to be replaced with bankcode of fuelifints.properties
   sudo -u fints cp /home/fints/fints/config/blz.banking2.properties.example /home/fints/config/12345678.banking2.properties
@@ -352,8 +352,8 @@ WantedBy=multi-user.target
   # in file lnbits.properties replace the line starting with lnbitsUrl with the following line 'lnbitsUrl = http://127.0.0.1:5000'
   sudo sed -i "s/lnbitsUrl =.*/lnbitsUrl = http:\/\/127.0.0.1:5000/g" /home/fints/config/lnbits.properties   
 
-  # mark app as installed in raspiblitz config
-  /home/admin/config.scripts/blitz.conf.sh set ${APPID} "on"
+  # mark app as installed in raspiblesk config
+  /home/admin/config.scripts/blesk.conf.sh set ${APPID} "on"
 
   # enable app up thru systemd
   sudo systemctl enable ${APPID}
@@ -436,8 +436,8 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   echo "# removing Tor hidden service (if active)"
   /home/admin/config.scripts/tor.onion-service.sh off ${APPID}
 
-  echo "# mark app as uninstalled in raspiblitz config"
-  /home/admin/config.scripts/blitz.conf.sh set ${APPID} "off"
+  echo "# mark app as uninstalled in raspiblesk config"
+  /home/admin/config.scripts/blesk.conf.sh set ${APPID} "off"
 
   # only if 'delete-data' is an additional parameter then also the data directory gets deleted
   if [ "$(echo "$@" | grep -c delete-data)" -gt 0 ]; then

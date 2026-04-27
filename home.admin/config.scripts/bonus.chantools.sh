@@ -115,20 +115,20 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   sudo -u admin tar -xzf ${binaryName}
   sudo install -m 0755 -o root -g root -t /usr/local/bin/ chantools-linux-${OSversion}-v${pinnedVersion}/*
   sleep 3
-  installed=$(sudo -u bitcoin chantools --version)
+  installed=$(sudo -u glcoin chantools --version)
   if [ ${#installed} -eq 0 ]; then
     echo
     echo "# BUILD FAILED --> Was not able to install Channel Tools"
     exit 1
   fi
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set chantools "on"
+  /home/admin/config.scripts/blesk.conf.sh set chantools "on"
 
   echo
   echo "Installed ${installed}"
   echo "
 # Channel Tools is a command line tool.
-# Type: 'sudo su - bitcoin' in the command line to switch to the bitcoin user.
+# Type: 'sudo su - glcoin' in the command line to switch to the glcoin user.
 # Then see 'chantools' for the options.
 # Usage: https://github.com/guggero/chantools/blob/master/README.md
 "
@@ -138,7 +138,7 @@ fi
 # switch off
 if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set chantools "off"
+  /home/admin/config.scripts/blesk.conf.sh set chantools "off"
 
   echo "# REMOVING Channel Tools"
   sudo rm -rf /home/admin/download/chantools*

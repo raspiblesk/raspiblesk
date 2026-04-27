@@ -1932,7 +1932,7 @@ message GetInfoResponse {
     reserved 11;
 
     /*
-    Deprecated. The only active chain is bitcoin.
+    Deprecated. The only active chain is glcoin.
     A list of active chains the node is connected to
     */
     repeated Chain chains = 16 [deprecated = true];
@@ -1969,8 +1969,8 @@ message GetRecoveryInfoResponse {
 }
 
 message Chain {
-    // Deprecated. The chain is now always assumed to be bitcoin.
-    // The blockchain the node is on (must be bitcoin)
+    // Deprecated. The chain is now always assumed to be glcoin.
+    // The blockchain the node is on (must be glcoin)
     string chain = 1 [deprecated = true];
 
     // The network the node is on (eg regtest, testnet, mainnet)

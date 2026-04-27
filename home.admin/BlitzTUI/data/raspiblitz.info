@@ -1,7 +1,0 @@
-state=stresstest
-message='Testing Hardware 60s'
-network=bitcoin
-chain=main
-setupStep=100
-baseimage=raspbian
-undervoltageReports=0

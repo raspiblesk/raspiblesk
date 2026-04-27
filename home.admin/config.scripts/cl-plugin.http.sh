@@ -24,13 +24,13 @@ source <(/home/admin/config.scripts/network.aliases.sh getvars cl mainnet)
 
 if [ $1 = connect ];then
   toraddress=$(sudo cat /mnt/hdd/app-data/tor/clHTTPplugin/hostname)
-  PASSWORD_B=$(sudo cat /mnt/hdd/app-data/bitcoin/bitcoin.conf | grep rpcpassword | cut -c 13-)
-  # https://github.com/rootzoll/raspiblitz/issues/2579#issuecomment-936091256
+  PASSWORD_B=$(sudo cat /mnt/hdd/app-data/glcoin/glcoin.conf | grep rpcpassword | cut -c 13-)
+  # https://github.com/rootzoll/raspiblesk/issues/2579#issuecomment-936091256
   # http://rpcuser:rpcpassword@xxx.onion:9080
   url="http://lightning:${PASSWORD_B}@${toraddress}:9080"
   clear
   echo
-  sudo /home/admin/config.scripts/blitz.display.sh qr "${toraddress}"
+  sudo /home/admin/config.scripts/blesk.display.sh qr "${toraddress}"
   echo "
 Connect Fully Noded
 
@@ -58,8 +58,8 @@ https://github.com/Fonta1n3/FullyNoded/blob/master/Docs/Lightning.md#connect-ful
   echo
   echo "# Press enter to continue to show the full connection URL with all the info above"
   read key
-  sudo /home/admin/config.scripts/blitz.display.sh hide
-  sudo /home/admin/config.scripts/blitz.display.sh qr "${url}"
+  sudo /home/admin/config.scripts/blesk.display.sh hide
+  sudo /home/admin/config.scripts/blesk.display.sh qr "${url}"
   clear
   echo "
 Core Lightning connection URL code for Fully Noded:
@@ -70,42 +70,42 @@ $url
   echo
   echo "# Press enter to hide the QRcode from the LCD"
   read key
-  sudo /home/admin/config.scripts/blitz.display.sh hide
+  sudo /home/admin/config.scripts/blesk.display.sh hide
   exit 0
 fi
 
 if [ "$1" = "on" ];then
 
   echo
-  echo "# Installing Rust for the bitcoin user"
+  echo "# Installing Rust for the glcoin user"
   echo
-  sudo -u bitcoin curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sudo -u bitcoin sh -s -- -y
+  sudo -u glcoin curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sudo -u glcoin sh -s -- -y
 
-  if [ ! -f /home/bitcoin/cl-plugins-available/c-lightning-http-plugin ];then
-    sudo -u bitcoin mkdir /home/bitcoin/cl-plugins-available
-    cd /home/bitcoin/cl-plugins-available || exit 1
-    sudo -u bitcoin git clone https://github.com/Start9Labs/c-lightning-http-plugin.git
+  if [ ! -f /home/glcoin/cl-plugins-available/c-lightning-http-plugin ];then
+    sudo -u glcoin mkdir /home/glcoin/cl-plugins-available
+    cd /home/glcoin/cl-plugins-available || exit 1
+    sudo -u glcoin git clone https://github.com/Start9Labs/c-lightning-http-plugin.git
     cd c-lightning-http-plugin || exit 1
-    sudo -u bitcoin git reset --hard ${clHTTPpluginVersion} || exit 1
+    sudo -u glcoin git reset --hard ${clHTTPpluginVersion} || exit 1
 
-    sudo -u bitcoin /home/admin/config.scripts/blitz.git-verify.sh \
+    sudo -u glcoin /home/admin/config.scripts/blesk.git-verify.sh \
      "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" || exit 1
 
     echo
     echo "# change CL REST port to 9080"
     sudo sed -i "s/8080/9080/g" src/rpc.rs
     echo
-    sudo -u bitcoin /home/bitcoin/.cargo/bin/cargo build --release
-    sudo chmod a+x /home/bitcoin/cl-plugins-available/c-lightning-http-plugin/target/release/c-lightning-http-plugin
+    sudo -u glcoin /home/glcoin/.cargo/bin/cargo build --release
+    sudo chmod a+x /home/glcoin/cl-plugins-available/c-lightning-http-plugin/target/release/c-lightning-http-plugin
 
     # clean up
-    sudo rm -R /home/bitcoin/.cargo
-    sudo rm -R /home/bitcoin/.rustup
+    sudo rm -R /home/glcoin/.cargo
+    sudo rm -R /home/glcoin/.rustup
   fi
 
-  if [ ! -L /home/bitcoin/cl-plugins-enabled/c-lightning-http-plugin ];then
-    sudo ln -s /home/bitcoin/cl-plugins-available/c-lightning-http-plugin/target/release/c-lightning-http-plugin \
-               /home/bitcoin/cl-plugins-enabled
+  if [ ! -L /home/glcoin/cl-plugins-enabled/c-lightning-http-plugin ];then
+    sudo ln -s /home/glcoin/cl-plugins-available/c-lightning-http-plugin/target/release/c-lightning-http-plugin \
+               /home/glcoin/cl-plugins-enabled
   fi
 
   ##########
@@ -114,7 +114,7 @@ if [ "$1" = "on" ];then
   if ! grep -Eq "^http-pass=" ${CLCONF};then
     echo "# Editing ${CLCONF}"
     echo "# See: https://github.com/Fonta1n3/FullyNoded/blob/master/Docs/Lightning.md#setup-c-lightning-http-plugin"
-    PASSWORD_B=$(sudo cat /mnt/hdd/app-data/bitcoin/bitcoin.conf | grep rpcpassword | cut -c 13-)
+    PASSWORD_B=$(sudo cat /mnt/hdd/app-data/glcoin/glcoin.conf | grep rpcpassword | cut -c 13-)
     echo "
 http-pass=${PASSWORD_B}
 " | sudo tee -a ${CLCONF}
@@ -127,7 +127,7 @@ http-pass=${PASSWORD_B}
   /home/admin/config.scripts/tor.onion-service.sh clHTTPplugin 9080 9080
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set clHTTPplugin "on"
+  /home/admin/config.scripts/blesk.conf.sh set clHTTPplugin "on"
 
   source <(/home/admin/_cache.sh get state)
   if [ "${state}" == "ready" ] && [ "$2" != "norestart" ]; then
@@ -138,13 +138,13 @@ http-pass=${PASSWORD_B}
   echo "# clHTTPplugin was installed"
   echo "# Monitor with:"
   echo "sudo journalctl | grep clHTTPplugin | tail -n5"
-  echo "sudo tail -n 100 -f /home/bitcoin/.lightning/${CLNETWORK}/cl.log | grep clHTTPplugin"
+  echo "sudo tail -n 100 -f /home/glcoin/.lightning/${CLNETWORK}/cl.log | grep clHTTPplugin"
 
 fi
 
 if [ "$1" = "off" ];then
   # delete symlink
-  sudo rm -rf /home/bitcoin/cl-plugins-enabled/c-lightning-http-plugin
+  sudo rm -rf /home/glcoin/cl-plugins-enabled/c-lightning-http-plugin
 
   echo "# Editing ${CLCONF}"
   sudo sed -i "/^http-pass/d" ${CLCONF}
@@ -157,10 +157,10 @@ if [ "$1" = "off" ];then
   # purge
   if [ "$(echo "$@" | grep -c purge)" -gt 0 ];then
     echo "# Delete plugin"
-    sudo rm -rf /home/bitcoin/cl-plugins-available/c-lightning-http-plugin
+    sudo rm -rf /home/glcoin/cl-plugins-available/c-lightning-http-plugin
   fi
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set clHTTPplugin "off"
+  /home/admin/config.scripts/blesk.conf.sh set clHTTPplugin "off"
   echo "# clHTTPplugin was uninstalled"
 
 fi

@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.48.1] - 2020-05-30
 ### Add
-- move log file to /var/cache/raspiblitz/ if it exists
+- move log file to /var/cache/raspiblesk/ if it exists
 
 ## [0.47.0] - 2020-05-23
 ### Removed
@@ -46,12 +46,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.39.0] - 2019-11-04
 ### Added
 - fix logging
-- update blitz.touchscreen.sh scripts
+- update blesk.touchscreen.sh scripts
 
 ## [0.36.0] - 2019-11-03
 ### Added
 - require at least gRPC (grpcio) version 1.24.3 (to address atomic_exchange_8 issue)
-- fix issue on "not-default" setup (not bitcoin/mainnet)
+- fix issue on "not-default" setup (not glcoin/mainnet)
 
 ## [0.29.0] - 2019-11-02
 ### Added

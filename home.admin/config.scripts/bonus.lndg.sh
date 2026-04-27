@@ -13,10 +13,10 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
   exit 1
 fi
 
-# check and load raspiblitz config
+# check and load raspiblesk config
 # to know which network is running
-source /home/admin/raspiblitz.info
-source /mnt/hdd/app-data/raspiblitz.conf
+source /home/admin/raspiblesk.info
+source /mnt/hdd/app-data/raspiblesk.conf
 
 if [ "$1" = "status" ] || [ "$1" = "menu" ]; then
 
@@ -46,7 +46,7 @@ if [ "$1" = "menu" ]; then
 
   if [ "${runBehindTor}" = "on" ] && [ ${#toraddress} -gt 0 ]; then
     # Info with TOR
-    sudo /home/admin/config.scripts/blitz.display.sh qr "${toraddress}"
+    sudo /home/admin/config.scripts/blesk.display.sh qr "${toraddress}"
     whiptail --title " LNDg " --msgbox "Open in your local web browser:
 http://${localip}:${httpPort}\n
 https://${localip}:${httpsPort} with Fingerprint:
@@ -54,7 +54,7 @@ ${fingerprint}\n
 Username is lndg-admin. Use your Password B to login.\n
 Hidden Service address for TOR Browser (see LCD for QR):\n${toraddress}
 " 18 67
-    sudo /home/admin/config.scripts/blitz.display.sh hide
+    sudo /home/admin/config.scripts/blesk.display.sh hide
   else
     # Info without TOR
     whiptail --title " LNDg " --msgbox "Open in your local web browser:
@@ -151,7 +151,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     sudo apt install -y virtualenv
     sudo -u lndg virtualenv -p python3 .venv
     sudo -u lndg .venv/bin/pip install -r requirements.txt
-    PASSWORD_B=$(sudo cat /mnt/hdd/app-data/bitcoin/bitcoin.conf | grep rpcpassword | cut -c 13-)
+    PASSWORD_B=$(sudo cat /mnt/hdd/app-data/glcoin/glcoin.conf | grep rpcpassword | cut -c 13-)
     echo "# LNDg initialize.py ..."
     sudo -u lndg .venv/bin/python initialize.py -pw $PASSWORD_B
 
@@ -325,8 +325,8 @@ WantedBy=multi-user.target
     sudo systemctl enable lndg-controller
     sudo systemctl start lndg-controller
 
-    # setting value in raspiblitz config
-    /home/admin/config.scripts/blitz.conf.sh set lndg "on"
+    # setting value in raspiblesk config
+    /home/admin/config.scripts/blesk.conf.sh set lndg "on"
 
     # Hidden Service for LNDg if Tor is active
     if [ "${runBehindTor}" = "on" ]; then
@@ -386,7 +386,7 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   echo "OK LNDg removed."
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set lndg "off"
+  /home/admin/config.scripts/blesk.conf.sh set lndg "off"
 
   # needed for API/WebUI as signal that install ran thru 
   echo "result='OK'"

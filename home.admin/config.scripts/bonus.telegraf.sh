@@ -8,7 +8,7 @@
 # command info
 if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
   echo "# config script to switch the telegraf metric collection"
-  echo "# detailed setup info: github.com/raspiblitz/raspiblitz/tree/dev/home.admin/assets/telegraf"
+  echo "# detailed setup info: github.com/raspiblesk/raspiblesk/tree/dev/home.admin/assets/telegraf"
   echo "# bonus.telegraf.sh status ---> get status of telegraf service"
   echo "# bonus.telegraf.sh on     ---> install"
   echo "# bonus.telegraf.sh menu   ---> info & config"
@@ -17,7 +17,7 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
 fi
 
 # at this point the config file exists and can be sourced
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 
 # this variables is used repeatedly in this script
 resources_dir=/home/admin/assets/telegraf/etc-telegraf
@@ -36,29 +36,29 @@ if [ "$1" = "status" ]; then
 
   echo "##### STATUS TELEGRAF SERVICE"
 
-  # check if "telegraf" is enabled ("1"|"on") in raspiblitz.conf
+  # check if "telegraf" is enabled ("1"|"on") in raspiblesk.conf
   if [ "${telegraf}" = "1" ] || [ "${telegraf}" = "on" ]; then
     echo "configured=1"
   else
     echo "configured=0"
   fi
 
-  # check if config data in raspiblitz.conf is available
+  # check if config data in raspiblesk.conf is available
   configMissing=0
   if [ ${#telegrafInfluxUrl} -eq 0 ]; then
-    echo "# Missing telegrafInfluxUrl in raspiblitz.conf"
+    echo "# Missing telegrafInfluxUrl in raspiblesk.conf"
     configMissing=1
   fi
   if [ ${#telegrafInfluxDatabase} -eq 0 ]; then
-    echo "# Missing telegrafInfluxDatabase in raspiblitz.conf"
+    echo "# Missing telegrafInfluxDatabase in raspiblesk.conf"
     configMissing=1
   fi
   if [ ${#telegrafInfluxUsername} -eq 0 ]; then
-    echo "# Missing telegrafInfluxUsername in raspiblitz.conf"
+    echo "# Missing telegrafInfluxUsername in raspiblesk.conf"
     configMissing=1
   fi
   if [ ${#telegrafInfluxPassword} -eq 0 ]; then
-    echo "# Missing telegrafInfluxPassword in raspiblitz.conf"
+    echo "# Missing telegrafInfluxPassword in raspiblesk.conf"
     configMissing=1
   fi
   echo "configMissing=${configMissing}"
@@ -111,12 +111,12 @@ function config_telegraf() {
   echo "# *** telegraf installation: replace influxDB url and creds"
   sudo systemctl stop telegraf.service 2>/dev/null
 
-  # make sure that raspiblitz.conf has the telegraf-variables properly set
+  # make sure that raspiblesk.conf has the telegraf-variables properly set
   #   telegrafInfluxUrl
   #   telegrafInfluxDatabase
   #   telegrafInfluxUsername
   #   telegrafInfluxPassword
-  source /mnt/hdd/app-data/raspiblitz.conf  
+  source /mnt/hdd/app-data/raspiblesk.conf  
 
   echo "# *** telegraf installation: telegrafInfluxUrl      = '${telegrafInfluxUrl}'"
   # due to the occurrence of '/' in the ${telegrafInfluxUrl} we need to switch to '#' as the sed-separator
@@ -205,15 +205,15 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   sudo chmod 755 ${telegraf_target_dir}/getserviceuptime.sh
   #
   # copy shell script for IP address tracking
-  sudo cp -v ${telegraf_source_dir}/getraspiblitzipinfo.sh            ${telegraf_target_dir}/getraspiblitzipinfo.sh
-  sudo chmod 755 ${telegraf_target_dir}/getraspiblitzipinfo.sh
+  sudo cp -v ${telegraf_source_dir}/getraspibleskipinfo.sh            ${telegraf_target_dir}/getraspibleskipinfo.sh
+  sudo chmod 755 ${telegraf_target_dir}/getraspibleskipinfo.sh
 
-  echo "*** telegraf installation: set 'telegraf=on' in config file 'raspiblitz.conf'"
-  /home/admin/config.scripts/blitz.conf.sh set telegraf "on"
+  echo "*** telegraf installation: set 'telegraf=on' in config file 'raspiblesk.conf'"
+  /home/admin/config.scripts/blesk.conf.sh set telegraf "on"
 
   echo "*** install telegraf done ***"
 
-  # run config if data is set in raspiblitz.conf
+  # run config if data is set in raspiblesk.conf
   source <(/home/admin/config.scripts/bonus.telegraf.sh status)
   if [ ${configMissing} -eq 0 ]; then
     config_telegraf
@@ -233,11 +233,11 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   sudo apt-get remove -y telegraf
 
   echo "*** telegraf switch off and remove config ***"
-  /home/admin/config.scripts/blitz.conf.sh set telegraf "off"
-  /home/admin/config.scripts/blitz.conf.sh delete telegrafInfluxUrl
-  /home/admin/config.scripts/blitz.conf.sh delete telegrafInfluxDatabase
-  /home/admin/config.scripts/blitz.conf.sh delete telegrafInfluxUsername
-  /home/admin/config.scripts/blitz.conf.sh delete telegrafInfluxPassword
+  /home/admin/config.scripts/blesk.conf.sh set telegraf "off"
+  /home/admin/config.scripts/blesk.conf.sh delete telegrafInfluxUrl
+  /home/admin/config.scripts/blesk.conf.sh delete telegrafInfluxDatabase
+  /home/admin/config.scripts/blesk.conf.sh delete telegrafInfluxUsername
+  /home/admin/config.scripts/blesk.conf.sh delete telegrafInfluxPassword
 
   echo "*** remove telegraf done ***"
 
@@ -261,7 +261,7 @@ if [ "$1" = "menu" ]; then
   if [ ${configMissing} -eq 1 ]; then
   
     # Display the info box with whiptail
-    whiptail --title "Metrics Setup Information" --yesno "To run the Telegraf metrics service you need an external monitoring server running Grafana & InfluxDB. Please prepare InfluxDB database & user as described in github.com/raspiblitz/raspiblitz/tree/dev/home.admin/assets/telegraf Choose YES if all is ready to config RaspiBlitz Telegraf service." 11 75;
+    whiptail --title "Metrics Setup Information" --yesno "To run the Telegraf metrics service you need an external monitoring server running Grafana & InfluxDB. Please prepare InfluxDB database & user as described in github.com/raspiblesk/raspiblesk/tree/dev/home.admin/assets/telegraf Choose YES if all is ready to config RaspiBlesk Telegraf service." 11 75;
     if [ $? -eq 1 ]; then
       echo "# user cancel"
       exit 0
@@ -290,14 +290,14 @@ if [ "$1" = "menu" ]; then
         echo "OK Service is running at $telegrafInfluxUrl."
         break
       else
-        whiptail --msgbox "Was not able to connect to ${telegrafInfluxUrl} - please make sure InfluxDB is running and reachable for RaspiBlitz." 8 78
+        whiptail --msgbox "Was not able to connect to ${telegrafInfluxUrl} - please make sure InfluxDB is running and reachable for RaspiBlesk." 8 78
         continue
       fi
     done
 
     # Collect telegrafInfluxDatabase
     while true; do
-      telegrafInfluxDatabase=$(whiptail --inputbox "Enter the name of the database where to store the metrics:" 8 78 "raspiblitz" --title "InfluxDB Database" 3>&1 1>&2 2>&3)
+      telegrafInfluxDatabase=$(whiptail --inputbox "Enter the name of the database where to store the metrics:" 8 78 "raspiblesk" --title "InfluxDB Database" 3>&1 1>&2 2>&3)
       exitstatus=$?
       if [ $exitstatus -ne 0 ]; then
         echo "Operation canceled by user."
@@ -317,7 +317,7 @@ if [ "$1" = "menu" ]; then
 
     # Collect telegrafInfluxUsername
     while true; do
-      telegrafInfluxUsername=$(whiptail --inputbox "Enter the username that is allowed to write on that database:" 8 78 "raspiblitz" --title "InfluxDB Username" 3>&1 1>&2 2>&3)
+      telegrafInfluxUsername=$(whiptail --inputbox "Enter the username that is allowed to write on that database:" 8 78 "raspiblesk" --title "InfluxDB Username" 3>&1 1>&2 2>&3)
       exitstatus=$?
       if [ $exitstatus -ne 0 ]; then
         echo "Operation canceled by user."
@@ -356,11 +356,11 @@ if [ "$1" = "menu" ]; then
       break
     done
 
-    # save the config data to raspiblitz.conf
-    /home/admin/config.scripts/blitz.conf.sh set telegrafInfluxUrl "${telegrafInfluxUrl}"
-    /home/admin/config.scripts/blitz.conf.sh set telegrafInfluxDatabase "${telegrafInfluxDatabase}"
-    /home/admin/config.scripts/blitz.conf.sh set telegrafInfluxUsername "${telegrafInfluxUsername}"
-    /home/admin/config.scripts/blitz.conf.sh set telegrafInfluxPassword "${telegrafInfluxPassword}"
+    # save the config data to raspiblesk.conf
+    /home/admin/config.scripts/blesk.conf.sh set telegrafInfluxUrl "${telegrafInfluxUrl}"
+    /home/admin/config.scripts/blesk.conf.sh set telegrafInfluxDatabase "${telegrafInfluxDatabase}"
+    /home/admin/config.scripts/blesk.conf.sh set telegrafInfluxUsername "${telegrafInfluxUsername}"
+    /home/admin/config.scripts/blesk.conf.sh set telegrafInfluxPassword "${telegrafInfluxPassword}"
   
     # run the config function
     config_telegraf
@@ -388,10 +388,10 @@ if [ "$1" = "menu" ]; then
   whiptail --title " Telegraf " --yes-button "OK" --no-button "RESET-CONFIG" --yesno "${infoText}" 0 0
   if [ $? -eq 1 ]; then
     sudo systemctl stop telegraf.service 2>/dev/null
-    /home/admin/config.scripts/blitz.conf.sh delete telegrafInfluxUrl
-    /home/admin/config.scripts/blitz.conf.sh delete telegrafInfluxDatabase
-    /home/admin/config.scripts/blitz.conf.sh delete telegrafInfluxUsername
-    /home/admin/config.scripts/blitz.conf.sh delete telegrafInfluxPassword
+    /home/admin/config.scripts/blesk.conf.sh delete telegrafInfluxUrl
+    /home/admin/config.scripts/blesk.conf.sh delete telegrafInfluxDatabase
+    /home/admin/config.scripts/blesk.conf.sh delete telegrafInfluxUsername
+    /home/admin/config.scripts/blesk.conf.sh delete telegrafInfluxPassword
     echo "# config reset"
     sleep 3
     /home/admin/config.scripts/bonus.telegraf.sh menu

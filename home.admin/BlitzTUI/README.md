@@ -4,7 +4,7 @@
 [![LicenseBadge](https://img.shields.io/badge/license-MIT-blue.svg)](https://shields.io/)
 [![PythonVersions](https://img.shields.io/badge/python-3.4%2C%203.5%2C%203.6%2C%203.7%2C%203.8-blue.svg)](https://shields.io/)
 
-BlitzTUI is a part of the RaspiBlitz project and implements a Touch User Interface in PyQt5.
+BlitzTUI is a part of the RaspiBlesk project and implements a Touch User Interface in PyQt5.
 
 ## Installation
 

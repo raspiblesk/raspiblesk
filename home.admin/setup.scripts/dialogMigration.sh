@@ -1,22 +1,22 @@
 #!/bin/bash
 
-# TODO: also the raspiblitz-migration & other-node-migration might need to be adapted to work with an already mounted HDD later
+# TODO: also the raspiblesk-migration & other-node-migration might need to be adapted to work with an already mounted HDD later
 
 # get basic system information
 # these are the same set of infos the WebGUI dialog/controler has
-source /home/admin/raspiblitz.info
+source /home/admin/raspiblesk.info
 
 # SETUPFILE
 # this key/value file contains the state during the setup process
-SETUPFILE="/var/cache/raspiblitz/temp/raspiblitz.setup"
+SETUPFILE="/var/cache/raspiblesk/temp/raspiblesk.setup"
 source $SETUPFILE
 
 #########################
 # Parameters
 
-# 1st PARAMATER migrationOS: [raspiblitz|mynode|umbrel|citadel]
+# 1st PARAMATER migrationOS: [raspiblesk|mynode|umbrel|citadel]
 migrationOS="$1"
-if [ "${migrationOS}" != "raspiblitz" ] && [ "${migrationOS}" != "mynode" ] && [ "${migrationOS}" != "umbrel" ] && [ "${migrationOS}" != "citadel" ]; then
+if [ "${migrationOS}" != "raspiblesk" ] && [ "${migrationOS}" != "mynode" ] && [ "${migrationOS}" != "umbrel" ] && [ "${migrationOS}" != "citadel" ]; then
     echo "# FAIL: the given migrationOS '${migrationOS}' is not supported yet"
     exit 1
 fi  
@@ -32,14 +32,14 @@ if [ "${migrationMode}" != "normal" ] && [ "${migrationMode}" != "outdatedLightn
 fi  
 
 ####################################################
-# RASPIBLITZ
+# RASPIBLESK
 # migrating from other hardware with migration file
 ####################################################
 
-if [ "${migrationOS}" == "raspiblitz" ]; then
+if [ "${migrationOS}" == "raspiblesk" ]; then
 
   # get defaultUploadPath, localIP, etc
-  source <(sudo /home/admin/config.scripts/blitz.upload.sh prepare-upload)
+  source <(sudo /home/admin/config.scripts/blesk.upload.sh prepare-upload)
 
   filename=""
   while [ "${filename}" == "" ]
@@ -55,14 +55,14 @@ if [ "${migrationOS}" == "raspiblitz" ]; then
       echo "ON YOUR LAPTOP open a new terminal and change into"
       echo "the directory where your migration file is and"
       echo "COPY, PASTE AND EXECUTE THE FOLLOWING COMMAND:"
-      echo "scp -r ./raspiblitz-*.tar.gz ${defaultUploadUser}@${localip}:${defaultUploadPath}/"
+      echo "scp -r ./raspiblesk-*.tar.gz ${defaultUploadUser}@${localip}:${defaultUploadPath}/"
       echo ""
-      echo "Use password 'raspiblitz' to authenticate file transfer."
+      echo "Use password 'raspiblesk' to authenticate file transfer."
       echo "PRESS ENTER when upload is done."
       read key
 
       # check upload (will return filename or error)
-      source <(sudo /home/admin/config.scripts/blitz.upload.sh check-upload migration)
+      source <(sudo /home/admin/config.scripts/blesk.upload.sh check-upload migration)
       if [ "${filename}" != "" ]; then
         echo "OK - File found: ${filename}"
         echo "PRESS ENTER to continue."
@@ -105,18 +105,18 @@ fi
 
 ####################################################
 # WARNING: OUTDATED LIGHTNING
-# in case lightning version of RaspiBlitz is too old
+# in case lightning version of RaspiBlesk is too old
 ####################################################
 
   # outdated warning
   if [ "${migrationMode}" == "outdatedLightning" ]; then
 
     whiptail --title " MIGRATION WARNING " --yes-button "Stop Migration" --no-button "Try Anyway" --yesno " 
-RaspiBlitz might run an TOO OLD of an lightning version to migrate your nodes channel data automatically.
+RaspiBlesk might run an TOO OLD of an lightning version to migrate your nodes channel data automatically.
 
 You have now two options:
 1) Stop Migration, shutdown, keep your old node system
-   until RaspiBlitz offers an updated version
+   until RaspiBlesk offers an updated version
 2) Ignore this warning and try your luck (not recommended)
       " 16 62
 
@@ -131,19 +131,19 @@ You have now two options:
 
 ####################################################
 # UMBREL
-# migrating from Umbrel to RaspiBlitz
+# migrating from Umbrel to RaspiBlesk
 ####################################################
 
 if [ "${migrationOS}" == "umbrel" ]; then
 
   # infodialog
-  whiptail --title " UMBREL --> RASPIBLITZ " --yes-button "Start Migration" --no-button "Cancel Migration" --yesno "RaspiBlitz found data from UMBREL
+  whiptail --title " UMBREL --> RASPIBLESK " --yes-button "Start Migration" --no-button "Cancel Migration" --yesno "RaspiBlesk found data from UMBREL
 
-You can migrate your blockchain & lightning data (funds & channels) over to RaspiBlitz.
+You can migrate your blockchain & lightning data (funds & channels) over to RaspiBlesk.
 
 Please make sure to have your UMBREL seed words & static channel backup file (just in case). Also any data of additional apps you had installed on UMBREL might get lost.
 
-Do you want to start migration to RaspiBlitz now?
+Do you want to start migration to RaspiBlesk now?
       " 16 58
 
   if [ "$?" != "0" ]; then
@@ -158,19 +158,19 @@ fi
 
 ####################################################
 # CITADEL
-# migrating from Citadel to RaspiBlitz
+# migrating from Citadel to RaspiBlesk
 ####################################################
 
 if [ "${migrationOS}" == "citadel" ]; then
 
   # infodialog
-  whiptail --title " CITADEL --> RASPIBLITZ " --yes-button "Start Migration" --no-button "Cancel Migration" --yesno "RaspiBlitz found data from CITADEL
+  whiptail --title " CITADEL --> RASPIBLESK " --yes-button "Start Migration" --no-button "Cancel Migration" --yesno "RaspiBlesk found data from CITADEL
 
-You can migrate your blockchain & LND data (funds & channels) over to RaspiBlitz.
+You can migrate your blockchain & LND data (funds & channels) over to RaspiBlesk.
 
 Please make sure to have your CITADEL seed words & static channel backup file (just in case). Also any data of additional apps you had installed on CITADEL might get lost.
 
-Do you want to start migration to RaspiBlitz now?
+Do you want to start migration to RaspiBlesk now?
       " 16 58
 
   if [ "$?" != "0" ]; then
@@ -185,19 +185,19 @@ fi
 
 ####################################################
 # MYNODE
-# migrating from myNode to RaspiBlitz
+# migrating from myNode to RaspiBlesk
 ####################################################
 
 if [ "${migrationOS}" == "mynode" ]; then
 
   # infodialog
-  whiptail --title " MYNODE --> RASPIBLITZ " --yes-button "Start Migration" --no-button "Cancel Migration" --yesno "RaspiBlitz found data from MYNODE
+  whiptail --title " MYNODE --> RASPIBLESK " --yes-button "Start Migration" --no-button "Cancel Migration" --yesno "RaspiBlesk found data from MYNODE
 
-You can migrate your blockchain & LND data (funds & channels) over to RaspiBlitz.
+You can migrate your blockchain & LND data (funds & channels) over to RaspiBlesk.
 
 Please make sure to have your MYNODE seed words & static channel backup file (just in case). Also any data of additional apps you had installed on MYNODE might get lost.
 
-Do you want to start migration to RaspiBlitz now?
+Do you want to start migration to RaspiBlesk now?
       " 16 58
 
   if [ "$?" != "0" ]; then

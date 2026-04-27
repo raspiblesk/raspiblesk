@@ -21,20 +21,20 @@ function confirmMsg() {
 # SHORTCUT COMMANDS you can call as user 'admin' from terminal
 
 # command: blitz
-# calls the the raspiblitz mainmenu (shortcut)
+# calls the the raspiblesk mainmenu (shortcut)
 function blitz() {
   cd /home/admin
-  ./00raspiblitz.sh
+  ./00raspiblesk.sh
 }
 
-# command: blitzhelp
+# command: bleskhelp
 # gives overview of commands
-function blitzhelp() {
+function bleskhelp() {
   echo
   echo "Blitz commands are consolidated here."
   echo
   echo "Menu access:"
-  echo "  raspiblitz   menu"
+  echo "  raspiblesk   menu"
   echo "  menu         menu"
   echo "  bash         menu"
   echo "  repair       menu > repair"
@@ -57,7 +57,7 @@ function blitzhelp() {
   echo
   echo "Development with VM:"
   echo "  sync         sync all repos from shared folder"
-  echo "  sync code    sync only main raspiblitz repo from shared folder"
+  echo "  sync code    sync only main raspiblesk repo from shared folder"
   echo "  sync api     sync only blitz api repo from shared folder"
   echo "  reset        deletes all data/partitions on storage device"
   echo  
@@ -70,7 +70,7 @@ function blitzhelp() {
   echo "  lcd          switch video output to LCD"
   echo "  headless     switch video output to HEADLESS"
   echo
-  echo "BTC tx:"
+  echo "GLC tx:"
   echo "  torthistx    broadcast transaction through Tor to Blockstreams API and into the network"
   echo "  gettx        retrieve transaction from mempool or blockchain and print as JSON"
   echo "  watchtx      retrieve transaction from mempool or blockchain until certain confirmation target"
@@ -84,8 +84,8 @@ function blitzhelp() {
   echo "  ckbunker     CKbunker"
   echo
   echo "Extras:"
-  echo "  whitepaper   download the whitepaper from the blockchain to /home/admin/bitcoin.pdf"
-  echo "  notifyme     wrapper for blitz.notify.sh that will send a notification using the configured method and settings"
+  echo "  whitepaper   download the whitepaper from the blockchain to /home/admin/glcoin.pdf"
+  echo "  notifyme     wrapper for blesk.notify.sh that will send a notification using the configured method and settings"
   echo "  suez         visualize channels (for the default ln implementation and chain when installed)"
   echo "  lnproxy      wrap invoices with lnproxy"
   echo
@@ -100,11 +100,11 @@ function blitzhelp() {
   echo " lightning-cli Core Lightning commandline interface (when installed)"
 }
 
-# command: raspiblitz
-# calls the the raspiblitz mainmenu (legacy)
-function raspiblitz() {
+# command: raspiblesk
+# calls the the raspiblesk mainmenu (legacy)
+function raspiblesk() {
   cd /home/admin
-  ./00raspiblitz.sh
+  ./00raspiblesk.sh
 }
 
 # command: menu
@@ -124,34 +124,34 @@ function repair() {
 # command: reset
 # reset the storage device
 function reset() {
-  sudo /home/admin/config.scripts/blitz.data.sh reset
+  sudo /home/admin/config.scripts/blesk.data.sh reset
 }
 
 # command: restart
 function restart() {
-  echo "Command to restart your RaspiBlitz"
+  echo "Command to restart your RaspiBlesk"
   confirmMsg restart
   if [ $confirm -eq 1 ]; then
-    sudo /home/admin/config.scripts/blitz.shutdown.sh reboot
+    sudo /home/admin/config.scripts/blesk.shutdown.sh reboot
   fi
 }
 
 # command: sourcemode
 function sourcemode() {
-  /home/admin/config.scripts/blitz.copychain.sh source
+  /home/admin/config.scripts/blesk.copychain.sh source
 }
 
 # command: check
 function check() {
-  /home/admin/config.scripts/blitz.configcheck.py
+  /home/admin/config.scripts/blesk.configcheck.py
 }
 
 # command: release
 function release() {
   firstPARAM=$1
-  echo "Command to prepare your RaspiBlitz installation for sd card image:"
+  echo "Command to prepare your RaspiBlesk installation for sd card image:"
   echo "- delete logs"
-  echo "- clean raspiblitz.info"
+  echo "- clean raspiblesk.info"
   echo "- delete SSH Pub keys"
   echo "- delete local DNS confs"
   echo "- delete old API conf"
@@ -159,7 +159,7 @@ function release() {
   echo "- shutdown"
   confirmMsg release
   if [ $confirm -eq 1 ]; then
-    /home/admin/config.scripts/blitz.release.sh $firstPARAM
+    /home/admin/config.scripts/blesk.release.sh $firstPARAM
   fi
 }
 
@@ -172,14 +172,14 @@ function clean() {
     echo "error='can only be called on fresh sd card image - before setup or recover'"
     exit 1
   fi
-  source <(sudo /home/admin/config.scripts/blitz.data.sh status)
+  source <(sudo /home/admin/config.scripts/blesk.data.sh status)
   if [ "${storageDevice}" = "" ]; then
     echo "error='no storage device'"
     exit 1
   fi
   confirmMsg clean
   if [ $confirm -eq 1 ]; then
-    sudo /home/admin/config.scripts/blitz.data.sh clean STORAGE "${storageDevice}"
+    sudo /home/admin/config.scripts/blesk.data.sh clean STORAGE "${storageDevice}"
   fi
 }
 
@@ -188,10 +188,10 @@ function fatpack() {
   echo "Command to be called only on a fresh stopped minimal build to re-pack installs."
   confirmMsg fatpack
   if [ $confirm -eq 1 ]; then
-    sudo /home/admin/config.scripts/blitz.fatpack.sh
+    sudo /home/admin/config.scripts/blesk.fatpack.sh
     if [ $? -eq 0 ]; then
       # raspberry pi fatpack has lcd display be default
-      sudo /home/admin/config.scripts/blitz.display.sh set-display lcd
+      sudo /home/admin/config.scripts/blesk.display.sh set-display lcd
     else
       echo "FATPACK FAILED - please check the output above."
     fi
@@ -202,18 +202,18 @@ function fatpack() {
 function debug() {
   clear
   echo "Printing debug logs. Be patient, this should take maximum 2 minutes .."
-  sudo rm /var/cache/raspiblitz/debug.log 2>/dev/null
-  /home/admin/config.scripts/blitz.debug.sh > /var/cache/raspiblitz/debug.log
+  sudo rm /var/cache/raspiblesk/debug.log 2>/dev/null
+  /home/admin/config.scripts/blesk.debug.sh > /var/cache/raspiblesk/debug.log
   echo "Redacting .."
-  /home/admin/config.scripts/blitz.debug.sh redact /var/cache/raspiblitz/debug.log
-  sudo chmod 640 /var/cache/raspiblitz/debug.log
-  sudo chown root:sudo /var/cache/raspiblitz/debug.log
+  /home/admin/config.scripts/blesk.debug.sh redact /var/cache/raspiblesk/debug.log
+  sudo chmod 640 /var/cache/raspiblesk/debug.log
+  sudo chown root:sudo /var/cache/raspiblesk/debug.log
   if [ "$1" = "-l" ]||[ "$1" = "--link" ]; then
     proxy="-X 5 -x localhost:9050"
     if [ "$2" = "-n" ]||[ "$2" = "--no-tor" ]; then proxy=""; fi
-    cat /var/cache/raspiblitz/debug.log | nc ${proxy} termbin.com 9999
+    cat /var/cache/raspiblesk/debug.log | nc ${proxy} termbin.com 9999
   else
-    cat /var/cache/raspiblitz/debug.log
+    cat /var/cache/raspiblesk/debug.log
   fi
 }
 
@@ -221,7 +221,7 @@ function debug() {
 # syncs script with latest set github and branch
 function patch() {
   if [ "$1" == "" ]; then
-    echo "Command to patch your RaspiBlitz from github"
+    echo "Command to patch your RaspiBlesk from github"
     confirmMsg patch
     if [ $confirm -eq 1 ]; then
       patch all
@@ -234,21 +234,21 @@ function patch() {
     echo
     echo "#######################################################"
     echo "### UPDATE BLITZ --> SCRIPTS (code)"
-    /home/admin/config.scripts/blitz.github.sh -run
+    /home/admin/config.scripts/blesk.github.sh -run
   fi
 
   if [ "$1" == "all" ] || [ "$1" == "api" ]; then
     echo
     echo "#######################################################"
     echo "### UPDATE BLITZ --> API"
-    sudo /home/admin/config.scripts/blitz.web.api.sh update-code
+    sudo /home/admin/config.scripts/blesk.web.api.sh update-code
   fi
 
   if [ "$1" == "all" ] || [ "$1" == "web" ]; then
     echo
     echo "#######################################################"
     echo "### UPDATE BLITZ --> WEBUI"
-    sudo /home/admin/config.scripts/blitz.web.ui.sh update
+    sudo /home/admin/config.scripts/blesk.web.ui.sh update
   fi
 
   echo
@@ -257,16 +257,16 @@ function patch() {
 # command: sync
 # sync VM with shared folder
 function sync() {
-  sudo /home/admin/config.scripts/blitz.vm.sh sync ${1}
+  sudo /home/admin/config.scripts/blesk.vm.sh sync ${1}
   echo
 }
 
 # command: off
 function off() {
-  echo "Command to power off your RaspiBlitz"
+  echo "Command to power off your RaspiBlesk"
   confirmMsg off
   if [ $confirm -eq 1 ]; then
-    sudo /home/admin/config.scripts/blitz.shutdown.sh
+    sudo /home/admin/config.scripts/blesk.shutdown.sh
   fi
 }
 
@@ -279,33 +279,33 @@ function github() {
 
 # command: hdmi
 function hdmi() {
-  echo "Command to switch video output of your RaspiBlitz to hdmi"
+  echo "Command to switch video output of your RaspiBlesk to hdmi"
   confirmMsg hdmi
   if [ $confirm -eq 1 ]; then
     echo "# SWITCHING VIDEO OUTPUT TO --> HDMI"
-    sudo /home/admin/config.scripts/blitz.display.sh set-display hdmi
+    sudo /home/admin/config.scripts/blesk.display.sh set-display hdmi
     restart
   fi
 }
 
 # command: lcd
 function lcd() {
-  echo "Command to switch video output of your RaspiBlitz to lcd"
+  echo "Command to switch video output of your RaspiBlesk to lcd"
   confirmMsg lcd
   if [ $confirm -eq 1 ]; then
     echo "# SWITCHING VIDEO OUTPUT TO --> LCD"
-    sudo /home/admin/config.scripts/blitz.display.sh set-display lcd
+    sudo /home/admin/config.scripts/blesk.display.sh set-display lcd
     restart
   fi
 }
 
 # command: headless
 function headless() {
-  echo "Command to switch off any video output of your RaspiBlitz (ssh only)"
+  echo "Command to switch off any video output of your RaspiBlesk (ssh only)"
   confirmMsg headless
   if [ $confirm -eq 1 ]; then
     echo "# SWITCHING VIDEO OUTPUT TO --> HEADLESS"
-    sudo /home/admin/config.scripts/blitz.display.sh set-display headless
+    sudo /home/admin/config.scripts/blesk.display.sh set-display headless
     restart
   fi
 }
@@ -318,7 +318,7 @@ function cache() {
 
 # command: torthistx
 function torthistx() {
-  if [ $(cat /mnt/hdd/app-data/raspiblitz.conf 2>/dev/null | grep -c "runBehindTor=on") -eq 1 ]; then
+  if [ $(cat /mnt/hdd/app-data/raspiblesk.conf 2>/dev/null | grep -c "runBehindTor=on") -eq 1 ]; then
     echo "Broadcasting transaction through Tor to Blockstreams API and into the network."
     curl --socks5-hostname localhost:9050 -d $1 -X POST http://explorerzydxu5ecjrkwceayqybizmpjjznk5izmitf2modhcusuqlid.onion/api/tx
   else
@@ -376,12 +376,12 @@ function fwdreport() {
 # command: bos
 # switch to the bos user for Balance of Satoshis
 function bos() {
-  if [ $(grep -c "bos=on" < /mnt/hdd/app-data/raspiblitz.conf) -eq 1 ]; then
+  if [ $(grep -c "bos=on" < /mnt/hdd/app-data/raspiblesk.conf) -eq 1 ]; then
     echo "# switching to the bos user with the command: 'sudo su - bos'"
-    echo "# use command 'exit' and then 'raspiblitz' to return to menu"
+    echo "# use command 'exit' and then 'raspiblesk' to return to menu"
     echo "# use command 'bos --help' to list all possible options"
     sudo su - bos
-    echo "# use command 'raspiblitz' to return to menu"
+    echo "# use command 'raspiblesk' to return to menu"
   else
     echo "Balance of Satoshis is not installed - to install run:"
     echo "/home/admin/config.scripts/bonus.bos.sh on"
@@ -391,7 +391,7 @@ function bos() {
 # command: pyblock
 # switch to the pyblock user for PyBLOCK
 function pyblock() {
-  if [ $(grep -c "pyblock=on" < /mnt/hdd/app-data/raspiblitz.conf) -eq 1 ]; then
+  if [ $(grep -c "pyblock=on" < /mnt/hdd/app-data/raspiblesk.conf) -eq 1 ]; then
     cd /home/pyblock/pyblock
     sudo -u pyblock poetry run python -m pybitblock.console
   else
@@ -401,14 +401,14 @@ function pyblock() {
 }
 
 # command: chantools
-# switch to the bitcoin user for chantools
+# switch to the glcoin user for chantools
 function chantools() {
-  if [ $(grep -c "chantools=on" < /mnt/hdd/app-data/raspiblitz.conf) -eq 1 ]; then
-    echo "# switching to the bitcoin user with the command: 'sudo su - bitcoin'"
-    echo "# use command 'exit' and then 'raspiblitz' to return to menu"
+  if [ $(grep -c "chantools=on" < /mnt/hdd/app-data/raspiblesk.conf) -eq 1 ]; then
+    echo "# switching to the glcoin user with the command: 'sudo su - glcoin'"
+    echo "# use command 'exit' and then 'raspiblesk' to return to menu"
     echo "# use command 'chantools' again to start"
-    sudo su - bitcoin
-    echo "# use command 'raspiblitz' to return to menu"
+    sudo su - glcoin
+    echo "# use command 'raspiblesk' to return to menu"
   else
     echo "chantools is not installed - to install run:"
     echo "/home/admin/config.scripts/bonus.chantools.sh on"
@@ -418,10 +418,10 @@ function chantools() {
 # command: jm
 # switch to the joinmarket user for the JoininBox menu
 function jm() {
-  if [ $(grep -c "joinmarket=on"  < /mnt/hdd/app-data/raspiblitz.conf) -eq 1 ]; then
+  if [ $(grep -c "joinmarket=on"  < /mnt/hdd/app-data/raspiblesk.conf) -eq 1 ]; then
     echo "# switching to the joinmarket user with the command: 'sudo su - joinmarket'"
     sudo su - joinmarket
-    echo "# use command 'raspiblitz' to return to menu"
+    echo "# use command 'raspiblesk' to return to menu"
   else
     echo "JoinMarket is not installed - to install run:"
     echo "sudo /home/admin/config.scripts/bonus.joinmarket.sh on"
@@ -431,7 +431,7 @@ function jm() {
 # command: manage
 # switch to lndmanage env
 function manage() {
-  if [ $(cat /mnt/hdd/app-data/raspiblitz.conf 2>/dev/null | grep -c "lndmanage=on") -eq 1 ]; then
+  if [ $(cat /mnt/hdd/app-data/raspiblesk.conf 2>/dev/null | grep -c "lndmanage=on") -eq 1 ]; then
     cd /home/admin/lndmanage
     source venv/bin/activate
     echo "NOTICE: Needs at least one active channel to run without error."
@@ -446,10 +446,10 @@ function manage() {
 # command: ckbunker
 # switch to the ckbunker user
 function ckbunker() {
-  if [ $(grep -c "ckbunker=on"  < /mnt/hdd/app-data/raspiblitz.conf) -eq 1 ]; then
+  if [ $(grep -c "ckbunker=on"  < /mnt/hdd/app-data/raspiblesk.conf) -eq 1 ]; then
     echo "# switching to the ckbunker user with the command: 'sudo su - ckbunker'"
     sudo su - ckbunker
-    echo "# use command 'raspiblitz' to return to menu"
+    echo "# use command 'raspiblesk' to return to menu"
   else
     echo "ckbunker is not installed - to install run:"
     echo "sudo /home/admin/config.scripts/bonus.ckbunker.sh on"
@@ -459,13 +459,13 @@ function ckbunker() {
 # command: lit
 # switch to the lit user for the loop, pool & faraday services
 function lit() {
-  if [ $(grep -c "lit=on"  < /mnt/hdd/app-data/raspiblitz.conf) -eq 1 ]; then
+  if [ $(grep -c "lit=on"  < /mnt/hdd/app-data/raspiblesk.conf) -eq 1 ]; then
     echo "# switching to the lit user with the command: 'sudo su - lit'"
-    echo "# use command 'exit' and then 'raspiblitz' to return to menu"
+    echo "# use command 'exit' and then 'raspiblesk' to return to menu"
     echo "# see the prefilled parameters with 'alias'"
     echo "# use the commands: 'lncli', 'lit-frcli', 'lit-loop', 'lit-pool'"
     sudo su - lit
-    echo "# use command 'raspiblitz' to return to menu"
+    echo "# use command 'raspiblesk' to return to menu"
   else
     echo "LIT is not installed - to install run:"
     echo "/home/admin/config.scripts/bonus.lit.sh on"
@@ -474,8 +474,8 @@ function lit() {
 
 # aliases for lit
 # switch to the pool user for the Pool Service
-if [ -f "/mnt/hdd/app-data/raspiblitz.conf" ] && [ $(grep -c "lit=on"  < /mnt/hdd/app-data/raspiblitz.conf) -gt 0 ]; then
-  source /mnt/hdd/app-data/raspiblitz.conf
+if [ -f "/mnt/hdd/app-data/raspiblesk.conf" ] && [ $(grep -c "lit=on"  < /mnt/hdd/app-data/raspiblesk.conf) -gt 0 ]; then
+  source /mnt/hdd/app-data/raspiblesk.conf
   alias lit-frcli="sudo -u lit frcli --rpcserver=localhost:8443 \
     --tlscertpath=/home/lit/.lit/tls.cert \
     --macaroonpath=/home/lit/.faraday/${chain}net/faraday.macaroon"
@@ -492,7 +492,7 @@ fi
 # $ gettx "f4184fc596403b9d638783cf57adfe4c75c605f6356fbc91338530e9831e9e16"
 function gettx() {
     tx_id="${1:-f4184fc596403b9d638783cf57adfe4c75c605f6356fbc91338530e9831e9e16}"
-    if result=$(bitcoin-cli getrawtransaction "${tx_id}" 1 2>/dev/null); then
+    if result=$(glcoin-cli getrawtransaction "${tx_id}" 1 2>/dev/null); then
         echo "${result}"
     else
         echo "{\"error\": \"unable to find TX\", \"tx_id\": \"${tx_id}\"}"
@@ -513,7 +513,7 @@ function watchtx() {
 
     while true; do
 
-      if result=$(bitcoin-cli getrawtransaction "${tx_id}" 1 2>/dev/null); then
+      if result=$(glcoin-cli getrawtransaction "${tx_id}" 1 2>/dev/null); then
         confirmations=$(echo "${result}" | jq .confirmations)
 
         if [[ "${confirmations}" -ge "${wait_n_confirmations}" ]]; then
@@ -534,7 +534,7 @@ function watchtx() {
 }
 
 # command: notifyme
-# A wrapper for blitz.notify.sh that will send a notification using the configured
+# A wrapper for blesk.notify.sh that will send a notification using the configured
 # method and settings.
 # This makes sense when waiting for commands to finish and then sending a notification.
 # $ notifyme "Hello there..!"
@@ -542,11 +542,11 @@ function watchtx() {
 # $ ./run_job_which_takes_long.sh && notifyme "success" || notifyme "fail"
 function notifyme() {
     content="${1:-Notified}"
-    /home/admin/config.scripts/blitz.notify.sh send "${content}"
+    /home/admin/config.scripts/blesk.notify.sh send "${content}"
 }
 
 # command: whitepaper
-# downloads the whitepaper from the blockchain to /home/admin/bitcoin.pdf
+# downloads the whitepaper from the blockchain to /home/admin/glcoin.pdf
 function whitepaper() {
   cd /home/admin
   ./config.scripts/bonus.whitepaper.sh on
@@ -568,25 +568,25 @@ function qr() {
 }
 
 # command: bm
-# switch to the bitcoinminds user for the 'BitcoinMinds.org' in your local environment
+# switch to the glcoinminds user for the 'GlcoinMinds.org' in your local environment
 function bm() {
-  if [ $(grep -c "bitcoinminds=on"  < /mnt/hdd/app-data/raspiblitz.conf) -eq 1 ]; then
+  if [ $(grep -c "glcoinminds=on"  < /mnt/hdd/app-data/raspiblesk.conf) -eq 1 ]; then
     echo ""
     echo "# ***"
-    echo "# Switching to the bitcoinminds user with the command: 'sudo su - bitcoinminds'"
+    echo "# Switching to the glcoinminds user with the command: 'sudo su - glcoinminds'"
     echo "# ***"
     echo ""
-    sudo su - bitcoinminds
-    echo "# Use command 'raspiblitz' to return to menu"
+    sudo su - glcoinminds
+    echo "# Use command 'raspiblesk' to return to menu"
   else
-    echo "BitcoinMinds script is not installed - to install run:"
-    echo "sudo /home/admin/config.scripts/bonus.bitcoinminds.sh on"
+    echo "GlcoinMinds script is not installed - to install run:"
+    echo "sudo /home/admin/config.scripts/bonus.glcoinminds.sh on"
   fi
 }
 
 # command: lnproxy
 function lnproxy() {
-  source /mnt/hdd/app-data/raspiblitz.conf
+  source /mnt/hdd/app-data/raspiblesk.conf
   if [ $# -gt 0 ]; then
     invoice=$1
   else
@@ -609,27 +609,27 @@ function lnproxy() {
     echo "Requesting a wrapped invoice from ${lnproxy_override_clearnet}"
   fi
   echo
-  /home/admin/config.scripts/blitz.check-invoice-wrap.py "$1" "$wrapped"
+  /home/admin/config.scripts/blesk.check-invoice-wrap.py "$1" "$wrapped"
   echo
   echo $wrapped
 }
 
 # command: suez
 function suez() {
-  source /mnt/hdd/app-data/raspiblitz.conf
+  source /mnt/hdd/app-data/raspiblesk.conf
   if [ ${lightning} = 'cl' ] || [ ${lightning} = 'lnd' ]; then
-    if [ ! -f /home/bitcoin/suez/suez ];then
+    if [ ! -f /home/glcoin/suez/suez ];then
       /home/admin/config.scripts/bonus.suez.sh on
     fi
     source <(/home/admin/config.scripts/network.aliases.sh getvars ${lightning} ${chain}net)
-    cd /home/bitcoin/suez || exit 1
+    cd /home/glcoin/suez || exit 1
     clear
     echo "# Showing the channels of ${lightning} ${chain}net - consider reducing the font size (press CTRL- or CMD-)"
     if [ ${lightning} = cl ]; then
-      sudo -u bitcoin poetry run /home/bitcoin/suez/suez \
+      sudo -u glcoin poetry run /home/glcoin/suez/suez \
       --client=c-lightning --client-args=--conf=${CLCONF}
     elif [ ${lightning} = lnd ]; then
-      sudo -u bitcoin poetry run /home/bitcoin/suez/suez \
+      sudo -u glcoin poetry run /home/glcoin/suez/suez \
       --client-args=-n=${CHAIN} \
       --client-args=--rpcserver=localhost:1${L2rpcportmod}009
     fi

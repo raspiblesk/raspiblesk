@@ -11,12 +11,12 @@ with open("blitztui/version.py") as f:
 setuptools.setup(
     name="BlitzTUI",
     version=__version__,
-    author="RaspiBlitz Developers",
-    author_email="raspiblitz@rhab.de",
-    description="Touch User Interface for RaspiBlitz",
+    author="RaspiBlesk Developers",
+    author_email="raspiblesk@rhab.de",
+    description="Touch User Interface for RaspiBlesk",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/rootzoll/raspiblitz",
+    url="https://github.com/rootzoll/raspiblesk",
     packages=setuptools.find_packages(exclude=("tests", "docs")),
     classifiers=[
         # How mature is this project? Common values are

@@ -2,11 +2,11 @@
 
 # get basic system information
 # these are the same set of infos the WebGUI dialog/controler has
-source /home/admin/raspiblitz.info
+source /home/admin/raspiblesk.info
 
 # SETUPFILE
 # this key/value file contains the state during the setup process
-SETUPFILE="/var/cache/raspiblitz/temp/raspiblitz.setup"
+SETUPFILE="/var/cache/raspiblesk/temp/raspiblesk.setup"
 source $SETUPFILE
 
 ###################
@@ -14,15 +14,15 @@ source $SETUPFILE
 ###################
 
 # temp file for password results
-_temp="/var/cache/raspiblitz/temp/.temp.tmp"
+_temp="/var/cache/raspiblesk/temp/.temp.tmp"
 
-# ask for name of RaspiBlitz
+# ask for name of RaspiBlesk
 result=""
 while [ ${#result} -eq 0 ]
   do
-    l1="Please enter the name of your new RaspiBlitz:\n"
+    l1="Please enter the name of your new RaspiBlesk:\n"
     l2="one word, keep characters basic & max 32chars"
-    dialog --backtitle "RaspiBlitz - Setup" --inputbox "$l1$l2" 11 52 2>$_temp
+    dialog --backtitle "RaspiBlesk - Setup" --inputbox "$l1$l2" 11 52 2>$_temp
     result=$( cat $_temp | tr -dc '[:alnum:]-.' | tr -d ' ' )
     result="${result:0:32}"
     sudo rm $_temp

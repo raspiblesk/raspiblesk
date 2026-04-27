@@ -18,7 +18,7 @@ fi
 
 echo "# Running: bonus.elements.sh $*"
 
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 # elementslogpath
 elementslogpath="/home/elements/.elements/liquidv1/debug.log"
 
@@ -157,12 +157,12 @@ function installService() {
   echo "# Installing Elements"
   # elements.conf
   if [ ! -f /home/elements/.elements/elements.conf ]; then
-    PASSWORD_B=$(sudo cat /mnt/hdd/app-data/bitcoin/bitcoin.conf | grep rpcpassword | cut -c 13-)
+    PASSWORD_B=$(sudo cat /mnt/hdd/app-data/glcoin/glcoin.conf | grep rpcpassword | cut -c 13-)
     echo "
 # Elementsd configuration
 datadir=/mnt/hdd/app-data/.elements
 walletdir=/mnt/hdd/app-data/.elements/liquidv1/wallets
-rpcuser=raspiblitz
+rpcuser=raspiblesk
 rpcpassword=$PASSWORD_B
 rpcbind=127.0.0.1
 
@@ -170,7 +170,7 @@ rpcbind=127.0.0.1
 acceptdiscountct=1
 creatediscountct=1
 
-# Bitcoin Core credentials
+# Glcoin Core credentials
 mainchainrpcuser=raspibolt
 mainchainrpcpassword=$PASSWORD_B
 
@@ -290,8 +290,8 @@ elif [ "$1" = "1" ] || [ "$1" = "on" ]; then
 
   installService
 
-  # setting value in raspiblitz.conf
-  /home/admin/config.scripts/blitz.conf.sh set elements "on"
+  # setting value in raspiblesk.conf
+  /home/admin/config.scripts/blesk.conf.sh set elements "on"
   exit 0
 
 # switch off
@@ -301,8 +301,8 @@ elif [ "$1" = "0" ] || [ "$1" = "off" ]; then
   removeService
 
   sudo userdel -rf elements
-  # setting value in raspiblitz.conf
-  /home/admin/config.scripts/blitz.conf.sh set elements "off"
+  # setting value in raspiblesk.conf
+  /home/admin/config.scripts/blesk.conf.sh set elements "off"
   exit 0
 fi
 

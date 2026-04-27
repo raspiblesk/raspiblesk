@@ -26,7 +26,7 @@ if [ "$1" = "" ] || [ $# -eq 0 ]; then
     OPTIONS+=(HEX "Hex-String (Copy+Paste)")   
     OPTIONS+=(STR "BTCPay Connection String") 
     CHOICE=$(dialog --clear \
-                --backtitle "RaspiBlitz" \
+                --backtitle "RaspiBlesk" \
                 --title "Export Macaroons & TLS.cert" \
                 --menu "How do you want to export?" \
                 11 50 7 \
@@ -51,8 +51,8 @@ if [ "$1" = "" ] || [ $# -eq 0 ]; then
 fi
 
 # load data from config
-source /home/admin/raspiblitz.info
-source /mnt/hdd/app-data/raspiblitz.conf
+source /home/admin/raspiblesk.info
+source /mnt/hdd/app-data/raspiblesk.conf
 
 ########################
 # CANCEL
@@ -106,7 +106,7 @@ elif [ "${exportType}" = "btcpay" ]; then
   port="8080"
 
   # will overwrite ip & port if IP2TOR tunnel is available
-  source <(sudo /home/admin/config.scripts/blitz.subscriptions.ip2tor.py subscription-by-service LND-REST-API)
+  source <(sudo /home/admin/config.scripts/blesk.subscriptions.ip2tor.py subscription-by-service LND-REST-API)
 
   # bake macaroon that just can create invoices and monitor them
   macaroon=$(sudo -u admin lncli bakemacaroon address:read address:write info:read invoices:read invoices:write onchain:read)
@@ -135,7 +135,7 @@ elif [ "${exportType}" = "btcpay" ]; then
   if [ ${#type} -gt 0 ]; then
     echo "NOTE: You have a IP2TOR connection for LND REST API .. so you can use this connection string also with a external BTCPay server."
   else
-    echo "IMPORTANT: You can only use this connection string for a BTCPay server running on this RaspiBlitz."
+    echo "IMPORTANT: You can only use this connection string for a BTCPay server running on this RaspiBlesk."
     echo "If you want to connect from a external BTCPay server activate a IP2TOR tunnel for LND-REST first:"
     echo "MAIN MENU > SUBSCRIBE > IP2TOR > LND REST API"
     echo "Then come back and get a new connection string."
@@ -154,10 +154,10 @@ elif [ "${exportType}" = "sftp" ]; then
   echo "The password needed during download is your Password A."
   echo ""
   echo "Macaroons:"
-  echo "scp bitcoin@${local_ip}:/mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/\*.macaroon ./"
+  echo "scp glcoin@${local_ip}:/mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/\*.macaroon ./"
   echo ""
   echo "TLS Certificate:"
-  echo "scp bitcoin@${local_ip}:/mnt/hdd/app-data/lnd/tls.cert ./"
+  echo "scp glcoin@${local_ip}:/mnt/hdd/app-data/lnd/tls.cert ./"
   echo ""
 
 ###########################

@@ -27,7 +27,7 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
 fi
 
 echo "# Running: 'bonus.lnbits.sh $*'"
-source /mnt/hdd/app-data/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblesk.conf
 
 lnbitsDataDir="/mnt/hdd/app-data/LNBits/data"
 lnbitsConfig="${lnbitsDataDir}/.env"
@@ -46,7 +46,7 @@ function postgresConfig() {
   fi
   # create database for new installations and keep old
   sudo -u postgres psql -c "create database lnbits_db;" 2>/dev/null
-  sudo -u postgres psql -c "create user lnbits_user with encrypted password 'raspiblitz';" 2>/dev/null
+  sudo -u postgres psql -c "create user lnbits_user with encrypted password 'raspiblesk';" 2>/dev/null
   sudo -u postgres psql -c "grant all privileges on database lnbits_db to lnbits_user;" 2>/dev/null
 
   # check
@@ -58,7 +58,7 @@ function postgresConfig() {
     echo "# Setup PostgreSQL successful, new database found: $check"
   fi
 
-  /home/admin/config.scripts/blitz.conf.sh set LNBitsDB "PostgreSQL"
+  /home/admin/config.scripts/blesk.conf.sh set LNBitsDB "PostgreSQL"
 }
 
 function migrateMsg() {
@@ -115,8 +115,8 @@ function revertMigration() {
     sudo systemctl start lnbits
 
     # set blitz config
-    /home/admin/config.scripts/blitz.conf.sh set LNBitsMigrate "off"
-    /home/admin/config.scripts/blitz.conf.sh set LNBitsDB "SQLite"
+    /home/admin/config.scripts/blesk.conf.sh set LNBitsMigrate "off"
+    /home/admin/config.scripts/blesk.conf.sh set LNBitsDB "SQLite"
 
     echo "# OK revert migration done"
   else
@@ -163,7 +163,7 @@ You need to accept self-signed HTTPS cert with SHA1 Fingerprint:
 ${sslFingerprintIP}"
 
   if [ "${runBehindTor}" = "on" ] && [ ${#toraddress} -gt 0 ]; then
-    sudo /home/admin/config.scripts/blitz.display.sh qr "${toraddress}"
+    sudo /home/admin/config.scripts/blesk.display.sh qr "${toraddress}"
     text="${text}\n
 TOR Browser Hidden Service address (QR see LCD):
 ${toraddress}"
@@ -171,7 +171,7 @@ ${toraddress}"
 
   whiptail --title " LNbits ${fundinginfo}" --yes-button "OK" --no-button "OPTIONS" --yesno "${text}" 15 78
   result=$?
-  sudo /home/admin/config.scripts/blitz.display.sh hide
+  sudo /home/admin/config.scripts/blesk.display.sh hide
   echo "option (${result}) - please wait ..."
 
   # exit when user presses OK to close menu
@@ -242,7 +242,7 @@ ${toraddress}"
 
   case $CHOICE in
   HTTPS-ON)
-    python /home/admin/config.scripts/blitz.subscriptions.letsencrypt.py create-ssh-dialog
+    python /home/admin/config.scripts/blesk.subscriptions.letsencrypt.py create-ssh-dialog
     exit 0
     ;;
   SWITCH-CL)
@@ -462,9 +462,9 @@ if [ "$1" = "prestart" ]; then
   echo "## lnbits.service PRESTART CONFIG"
   echo "# --> ${lnbitsConfig}"
 
-  # set values based in funding source in raspiblitz config
+  # set values based in funding source in raspiblesk config
   # portprefix is "" |  1 | 3
-  LNBitsNetwork="bitcoin"
+  LNBitsNetwork="glcoin"
   LNBitsChain=""
   LNBitsLightning=""
   if [ "${LNBitsFunding}" == "" ] || [ "${LNBitsFunding}" == "lnd" ]; then
@@ -663,8 +663,8 @@ if [ "$1" = "install" ]; then
   # add lnbits user
   echo "*** Add the 'lnbits' user ***"
   sudo adduser --system --group --home /home/lnbits lnbits
-  # add user to group bitcoin
-  sudo usermod -a -G bitcoin lnbits
+  # add user to group glcoin
+  sudo usermod -a -G glcoin lnbits
 
   # install from GitHub
   echo "# get the github code user(${githubUser}) branch(${tag})"
@@ -829,7 +829,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   else
 
     echo "# install database: SQLite"
-    /home/admin/config.scripts/blitz.conf.sh set LNBitsDB "SQLite"
+    /home/admin/config.scripts/blesk.conf.sh set LNBitsDB "SQLite"
 
     # new data directory
     sudo mkdir -p /mnt/hdd/app-data/LNBits
@@ -848,7 +848,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   echo
 
   # make sure that systemd starts funding source first
-  systemdDependency="bitcoind.service"
+  systemdDependency="glcoind.service"
   if [ "${fundingsource}" == "lnd" ]; then
     systemdDependency="lnd.service"
   elif [ "${fundingsource}" == "cl" ]; then
@@ -918,10 +918,10 @@ EOF
   sudo systemctl reload nginx
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set LNBits "on"
+  /home/admin/config.scripts/blesk.conf.sh set LNBits "on"
 
   # Hidden Service if Tor is active
-  source /mnt/hdd/app-data/raspiblitz.conf
+  source /mnt/hdd/app-data/raspiblesk.conf
   if [ "${runBehindTor}" = "on" ]; then
     # make sure to keep in sync with tor.network.sh script
     /home/admin/config.scripts/tor.onion-service.sh lnbits 80 5002 443 5003
@@ -986,8 +986,8 @@ if [ "$1" = "switch" ]; then
   fi
 
   # make lnd.service fallback
-  sudo sed -i 's/Wants=lnd.service/Wants=bitcoind.service/' /etc/systemd/system/lnbits.service
-  sudo sed -i 's/After=lnd.service/After=bitcoind.service/' /etc/systemd/system/lnbits.service
+  sudo sed -i 's/Wants=lnd.service/Wants=glcoind.service/' /etc/systemd/system/lnbits.service
+  sudo sed -i 's/After=lnd.service/After=glcoind.service/' /etc/systemd/system/lnbits.service
 
   echo "##############"
   echo "# NOTE: If you switch the funding source of a running LNbits instance all sub account will keep balance."
@@ -1026,31 +1026,31 @@ if [ "$1" = "switch" ]; then
 
   if [ "${fundingsource}" == "cl" ] || [ "${fundingsource}" == "tcl" ] || [ "${fundingsource}" == "scl" ]; then
 
-    echo "# add the 'lnbits' user to the 'bitcoin' group"
-    sudo /usr/sbin/usermod --append --groups bitcoin lnbits
+    echo "# add the 'lnbits' user to the 'glcoin' group"
+    sudo /usr/sbin/usermod --append --groups glcoin lnbits
     echo "# check user"
     id lnbits
 
-    echo "# allowing lnbits user as part of the bitcoin group to RW RPC hook"
-    sudo chmod 770 /home/bitcoin/.lightning/bitcoin${clrpcsubdir}
-    sudo chmod 660 /home/bitcoin/.lightning/bitcoin${clrpcsubdir}/lightning-rpc
+    echo "# allowing lnbits user as part of the glcoin group to RW RPC hook"
+    sudo chmod 770 /home/glcoin/.lightning/glcoin${clrpcsubdir}
+    sudo chmod 660 /home/glcoin/.lightning/glcoin${clrpcsubdir}/lightning-rpc
     if [ "${fundingsource}" == "cl" ]; then
-      CLCONF="/home/bitcoin/.lightning/config"
+      CLCONF="/home/glcoin/.lightning/config"
     else
-      CLCONF="/home/bitcoin/.lightning${clrpcsubdir}/config"
+      CLCONF="/home/glcoin/.lightning${clrpcsubdir}/config"
     fi
-    # https://github.com/rootzoll/raspiblitz/issues/3007
+    # https://github.com/rootzoll/raspiblesk/issues/3007
     if [ "$(sudo cat ${CLCONF} | grep -c "^rpc-file-mode=0660")" -eq 0 ]; then
       echo "rpc-file-mode=0660" | sudo tee -a ${CLCONF}
     fi
 
     echo "# preparing lnbits config for CLN"
     sudo bash -c "echo 'LNBITS_BACKEND_WALLET_CLASS=CLightningWallet' >> ${lnbitsConfig}"
-    sudo bash -c "echo 'CLIGHTNING_RPC=/home/bitcoin/.lightning/bitcoin${clrpcsubdir}/lightning-rpc' >> ${lnbitsConfig}"
+    sudo bash -c "echo 'CLIGHTNING_RPC=/home/glcoin/.lightning/glcoin${clrpcsubdir}/lightning-rpc' >> ${lnbitsConfig}"
   fi
 
-  # set raspiblitz config value for funding
-  /home/admin/config.scripts/blitz.conf.sh set LNBitsFunding "${fundingsource}"
+  # set raspiblesk config value for funding
+  /home/admin/config.scripts/blesk.conf.sh set LNBitsFunding "${fundingsource}"
 
   echo "##############"
   echo "# OK new funding source set - does need restart or call: sudo systemctl restart lnbits"
@@ -1118,7 +1118,7 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   fi
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set LNBits "off"
+  /home/admin/config.scripts/blesk.conf.sh set LNBits "off"
 
   # needed for API/WebUI as signal that install ran thru
   echo "result='OK'"
@@ -1158,9 +1158,9 @@ if [ "$1" = "restore" ]; then
     echo "# Restore PostgreSQL database"
     if [ "$2" != "" ]; then
       backup_file=$2
-      sudo /home/admin/config.scripts/bonus.postgresql.sh restore lnbits_db lnbits_user raspiblitz "${backup_file}"
+      sudo /home/admin/config.scripts/bonus.postgresql.sh restore lnbits_db lnbits_user raspiblesk "${backup_file}"
     else
-      sudo /home/admin/config.scripts/bonus.postgresql.sh restore lnbits_db lnbits_user raspiblitz
+      sudo /home/admin/config.scripts/bonus.postgresql.sh restore lnbits_db lnbits_user raspiblesk
     fi
   else
     backup_target="/mnt/hdd/app-data/backup/lnbits_sqlite"
@@ -1210,7 +1210,7 @@ fi
 
 # revert migrate to postgresql
 if [ "$1" = "migrate" ] && [ "$2" = "revert" ]; then
-  /home/admin/config.scripts/blitz.conf.sh set LNBitsMigrate "on"
+  /home/admin/config.scripts/blesk.conf.sh set LNBitsMigrate "on"
   revertMigration
   exit 0
 fi
@@ -1239,7 +1239,7 @@ if [ "$1" = "migrate" ]; then
     # stop after sync was done
     sudo systemctl stop lnbits
 
-    /home/admin/config.scripts/blitz.conf.sh set LNBitsMigrate "on"
+    /home/admin/config.scripts/blesk.conf.sh set LNBitsMigrate "on"
 
     # POSTGRES
     postgresConfig
@@ -1247,7 +1247,7 @@ if [ "$1" = "migrate" ]; then
     # example: postgres://<user>:<password>@<host>/<database>
     # add new postgres config
     sudo sed -i "/^LNBITS_DATABASE_URL=/d" $lnbitsConfig 2>/dev/null
-    sudo bash -c "echo 'LNBITS_DATABASE_URL=postgres://lnbits_user:raspiblitz@localhost:5432/lnbits_db' >> ${lnbitsConfig}"
+    sudo bash -c "echo 'LNBITS_DATABASE_URL=postgres://lnbits_user:raspiblesk@localhost:5432/lnbits_db' >> ${lnbitsConfig}"
 
     # clean start on new postgres db prior migration
     echo "# LNBits first start with clean PostgreSQL"
@@ -1293,7 +1293,7 @@ if [ "$1" = "migrate" ]; then
     sudo bash -c "echo 'LNBITS_DATA_FOLDER=/mnt/hdd/app-data/LNBits/data' >> ${lnbitsConfig}"
 
     # setting value in raspi blitz config
-    /home/admin/config.scripts/blitz.conf.sh set LNBitsMigrate "off"
+    /home/admin/config.scripts/blesk.conf.sh set LNBitsMigrate "off"
 
     echo "# OK - migration done"
   else

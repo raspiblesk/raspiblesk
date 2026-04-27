@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# deprecated - see: https://github.com/rootzoll/raspiblitz/issues/2290
+# deprecated - see: https://github.com/rootzoll/raspiblesk/issues/2290
 
 # command info
 if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
@@ -15,10 +15,10 @@ if [ "$1" != "testnet" ] && [ "$1" != "mainnet" ]; then
  exit 1
 fi
 
-# check and load raspiblitz config
+# check and load raspiblesk config
 # to know which network is running
-source /home/admin/raspiblitz.info
-source /mnt/hdd/app-data/raspiblitz.conf
+source /home/admin/raspiblesk.info
+source /mnt/hdd/app-data/raspiblesk.conf
 if [ ${#network} -eq 0 ]; then
  echo "FAIL - missing network info"
  exit 1
@@ -50,8 +50,8 @@ fi
 # editing lnd config files (hdd & admin user)
 echo "edit lightning config .."
 # fix old lnd config file (that worked with switching comment)
-sudo sed -i "s/^#bitcoin.testnet=.*/bitcoin.testnet=1/g" /mnt/hdd/app-data/lnd/lnd.conf
-sudo sed -i "s/^#bitcoin.testnet=.*/bitcoin.testnet=1/g" /home/admin/.lnd/lnd.conf
+sudo sed -i "s/^#glcoin.testnet=.*/glcoin.testnet=1/g" /mnt/hdd/app-data/lnd/lnd.conf
+sudo sed -i "s/^#glcoin.testnet=.*/glcoin.testnet=1/g" /home/admin/.lnd/lnd.conf
 # changes based on parameter
 if [ "$1" = "testnet" ]; then
   echo "editing /mnt/hdd/app-data/lnd/lnd.conf"
@@ -70,11 +70,11 @@ else
 fi
 
 # editing the raspi blitz config file
-echo "editing /mnt/hdd/app-data/raspiblitz.conf"
+echo "editing /mnt/hdd/app-data/raspiblesk.conf"
 if [ "$1" = "testnet" ]; then
-  /home/admin/config.scripts/blitz.conf.sh set chain "test"
+  /home/admin/config.scripts/blesk.conf.sh set chain "test"
 else
-  /home/admin/config.scripts/blitz.conf.sh set chain "main"
+  /home/admin/config.scripts/blesk.conf.sh set chain "main"
 fi
 
 # edit RTL.conf (if active)

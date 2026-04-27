@@ -1,0 +1,15 @@
+diff --git a/src/BitcoinD.cpp b/src/BitcoinD.cpp
+index 4b9e210..f8cf9c8 100644
+--- a/src/BitcoinD.cpp
++++ b/src/BitcoinD.cpp
+@@ -227,7 +227,9 @@ namespace {
+                 version = Version::BitcoinDCompact(val);
+             isBchd = true;
+         } else {
+-            isCore = subversion.startsWith("/Satoshi:"); // this matches Bitcoin Knots as well
++            // "/Gsatoshi:" is the Glcoin user-agent; treat it like Bitcoin Core for segwit block handling
++            isCore = subversion.startsWith("/Satoshi:") // this matches Bitcoin Knots as well
++                  || subversion.startsWith("/Gsatoshi:");
+             isBU = subversion.startsWith("/BCH Unlimited:");
+             isBCHN = subversion.startsWith("/Bitcoin Cash Node:");
+             isLTC = subversion.startsWith("/LitecoinCore:");

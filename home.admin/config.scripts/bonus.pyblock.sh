@@ -42,7 +42,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   sudo apt-get install -y hexyl html2text
 
 
-  ## WORKAROUND: see https://github.com/raspiblitz/raspiblitz/issues/4383
+  ## WORKAROUND: see https://github.com/raspiblesk/raspiblesk/issues/4383
   # install via pip
   # sudo -u pyblock pip3 install pybitblock 
   # install from github
@@ -62,10 +62,10 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   # add user to group with admin access to lnd
   sudo /usr/sbin/usermod --append --groups lndadmin pyblock
   
-  sudo rm -rf /home/pyblock/.bitcoin  # not a symlink.. delete it silently
-  sudo -u pyblock mkdir /home/pyblock/.bitcoin
-  sudo cp /mnt/hdd/app-data/bitcoin/bitcoin.conf /home/pyblock/.bitcoin/
-  sudo chown pyblock:pyblock /home/pyblock/.bitcoin/bitcoin.conf
+  sudo rm -rf /home/pyblock/.glcoin  # not a symlink.. delete it silently
+  sudo -u pyblock mkdir /home/pyblock/.glcoin
+  sudo cp /mnt/hdd/app-data/glcoin/glcoin.conf /home/pyblock/.glcoin/
+  sudo chown pyblock:pyblock /home/pyblock/.glcoin/glcoin.conf
 
   # make sure symlink to central app-data directory exists ***"
   sudo rm -rf /home/pyblock/.lnd  # not a symlink.. delete it silently
@@ -84,9 +84,9 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   sudo chown pyblock:pyblock /home/pyblock/config/blndconnect.conf
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set pyblock "on"
+  /home/admin/config.scripts/blesk.conf.sh set pyblock "on"
   echo "# Usage: https://github.com/curly60e/pyblock"
-  echo "# To start use raspiblitz shortcut-command: pyblock"
+  echo "# To start use raspiblesk shortcut-command: pyblock"
 
   exit 0
 fi
@@ -95,7 +95,7 @@ fi
 if [ "$1" = "0" ] || [ "$1" = "off" ]; then
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blitz.conf.sh set pyblock "off"
+  /home/admin/config.scripts/blesk.conf.sh set pyblock "off"
   
   echo "*** REMOVING PyBLOCK ***"
   sudo userdel -rf pyblock
