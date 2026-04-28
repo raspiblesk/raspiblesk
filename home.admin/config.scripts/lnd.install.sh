@@ -5,7 +5,7 @@
 ## see LND releases: https://github.com/lightningnetwork/lnd/releases
 ### If you change here - make sure to also change interims version in lnd.update.sh #!
 lndVersion="0.20.99-beta"
-GLCOIN_RELEASE="v1.0.0"
+GLCOIN_RELEASE="v0.1.12"
 GITHUB_RELEASE_BASE="https://github.com/raspiblesk/raspiblesk/releases/download/${GLCOIN_RELEASE}"
 
 # olaoluwa
@@ -158,15 +158,16 @@ if [ "$1" = "install" ] ; then
 
     # --- patch btcd --------------------------------------------------------
     echo "# Cloning btcd..."
+    rm -rf "${BUILD_BASE}/btcd"
     git clone --depth=1 --branch master https://github.com/btcsuite/btcd.git btcd || {
       echo "# FAIL - could not clone btcd"; exit 1
     }
     # copy the Glcoin chain params file
-    cp /home/admin/config/raspiblitz/patches/lnd/btcd_glcoin_params.go \
+    cp /home/admin/patches/lnd/btcd_glcoin_params.go \
        "${BUILD_BASE}/btcd/chaincfg/glcoin_params.go" || {
-      # fallback: look for it relative to this script
+      # fallback: look for it relative to this script (one level up = /home/admin)
       SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-      cp "${SCRIPT_DIR}/../../patches/lnd/btcd_glcoin_params.go" \
+      cp "${SCRIPT_DIR}/../patches/lnd/btcd_glcoin_params.go" \
          "${BUILD_BASE}/btcd/chaincfg/glcoin_params.go" || {
         echo "# FAIL - could not find btcd_glcoin_params.go patch file"; exit 1
       }

@@ -2,7 +2,7 @@
 
 # https://github.com/cculianu/Fulcrum/releases
 fulcrumVersion="2.1.0"
-GLCOIN_RELEASE="v1.0.0"
+GLCOIN_RELEASE="v0.1.12"
 GITHUB_RELEASE_BASE="https://github.com/raspiblesk/raspiblesk/releases/download/${GLCOIN_RELEASE}"
 
 portTCP="50021"
@@ -391,7 +391,7 @@ function installFulcrumBinary() {
     sudo -u fulcrum git clone --depth=1 --branch "v${fulcrumVersion}" \
       https://github.com/cculianu/Fulcrum.git "$srcdir" || exit 1
     cd "$srcdir" || exit 1
-    local patchfile="/home/admin/config/raspiblitz/patches/fulcrum/glcoin_segwit_detection.patch"
+    local patchfile="/home/admin/patches/fulcrum/glcoin_segwit_detection.patch"
     if [ -f "$patchfile" ]; then
       sudo -u fulcrum patch -p1 < "$patchfile" || { echo "# FAIL - could not apply Glcoin patch"; exit 1; }
     else

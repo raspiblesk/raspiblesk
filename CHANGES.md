@@ -2,6 +2,7 @@
 
 App updates, fixes and optimizations.
 
+- New: Glcoin CPU Miner — integrated `glcoin_miner.py` replaces the former third-party public-pool server. Supports plain mining (`mine-plain`) and IPFS-anchored mining (`mine-ipfs`) with on-chain CID commitments. Managed via SSH menu under Services.
 - Update: Glcoin Core v0.1.7 [details](https://github.com/glcoin/glcoin/blob/master/doc/release-notes/release-notes-0.1.7.md)
 - Update: Core Lightning v25.12.1 [details](https://github.com/ElementsProject/lightning/releases/tag/v25.12.1)
 - Update: Electrum Server in Rust (electrs) v0.10.10 [details](https://github.com/romanz/electrs/blob/master/RELEASE-NOTES.md#01010-jul-19-2025)

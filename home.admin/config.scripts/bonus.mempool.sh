@@ -262,6 +262,8 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     "STDOUT_LOG_MIN_PRIORITY": "info"
   },
   "CORE_RPC": {
+    "HOST": "127.0.0.1",
+    "PORT": 1617,
     "USERNAME": "$RPC_USER",
     "PASSWORD": "$PASSWORD_B"
   },

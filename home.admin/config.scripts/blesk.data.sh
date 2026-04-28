@@ -524,9 +524,17 @@ if [ "$action" = "status" ]; then
 
         # no storage device found (system seems only device)
         if [ "${systemDevice}" = "${storageDevice}" ]; then
-            scenario="error:no-storage"
-            storageDevice=""
-            storageSizeGB=""
+            # RaspberryPi booting from single drive (NVMe or USB-SSD) with no SD card:
+            # treat the single drive as boot-from-storage, same as PC bare-metal case
+            if [ "${computerType}" = "raspberrypi" ] && [ ${bootFromSD} -eq 0 ] && [ ${#installDevice} -eq 0 ]; then
+                echo "# RaspberryPi booting from single drive with no SD card - treating as boot-from-storage"
+                bootFromStorage=1
+                systemDevice=""
+            else
+                scenario="error:no-storage"
+                storageDevice=""
+                storageSizeGB=""
+            fi
 
         # Set SYSTEM
         elif [ ${#systemDevice} -eq 0 ]; then

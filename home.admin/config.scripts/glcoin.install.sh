@@ -3,11 +3,11 @@
 # Glcoin Core - build & install from source tarball
 # Source lookup order:
 #   1. Explicit path passed as 2nd argument
-#   2. Tarball at /tmp/glcoin-0.1.7-src.tar.gz  (copy here before running)
+#   2. Tarball at /tmp/glcoin-0.1.8-src.tar.gz  (copy here before running)
 #   3. Already-extracted dir at /tmp/glcoin-src or /home/admin/glcoin-src
 #   4. GitHub (once the repo is public)
-GLCOIN_TARBALL_URL="https://github.com/glcoin/glcoin/releases/download/v0.1.7/glcoin-0.1.7-src.tar.gz"
-GLCOIN_VERSION="0.1.7"
+GLCOIN_TARBALL_URL="https://github.com/glcoin/glcoin/releases/download/v0.1.8/glcoin-0.1.8-src.tar.gz"
+GLCOIN_VERSION="0.1.8"
 
 # command info
 if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
@@ -15,7 +15,7 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
   echo "glcoin.install.sh install [source_path_or_tarball]"
   echo "Install or remove parallel chains for Glcoin Core:"
   echo "glcoin.install.sh install"
-  echo "glcoin.install.sh install /path/to/glcoin-0.1.7-src.tar.gz"
+  echo "glcoin.install.sh install /path/to/glcoin-0.1.8-src.tar.gz"
   echo "glcoin.install.sh install /path/to/extracted/glcoin-src"
   echo "glcoin.install.sh [on|off] [signet|testnet|mainnet]"
   echo
@@ -25,7 +25,12 @@ fi
 echo "# Running: glcoin.install.sh $*"
 
 # mainnet | testnet | signet
-CHAIN=${2:-mainnet}
+# When 'install' is used, $2 may be a source path rather than a chain name
+if [ "$1" = "install" ] && ([ -f "${2}" ] || [ -d "${2}" ]); then
+  CHAIN=${3:-mainnet}
+else
+  CHAIN=${2:-mainnet}
+fi
 if [ "${CHAIN}" != signet ] && [ "${CHAIN}" != testnet ] && [ "${CHAIN}" != mainnet ]; then
   echo "# ${CHAIN} is not supported"
   exit 1
@@ -86,8 +91,10 @@ if [ "$1" = "install" ]; then
     TARBALL_PATH="${2}"
   elif [ -n "${2}" ] && [ -d "${2}" ]; then
     LOCAL_SOURCE="${2}"
-  elif [ -f "/tmp/glcoin-0.1.7-src.tar.gz" ]; then
-    TARBALL_PATH="/tmp/glcoin-0.1.7-src.tar.gz"
+  elif [ -f "/home/admin/assets/glcoin-0.1.8-src.tar.gz" ]; then
+    TARBALL_PATH="/home/admin/assets/glcoin-0.1.8-src.tar.gz"
+  elif [ -f "/tmp/glcoin-0.1.8-src.tar.gz" ]; then
+    TARBALL_PATH="/tmp/glcoin-0.1.8-src.tar.gz"
   elif [ -d "/tmp/glcoin-src" ]; then
     LOCAL_SOURCE="/tmp/glcoin-src"
   elif [ -d "/home/admin/glcoin-src" ]; then

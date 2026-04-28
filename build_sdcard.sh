@@ -27,8 +27,11 @@ if [ "$1" != "-EXPORT" ] && [ "$1" != "EXPORT" ]; then
   source /etc/default/locale
 fi
 
+# Capture script directory before any cd commands change working directory
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+
 defaultRepo="raspiblesk" # user that hosts a `raspiblesk` repo
-defaultBranch="v0.12" # latest version branch
+defaultBranch="dev" # latest version branch
 
 defaultAPIuser="fusion44"
 defaultAPIrepo="blitz_api"
@@ -426,11 +429,11 @@ echo -e "\n*** Python DEFAULT libs & dependencies ***"
 if [ -f "/usr/bin/python3.13" ]; then
   # use python 3.13 if available (Debian 13 Trixie)
   update-alternatives --install /usr/bin/python python /usr/bin/python3.13 1
-  # keep python backwards compatible
-  ln -s /usr/bin/python3.13 /usr/bin/python3.9
-  ln -s /usr/bin/python3.13 /usr/bin/python3.10
-  ln -s /usr/bin/python3.13 /usr/bin/python3.11
-  ln -s /usr/bin/python3.13 /usr/bin/python3.12
+  # keep python backwards compatible — do NOT symlink python3.12, it will be
+  # installed as a real binary later (LNBits requires genuine python3.12)
+  [ ! -f "/usr/bin/python3.9"  ] && ln -s /usr/bin/python3.13 /usr/bin/python3.9
+  [ ! -f "/usr/bin/python3.10" ] && ln -s /usr/bin/python3.13 /usr/bin/python3.10
+  [ ! -f "/usr/bin/python3.11" ] && ln -s /usr/bin/python3.13 /usr/bin/python3.11
   echo "python calls python3.13"
 elif [ -f "/usr/bin/python3.12" ]; then
   # use python 3.12 if available
@@ -484,7 +487,9 @@ update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
 # 3. Nyx
 # setuptools
 sudo -H python3 -m pip install --upgrade pip
-sudo -H python3 -m pip install grpcio==1.59.3 googleapis-common-protos==1.61.0 toml==0.10.2 j2cli==0.3.10 requests[socks]==2.21.0 protobuf==4.25.1 pathlib2==2.3.7.post1
+# grpcio: use apt to avoid compiling from source on arm64
+apt-get install -y -q python3-grpcio || sudo -H python3 -m pip install --prefer-binary grpcio==1.59.3
+sudo -H python3 -m pip install --prefer-binary googleapis-common-protos==1.61.0 toml==0.10.2 j2cli==0.3.10 requests[socks]==2.21.0 protobuf==4.25.1 pathlib2==2.3.7.post1
 sudo -H python3 -m pip install pytesseract mechanize PySocks urwid Pillow requests setuptools
 
 echo -e "\n*** PREPARE ${baseimage} ***"
@@ -725,14 +730,61 @@ sudo -u admin git config --global user.email "johndoe@example.com" || exit 1
 sudo -u admin git config --global http.postBuffer 524288000 || exit 1
 sudo -u admin rm -rf /home/admin/raspiblesk
 sudo -u admin git clone -b "${branch}" https://github.com/${github_user}/raspiblesk.git || exit 1
+
+# Overlay local fixed scripts over the cloned repo so GitHub lag doesn't break the install
+for fixedScript in \
+    config.scripts/glcoin.install.sh \
+    config.scripts/blesk.data.sh \
+    config.scripts/blesk.fatpack.sh \
+    config.scripts/bonus.lndmanage.sh \
+    config.scripts/lnd.install.sh \
+    config.scripts/cl.install.sh \
+    config.scripts/bonus.fulcrum.sh \
+    config.scripts/bonus.electrs.sh \
+    config.scripts/bonus.lnbits.sh \
+    config.scripts/bonus.glc-rpc-explorer.sh; do
+  if [ -f "${SCRIPT_DIR}/home.admin/${fixedScript}" ]; then
+    cp "${SCRIPT_DIR}/home.admin/${fixedScript}" "/home/admin/raspiblesk/home.admin/${fixedScript}"
+    echo "# Overlaid local fix: ${fixedScript}"
+  fi
+done
+if [ -f "${SCRIPT_DIR}/home.admin/assets/glcoin-0.1.8-src.tar.gz" ]; then
+  cp "${SCRIPT_DIR}/home.admin/assets/glcoin-0.1.8-src.tar.gz" "/home/admin/raspiblesk/home.admin/assets/glcoin-0.1.8-src.tar.gz"
+  echo "# Copied bundled glcoin-0.1.8-src.tar.gz to repo assets"
+fi
+# Stage all pre-built Glcoin tarballs in /tmp so install scripts skip source compilation
+_arch="arm64"
+[ "$(uname -m)" = "x86_64" ] && _arch="amd64"
+for _staged in \
+  "lnd-glcoin-0.20.99-beta-linux-${_arch}.tar.gz" \
+  "cln-glcoin-v25.12.1-linux-${_arch}.tar.gz" \
+  "electrs-glcoin-v0.10.10-linux-${_arch}.tar.gz" \
+  "fulcrum-glcoin-v2.1.0-linux-${_arch}.tar.gz"; do
+  if [ -f "${SCRIPT_DIR}/home.admin/assets/${_staged}" ]; then
+    cp "${SCRIPT_DIR}/home.admin/assets/${_staged}" "/tmp/${_staged}"
+    echo "# Staged pre-built tarball: ${_staged}"
+  fi
+done
+# Overlay local patches directory (Glcoin-specific patch files)
+if [ -d "${SCRIPT_DIR}/patches" ]; then
+  mkdir -p "/home/admin/raspiblesk/patches"
+  cp -r "${SCRIPT_DIR}/patches/." "/home/admin/raspiblesk/patches/"
+  echo "# Overlaid local patches directory"
+fi
+# Fix ownership of all overlaid files so admin can read them
+# (new files created by root would otherwise block the later sudo -u admin cp)
+chown -R admin:admin /home/admin/raspiblesk/home.admin/
+chown -R admin:admin /home/admin/raspiblesk/patches/ 2>/dev/null || true
+
 sudo -u admin cp -r /home/admin/raspiblesk/home.admin/*.* /home/admin || exit 1
 sudo -u admin cp /home/admin/raspiblesk/home.admin/.tmux.conf /home/admin || exit 1
 sudo -u admin cp -r /home/admin/raspiblesk/home.admin/assets /home/admin/ || exit 1
-sudo -u admin chmod +x *.sh || exit 1
+sudo -u admin chmod +x *.sh 2>/dev/null || true
 sudo -u admin cp -r /home/admin/raspiblesk/home.admin/config.scripts /home/admin/ || exit 1
 sudo -u admin chmod +x /home/admin/config.scripts/*.sh || exit 1
 sudo -u admin cp -r /home/admin/raspiblesk/home.admin/setup.scripts /home/admin/ || exit 1
 sudo -u admin chmod +x /home/admin/setup.scripts/*.sh || exit 1
+sudo -u admin cp -r /home/admin/raspiblesk/patches /home/admin/ || exit 1
 sudo -u admin git config --global --add safe.directory /home/admin/raspiblesk
 # Also configure safe.directory for root user in case root processes need to access the repo
 git config --global --add safe.directory /home/admin/raspiblesk
@@ -959,6 +1011,12 @@ echo -e "2. run --> release\n"
 
 # make sure that at least the code is available (also if no internet)
 echo "** DISPLAY(${display})"
+# Debian baseimage doesn't support the Waveshare LCD driver (requires raspios_arm64/debian_rpi64)
+# Force headless so the set-display step is skipped on plain Debian Pi installs
+if [ "${baseimage}" = "debian" ] && [ "${display}" = "lcd" ]; then
+  echo "# debian baseimage detected - overriding display to headless (no LCD driver support)"
+  display="headless"
+fi
 /home/admin/config.scripts/blesk.display.sh prepare-install || exit 1
 # (do last - because it might trigger reboot)
 if [ "${display}" != "headless" ] || [ "${baseimage}" = "raspios_arm64" ]; then

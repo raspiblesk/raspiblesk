@@ -53,11 +53,7 @@ if [ "${network}" == "glcoin" ]; then
   OPTIONS+=(za 'GLC Jam (JoinMarket WebUI)' ${jam})
   OPTIONS+=(wa 'GLC Download Glcoin Whitepaper' ${whitepaper})
   OPTIONS+=(ls 'GLC Labelbase' ${labelbase})
-<<<<<<< HEAD
   OPTIONS+=(gm 'GLC Glcoin Miner (CPU Mining)' ${glcoinMiner})
-=======
-  OPTIONS+=(pp 'GLC Publicpool (Solo Mining)' ${publicpool})  
->>>>>>> 27c1a3bb2 (feat: integrate Glcoin CPU miner, remove public-pool server)
 fi
 
 # available for both LND & c-lightning
@@ -674,17 +670,10 @@ if [ ${check} -eq 1 ]; then choice="on"; fi
 if [ "${glcoinMiner}" != "${choice}" ]; then
   echo "GlcoinMiner setting changed .."
   anychange=1
-<<<<<<< HEAD
   sudo -u admin /home/admin/config.scripts/bonus.glcoin-miner.sh ${choice}
   source /mnt/hdd/app-data/raspiblesk.conf
   if [ "${glcoinMiner}" = "on" ]; then
     sudo -u admin /home/admin/config.scripts/bonus.glcoin-miner.sh menu
-=======
-  sudo -u admin /home/admin/config.scripts/bonus.publicpool.sh ${choice}
-  source /mnt/hdd/app-data/raspiblesk.conf
-  if [ "${publicpool}" =  "on" ]; then
-    sudo -u admin /home/admin/config.scripts/bonus.publicpool.sh menu
->>>>>>> 27c1a3bb2 (feat: integrate Glcoin CPU miner, remove public-pool server)
   fi
 else
   echo "GlcoinMiner setting unchanged."

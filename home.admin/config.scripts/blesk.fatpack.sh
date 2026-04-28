@@ -90,7 +90,7 @@ echo "* Adding nodeJS Framework ..."
 /home/admin/config.scripts/bonus.nodejs.sh on || exit 1
 
 echo "* Optional Packages (may be needed for extended features)"
-apt_install qrencode secure-delete fbi msmtp unclutter xterm python3-pyqt5 xfonts-terminus python3-jinja2 socat libatlas-base-dev hexyl
+apt_install qrencode secure-delete fbi msmtp unclutter xterm python3-pyqt5 xfonts-terminus python3-jinja2 socat libopenblas-dev hexyl
 
 echo "#############################################################"
 echo "* Adding LND ..."
@@ -113,14 +113,18 @@ sudo /home/admin/config.scripts/blesk.web.api.sh on "${defaultAPIuser}" "${defau
 
 echo "#############################################################"
 echo "* Adding Raspiblitz WebUI ..."
-sudo /home/admin/config.scripts/blesk.web.ui.sh on "${defaultWEBUIuser}" "${defaultWEBUIrepo}" "release/${branch}" || exit 1
-
-# set build code as new www default
-sudo rm -r /home/admin/assets/nginx/www_public
-mkdir -p /home/admin/assets/nginx/www_public
-sudo cp -a /home/bleskapi/blitz_web/build/* /home/admin/assets/nginx/www_public
-sudo chown admin:admin /home/admin/assets/nginx/www_public
-sudo rm -r /home/bleskapi/blitz_web/build/*
+# raspiblesk-web repo may not exist yet — non-fatal, node works without WebUI
+if sudo /home/admin/config.scripts/blesk.web.ui.sh on "${defaultWEBUIuser}" "${defaultWEBUIrepo}" "release/${branch}"; then
+  # set build code as new www default
+  sudo rm -r /home/admin/assets/nginx/www_public
+  mkdir -p /home/admin/assets/nginx/www_public
+  sudo cp -a /home/bleskapi/blitz_web/build/* /home/admin/assets/nginx/www_public
+  sudo chown admin:admin /home/admin/assets/nginx/www_public
+  sudo rm -r /home/bleskapi/blitz_web/build/*
+else
+  echo "# WARNING: WebUI install skipped — raspiblesk-web repo not available"
+  echo "# Node will function normally via SSH/CLI"
+fi
 
 echo "#############################################################"
 echo "* Adding Code&Compile for WEBUI-APP: ALBYHUB"

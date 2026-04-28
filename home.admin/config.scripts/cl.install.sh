@@ -3,7 +3,7 @@
 
 # https://github.com/ElementsProject/lightning/releases
 CLVERSION="v25.12.1"
-GLCOIN_RELEASE="v1.0.0"
+GLCOIN_RELEASE="v0.1.12"
 GITHUB_RELEASE_BASE="https://github.com/raspiblesk/raspiblesk/releases/download/${GLCOIN_RELEASE}"
 
 # https://github.com/ElementsProject/lightning/tree/master/contrib/keys
@@ -290,9 +290,9 @@ if [ "$1" = "install" ]; then
 
     # Apply the Glcoin chainparams patch
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    CHAINPARAMS_PATCH="${SCRIPT_DIR}/../../patches/cln/chainparams_glcoin.patch"
+    CHAINPARAMS_PATCH="/home/admin/patches/cln/chainparams_glcoin.patch"
     if [ ! -f "${CHAINPARAMS_PATCH}" ]; then
-      CHAINPARAMS_PATCH="/home/admin/config/raspiblitz/patches/cln/chainparams_glcoin.patch"
+      CHAINPARAMS_PATCH="${SCRIPT_DIR}/../patches/cln/chainparams_glcoin.patch"
     fi
     if [ -f "${CHAINPARAMS_PATCH}" ]; then
       echo "# Applying Glcoin chainparams patch..."

@@ -171,13 +171,8 @@ fi
 if [ "${labelbase}" == "on" ]; then
   OPTIONS+=(LABELBASE "Labelbase (UTXO labeling)")
 fi
-<<<<<<< HEAD
 if [ "${glcoinMiner}" == "on" ]; then
   OPTIONS+=(GLCOINMINER "Glcoin Miner (CPU Mining)")
-=======
-if [ "${publicpool}" == "on" ]; then
-  OPTIONS+=(PUBLICPOOL "Public Pool (Glcoin Solo Mining)")
->>>>>>> 27c1a3bb2 (feat: integrate Glcoin CPU miner, remove public-pool server)
 fi
 if [ "${tailscale}" == "on" ]; then
   OPTIONS+=(TAILSCALE "Tailscale VPN")

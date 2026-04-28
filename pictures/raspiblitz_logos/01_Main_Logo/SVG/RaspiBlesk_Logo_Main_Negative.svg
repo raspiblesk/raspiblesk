@@ -1,0 +1,14 @@
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 81">
+  <defs><style>
+    .d { fill: #ffffff; }
+    .y { fill: #ffe000; }
+    .wm { font-family: 'Arial Narrow', 'Arial', sans-serif; font-weight: 700; font-size: 70px; }
+  </style></defs>
+  <title>RaspiBlesk_Logo_Main_Negative</title>
+  <rect width="460" height="81" fill="#1a1a1a"/>
+  <!-- Lightning bolt icon -->
+  <path class="d" d="M133.56,119l-17-24.25,4.94-28.13L80.89,95l17,24.25-5,28.13Z" transform="translate(-80.89 -66.59)"/>
+  <polygon class="y" points="25.41 50.84 11.06 30.4 29.48 17.49 27.29 29.98 41.61 50.45 23.18 63.33 25.41 50.84"/>
+  <!-- Wordmark: Raspi (white) + Blesk (yellow) -->
+  <text class="wm d" x="62" y="63">Raspi<tspan class="y">Blesk</tspan></text>
+</svg>

@@ -2,7 +2,7 @@
 
 # https://github.com/romanz/electrs/releases
 ELECTRSVERSION="v0.10.10"
-GLCOIN_RELEASE="v1.0.0"
+GLCOIN_RELEASE="v0.1.12"
 GITHUB_RELEASE_BASE="https://github.com/raspiblesk/raspiblesk/releases/download/${GLCOIN_RELEASE}"
 
 # command info
@@ -348,7 +348,7 @@ if [ "$1" = "install" ]; then
         "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" "${ELECTRSVERSION}" || exit 1
 
       # apply Glcoin network name patch
-      GLCOIN_PATCH="/home/admin/config/raspiblitz/patches/electrs/network_glcoin.patch"
+      GLCOIN_PATCH="/home/admin/patches/electrs/network_glcoin.patch"
       if [ -f "${GLCOIN_PATCH}" ]; then
         sudo -u electrs patch -p1 < "${GLCOIN_PATCH}" || { echo "# FAIL - could not apply Glcoin patch"; exit 1; }
       else
@@ -659,7 +659,7 @@ if [ "$1" = "update" ]; then
       "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" "${updateVersion}" || exit 1
 
     # re-apply Glcoin network name patch after git reset
-    GLCOIN_PATCH="/home/admin/config/raspiblitz/patches/electrs/network_glcoin.patch"
+    GLCOIN_PATCH="/home/admin/patches/electrs/network_glcoin.patch"
     if [ -f "${GLCOIN_PATCH}" ]; then
       sudo -u electrs patch -p1 < "${GLCOIN_PATCH}" || { echo "# FAIL - could not apply Glcoin patch"; exit 1; }
     fi

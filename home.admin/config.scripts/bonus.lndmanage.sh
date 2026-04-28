@@ -38,7 +38,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   echo "*** INSTALL LNDMANAGE ***"
 
   # make sure needed os dependencies are installed
-  sudo apt-get install -y libatlas-base-dev
+  sudo apt-get install -y libopenblas-dev
 
   # prepare directory
   mkdir /home/admin/lndmanage 2>/dev/null

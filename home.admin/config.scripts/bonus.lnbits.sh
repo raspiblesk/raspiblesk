@@ -658,7 +658,9 @@ if [ "$1" = "install" ]; then
   echo "# githubUser=$githubUser tag=$tag"
 
   # make sure dependencies are installed
-  sudo apt-get install -y pkg-config build-essential python3-dev libsecp256k1-dev libffi-dev libgmp-dev
+  # LNBits requires Python <=3.12; Debian Trixie ships 3.13 — install 3.12 explicitly
+  sudo apt-get install -y pkg-config build-essential python3-dev libsecp256k1-dev libffi-dev libgmp-dev \
+    python3.12 python3.12-venv python3.12-dev
 
   # add lnbits user
   echo "*** Add the 'lnbits' user ***"
@@ -685,6 +687,9 @@ if [ "$1" = "install" ]; then
     sudo pip3 install --upgrade pip
     sudo pip3 install poetry
   fi
+
+  # Pin Poetry to Python 3.12 (LNBits does not yet support 3.13)
+  sudo -u lnbits poetry env use /usr/bin/python3.12 || { echo "# FAIL - python3.12 not found"; exit 1; }
 
   echo "# install"
   exitCode=0
