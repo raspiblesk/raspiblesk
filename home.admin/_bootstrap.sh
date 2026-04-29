@@ -305,10 +305,10 @@ until [ ${#scenario} -gt 0 ] && [[ ! "${scenario}" =~ ^error ]]; do
   source <(/home/admin/config.scripts/blesk.data.sh status)
   echo "blesk.data.sh status - scenario: ${scenario}" >> $logFile
 
-  # in case of HDD analyse ERROR
+  # in case of storage analyse ERROR
   if [ "${scenario}" = "error:no-storage" ]; then
     /home/admin/_cache.sh set state "noHDD"
-    /home/admin/_cache.sh set message ">=1TB"
+    /home/admin/_cache.sh set message "No storage found (NVMe/SSD required)"
   elif [[ "${scenario}" =~ ^error ]]; then
     echo "FAIL - error on HDD analysis: ${scenario}" >> $logFile
     /home/admin/_cache.sh set state "errorHDD"

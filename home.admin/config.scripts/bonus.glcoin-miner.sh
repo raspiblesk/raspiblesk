@@ -59,37 +59,109 @@ Requires glcoind to be running and synced.
     [ $? -eq 0 ] || exit 0
     sudo /home/admin/config.scripts/bonus.glcoin-miner.sh on
   else
+    GLC_CLI="glcoin-cli -datadir=/mnt/hdd/app-data/glcoin"
+
+    # Block height
+    BLOCKCOUNT=$(${GLC_CLI} getblockcount 2>/dev/null || echo "?")
+
+    # Miner permit status from registry
+    PERMIT_STATUS="?"
+    if [ -n "${address}" ]; then
+      MINER_JSON=$(${GLC_CLI} getminerinfo "${address}" 2>/dev/null)
+      if echo "${MINER_JSON}" | grep -q '"status"'; then
+        PERMIT_STATUS=$(echo "${MINER_JSON}" | grep -oP '"status"\s*:\s*"\K[^"]+' 2>/dev/null \
+          || echo "${MINER_JSON}" | sed 's/.*"status"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+      else
+        PERMIT_STATUS="not registered"
+      fi
+    fi
+
+    # Service state label
+    SVC_STATE="stopped"
+    [ "${active}" = "1" ] && SVC_STATE="MINING"
+
+    # Truncated address for display
+    ADDR_SHORT="${address:-(not set)}"
+    [ "${#address}" -gt 32 ] && ADDR_SHORT="${address:0:20}...${address: -8}"
+
+    MENU_TEXT="\n Status: ${SVC_STATE}  |  Block height: ${BLOCKCOUNT}\n Permit: ${PERMIT_STATUS}  |  Mode: ${mode}\n Address: ${ADDR_SHORT}\n"
+
     OPTIONS=()
     if [ "${active}" = "1" ]; then
       OPTIONS+=(STOP "Stop miner")
     else
       OPTIONS+=(START "Start miner")
     fi
-    OPTIONS+=(ADDRESS "Set payout address (current: ${address})")
-    OPTIONS+=(MODE "Set mining mode (current: ${mode})")
+    OPTIONS+=(ADDRESS "Set payout address")
+    OPTIONS+=(MODE "Mining mode: ${mode}")
     if [ "${mode}" = "ipfs" ]; then
-      OPTIONS+=(TXID "Set anchor txid (current: ${txid:0:16}...)")
+      OPTIONS+=(TXID "Anchor txid: ${txid:0:20}...")
     fi
+    if [ "${PERMIT_STATUS}" = "not registered" ] && [ -n "${address}" ]; then
+      OPTIONS+=(REGISTER "Apply for mining permit")
+    fi
+    OPTIONS+=(VIEWLOG "View recent mining log")
     OPTIONS+=(UNINSTALL "Uninstall miner")
-    CHOICE=$(whiptail --title " Glcoin Miner " --menu "" 14 62 6 "${OPTIONS[@]}" 3>&1 1>&2 2>&3)
+
+    CHOICE=$(whiptail --title " Glcoin Miner " --menu "${MENU_TEXT}" 18 68 8 "${OPTIONS[@]}" 3>&1 1>&2 2>&3)
     case "${CHOICE}" in
       START)   sudo systemctl start glcoin-miner ;;
       STOP)    sudo systemctl stop glcoin-miner ;;
       ADDRESS)
         NEW_ADDR=$(whiptail --title " Payout Address " --inputbox \
-          "Enter your Glcoin mining address (bech32 gc1...)" 8 60 "${address}" 3>&1 1>&2 2>&3)
-        [ -n "${NEW_ADDR}" ] && sudo /home/admin/config.scripts/bonus.glcoin-miner.sh set-address "${NEW_ADDR}"
+          "Enter your Glcoin mining address (bech32 gc1...)
+
+This address must match your approved miner permit.
+Example: gc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh" \
+          12 66 "${address}" 3>&1 1>&2 2>&3)
+        if [ -n "${NEW_ADDR}" ]; then
+          if ! echo "${NEW_ADDR}" | grep -qE '^gc1[a-z0-9]{10,}$'; then
+            whiptail --title " Invalid Address " --msgbox \
+              "Address must be a valid Glcoin bech32 address starting with gc1." 7 58
+          else
+            sudo /home/admin/config.scripts/bonus.glcoin-miner.sh set-address "${NEW_ADDR}"
+          fi
+        fi
         ;;
       MODE)
-        NEW_MODE=$(whiptail --title " Mining Mode " --menu "" 10 52 2 \
-          plain "Standard block mining" \
-          ipfs  "IPFS-anchored block mining" 3>&1 1>&2 2>&3)
+        NEW_MODE=$(whiptail --title " Mining Mode " --menu "" 10 62 2 \
+          plain "Block mining — Tier 1 permit required" \
+          ipfs  "IPFS-anchored mining — Tier 2 permit required" 3>&1 1>&2 2>&3)
         [ -n "${NEW_MODE}" ] && sudo /home/admin/config.scripts/bonus.glcoin-miner.sh set-mode "${NEW_MODE}"
         ;;
       TXID)
         NEW_TXID=$(whiptail --title " IPFS Anchor txid " --inputbox \
           "Enter the anchor transaction txid to commit in the coinbase." 8 72 "${txid}" 3>&1 1>&2 2>&3)
         [ -n "${NEW_TXID}" ] && sudo /home/admin/config.scripts/bonus.glcoin-miner.sh set-txid "${NEW_TXID}"
+        ;;
+      REGISTER)
+        whiptail --title " Mining Permit Application " --yesno \
+"Apply for a Glcoin mining permit for address:
+
+${address}
+
+This submits a registration request to the local node.
+Contact the Glcoin admin to complete KYC approval
+and have your permit approved." 14 66
+        if [ $? -eq 0 ]; then
+          DISP_NAME=$(whiptail --title " Display Name " --inputbox \
+            "Enter your miner display name (e.g. 'Alice - Germany'):" 8 60 "" 3>&1 1>&2 2>&3)
+          [ -z "${DISP_NAME}" ] && DISP_NAME="RaspiBlesk Miner"
+          KYC_ID="PENDING-$(date +%Y%m%d)"
+          RESULT=$(${GLC_CLI} registerminer "${address}" "${KYC_ID}" "${DISP_NAME}" 2>&1)
+          whiptail --title " Registration Submitted " --msgbox \
+"Application submitted to the local registry.
+
+Your KYC reference: ${KYC_ID}
+Contact admin at admin@glcoin.org to complete approval.
+
+Node response:
+${RESULT}" 14 68
+        fi
+        ;;
+      VIEWLOG)
+        LOG=$(journalctl -u glcoin-miner -n 40 --no-pager 2>/dev/null || echo "(no log entries found)")
+        whiptail --title " Glcoin Miner — Recent Log " --scrolltext --msgbox "${LOG}" 24 90
         ;;
       UNINSTALL) sudo /home/admin/config.scripts/bonus.glcoin-miner.sh off ;;
     esac

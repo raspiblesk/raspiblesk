@@ -3,7 +3,8 @@
 
 [Unit]
 Description=execute on every startup before everything else
-After=network.target mnt-hdd.mount
+Wants=local-fs.target
+After=network.target local-fs.target
 
 [Service]
 User=root

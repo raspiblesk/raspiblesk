@@ -486,11 +486,25 @@ update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
 # pytesseract mechanize PySocks urwid Pillow requests
 # 3. Nyx
 # setuptools
-sudo -H python3 -m pip install --upgrade pip
+sudo -H python3 -m pip install --upgrade pip || true
 # grpcio: use apt to avoid compiling from source on arm64
-apt-get install -y -q python3-grpcio || sudo -H python3 -m pip install --prefer-binary grpcio==1.59.3
-sudo -H python3 -m pip install --prefer-binary googleapis-common-protos==1.61.0 toml==0.10.2 j2cli==0.3.10 requests[socks]==2.21.0 protobuf==4.25.1 pathlib2==2.3.7.post1
-sudo -H python3 -m pip install pytesseract mechanize PySocks urwid Pillow requests setuptools
+apt-get install -y -q python3-grpcio || sudo -H python3 -m pip install --prefer-binary grpcio==1.59.3 || true
+# install python deps individually so one failure doesn't block the rest
+for _pypkg in \
+    "googleapis-common-protos==1.61.0" \
+    "toml==0.10.2" \
+    "requests[socks]==2.21.0" \
+    "protobuf==4.25.1" \
+    "pathlib2==2.3.7.post1"; do
+  sudo -H python3 -m pip install --prefer-binary "${_pypkg}" || echo "# WARNING: pip install ${_pypkg} failed - continuing"
+done
+# j2cli 0.3.10 has broken wheel names in pip >=25.3; try apt first, fall back silently
+apt-get install -y -q j2cli 2>/dev/null || \
+  sudo -H python3 -m pip install --prefer-binary "j2cli==0.3.10" 2>/dev/null || \
+  echo "# WARNING: j2cli not installed - templating features may be limited"
+for _pypkg in pytesseract mechanize PySocks urwid Pillow requests setuptools; do
+  sudo -H python3 -m pip install --prefer-binary "${_pypkg}" || echo "# WARNING: pip install ${_pypkg} failed - continuing"
+done
 
 echo -e "\n*** PREPARE ${baseimage} ***"
 
@@ -733,6 +747,10 @@ sudo -u admin git clone -b "${branch}" https://github.com/${github_user}/raspibl
 
 # Overlay local fixed scripts over the cloned repo so GitHub lag doesn't break the install
 for fixedScript in \
+    _bootstrap.sh \
+    _provision_.sh \
+    _provision.update.sh \
+    99connectMenu.sh \
     config.scripts/glcoin.install.sh \
     config.scripts/blesk.data.sh \
     config.scripts/blesk.fatpack.sh \
@@ -742,7 +760,9 @@ for fixedScript in \
     config.scripts/bonus.fulcrum.sh \
     config.scripts/bonus.electrs.sh \
     config.scripts/bonus.lnbits.sh \
-    config.scripts/bonus.glc-rpc-explorer.sh; do
+    config.scripts/bonus.glc-rpc-explorer.sh \
+    assets/bootstrap.service \
+    assets/glcoin.conf; do
   if [ -f "${SCRIPT_DIR}/home.admin/${fixedScript}" ]; then
     cp "${SCRIPT_DIR}/home.admin/${fixedScript}" "/home/admin/raspiblesk/home.admin/${fixedScript}"
     echo "# Overlaid local fix: ${fixedScript}"
@@ -998,6 +1018,30 @@ chown admin:admin /home/admin/fallback.glcoin.nodes
 echo
 echo "*** raspiblesk.info ***"
 cat /home/admin/raspiblesk.info
+
+# *** INITIALIZE DATA STORAGE (prevents first-boot system wipe on single-NVMe builds) ***
+# On Pi5/NVMe systems, bootstrap's first-boot "setup" would repartition the WHOLE NVMe,
+# destroying this just-completed installation. We prevent this by:
+#   1. Creating app-storage/app-data directories now on the existing filesystem
+#   2. Registering a bind-mount at /mnt/disk_storage in fstab
+#   3. bootstrap.service (After=local-fs.target) mounts this before bootstrap runs
+#   4. blesk.data.sh detects pre-mounted storage and skips the repartition
+# NOTE: raspiblesk.conf is intentionally NOT written here.
+#   Its absence signals "not yet provisioned" -> blesk.data.sh gives scenario=setup
+#   so the user gets the full guided first-boot dialogs (passwords + LND wallet).
+#   After provisioning writes the conf, subsequent boots get scenario=ready.
+echo -e "\n*** INITIALIZING RASPIBLESK DATA DIRECTORIES ***"
+_bleskdata="/mnt/raspiblesk-data"
+mkdir -p "${_bleskdata}/app-storage/glcoin"
+mkdir -p "${_bleskdata}/app-data/glcoin"
+mkdir -p /mnt/disk_storage /mnt/hdd
+chown -R glcoin:glcoin "${_bleskdata}" 2>/dev/null || true
+chmod 755 "${_bleskdata}" "${_bleskdata}/app-storage" "${_bleskdata}/app-data"
+
+# Register bind-mount in fstab (auto-mounted before bootstrap via local-fs.target)
+sed -i "\#/mnt/disk_storage#d" /etc/fstab
+echo "${_bleskdata} /mnt/disk_storage none bind,nofail 0 0" >> /etc/fstab
+echo "# RaspiBlesk data directories initialized at ${_bleskdata} -> /mnt/disk_storage"
 
 # *** RASPIBLESK IMAGE READY INFO ***
 echo -e "\n**********************************************"

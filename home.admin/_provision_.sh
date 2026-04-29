@@ -127,12 +127,12 @@ echo "allow outgoing connections"
 ufw default allow outgoing
 echo "allow: ssh"
 ufw allow ssh
-echo "allow: glcoin testnet"
-ufw allow 18333 comment 'glcoin testnet'
-echo "allow: glcoin mainnet"
-ufw allow 8333 comment 'glcoin mainnet'
+echo "allow: glcoin testnet P2P"
+ufw allow 11618 comment 'glcoin testnet P2P'
+echo "allow: glcoin mainnet P2P"
+ufw allow 1618 comment 'glcoin mainnet P2P'
 echo 'allow: glcoin mainnet RPC'
-ufw allow 8332 comment 'glcoin mainnet RPC'
+ufw allow 1617 comment 'glcoin mainnet RPC'
 echo 'allow: lightning testnet'
 ufw allow 19735 comment 'lightning testnet'
 echo "allow: lightning mainnet"

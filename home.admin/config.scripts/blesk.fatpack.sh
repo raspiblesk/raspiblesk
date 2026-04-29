@@ -18,8 +18,13 @@ elif [ -d /boot ]; then
 fi
 echo "# raspi_bootdir(${raspi_bootdir})"
 
-# make sure LCD is on (default for fatpack)
-/home/admin/config.scripts/blesk.display.sh set-display lcd
+# make sure LCD is on (default for fatpack) - only on RaspberryPi OS, skip on plain Debian
+source /home/admin/raspiblesk.info 2>/dev/null || true
+if [ "${baseimage}" = "raspios_arm64" ] || [ "${baseimage}" = "debian_rpi64" ]; then
+  /home/admin/config.scripts/blesk.display.sh set-display lcd || true
+else
+  echo "# INFO: skipping LCD setup - not supported on baseimage=${baseimage}"
+fi
 
 # check if sd card needs expansion before fatpack
 source <(sudo /home/admin/config.scripts/blesk.bootdrive.sh status)
@@ -90,7 +95,9 @@ echo "* Adding nodeJS Framework ..."
 /home/admin/config.scripts/bonus.nodejs.sh on || exit 1
 
 echo "* Optional Packages (may be needed for extended features)"
-apt_install qrencode secure-delete fbi msmtp unclutter xterm python3-pyqt5 xfonts-terminus python3-jinja2 socat libopenblas-dev hexyl
+# fbi/unclutter/xterm are GUI packages - non-fatal if missing on headless builds
+sudo DEBIAN_FRONTEND=noninteractive apt install -y qrencode secure-delete msmtp python3-jinja2 socat libopenblas-dev || true
+sudo DEBIAN_FRONTEND=noninteractive apt install -y fbi unclutter xterm python3-pyqt5 xfonts-terminus hexyl || true
 
 echo "#############################################################"
 echo "* Adding LND ..."
@@ -126,83 +133,25 @@ else
   echo "# Node will function normally via SSH/CLI"
 fi
 
-echo "#############################################################"
-echo "* Adding Code&Compile for WEBUI-APP: ALBYHUB"
-/home/admin/config.scripts/bonus.albyhub.sh install || exit 1
-source <(/home/admin/config.scripts/bonus.albyhub.sh status)
-if [ "${fatpack}" != "1" ]; then
-  echo "FATPACK FAIL: albyhub"
-  exit 1
-fi
+# Helper: install a bonus app non-fatally — log failure and continue
+_fatpack_bonus() {
+  local name="$1"; local script="$2"
+  echo "#############################################################"
+  echo "* Adding Code&Compile for WEBUI-APP: ${name}"
+  if /home/admin/config.scripts/${script} install; then
+    echo "# OK: ${name} installed"
+  else
+    echo "# WARNING: ${name} install failed (exit $?) - continuing without it"
+    echo "# Node core functionality is unaffected. ${name} can be installed later."
+  fi
+}
 
-echo "#############################################################"
-echo "* Adding Code&Compile for WEBUI-APP: LNBITS"
-/home/admin/config.scripts/bonus.lnbits.sh install || exit 1
-source <(/home/admin/config.scripts/bonus.lnbits.sh status)
-if [ "${fatpack}" != "1" ]; then
-  echo "FATPACK FAIL: lnbits"
-  exit 1
-fi
-
-echo "#############################################################"
-echo "* Adding Code&Compile for WEBUI-APP: JAM"
-/home/admin/config.scripts/bonus.jam.sh install || exit 1
-source <(/home/admin/config.scripts/bonus.jam.sh status)
-if [ "${fatpack}" != "1" ]; then
-  echo "FATPACK FAIL: jam"
-  exit 1
-fi
-
-echo "#############################################################"
-echo "* Adding Code&Compile for WEBUI-APP: BTCPAYSERVER"
-/home/admin/config.scripts/bonus.btcpayserver.sh install || exit 1
-source <(/home/admin/config.scripts/bonus.btcpayserver.sh status)
-if [ "${fatpack}" != "1" ]; then
-  echo "FATPACK FAIL: btcpayserver"
-  exit 1
-fi
-
-echo "#############################################################"
-echo "* Adding Code&Compile for WEBUI-APP: RTL"
-/home/admin/config.scripts/bonus.rtl.sh install || exit 1
-source <(/home/admin/config.scripts/bonus.rtl.sh status)
-if [ "${fatpack}" != "1" ]; then
-  echo "FATPACK FAIL: rtl"
-  exit 1
-fi
-
-echo "#############################################################"
-echo "* Adding Code&Compile for WEBUI-APP: THUNDERHUB"
-/home/admin/config.scripts/bonus.thunderhub.sh install || exit 1
-source <(/home/admin/config.scripts/bonus.thunderhub.sh status)
-if [ "${fatpack}" != "1" ]; then
-  echo "FATPACK FAIL: thunderhub"
-  exit 1
-fi
-
-echo "#############################################################"
-echo "* Adding Code&Compile for WEBUI-APP: GLC RPC EXPLORER"
-/home/admin/config.scripts/bonus.glc-rpc-explorer.sh install || exit 1
-source <(sudo /home/admin/config.scripts/bonus.glc-rpc-explorer.sh status)
-if [ "${fatpack}" != "1" ]; then
-  echo "FATPACK FAIL: glc-rpc-explorer"
-  exit 1
-fi
-
-echo "#############################################################"
-echo "* Adding Code&Compile for WEBUI-APP: MEMPOOL"
-/home/admin/config.scripts/bonus.mempool.sh install || exit 1
-source <(/home/admin/config.scripts/bonus.mempool.sh status)
-if [ "${fatpack}" != "1" ]; then
-  echo "FATPACK FAIL: mempool"
-  exit 1
-fi
-
-echo "#############################################################"
-echo "* Adding Code&Compile for WEBUI-APP: ELECTRS"
-/home/admin/config.scripts/bonus.electrs.sh install || exit 1
-source <(/home/admin/config.scripts/bonus.electrs.sh status)
-if [ "${fatpack}" != "1" ]; then
-  echo "FATPACK FAIL: electrs"
-  exit 1
-fi
+_fatpack_bonus "ALBYHUB"       "bonus.albyhub.sh"
+_fatpack_bonus "LNBITS"        "bonus.lnbits.sh"
+_fatpack_bonus "JAM"           "bonus.jam.sh"
+_fatpack_bonus "BTCPAYSERVER"  "bonus.btcpayserver.sh"
+_fatpack_bonus "RTL"           "bonus.rtl.sh"
+_fatpack_bonus "THUNDERHUB"    "bonus.thunderhub.sh"
+_fatpack_bonus "GLC-RPC-EXPLORER" "bonus.glc-rpc-explorer.sh"
+_fatpack_bonus "MEMPOOL"       "bonus.mempool.sh"
+_fatpack_bonus "ELECTRS"       "bonus.electrs.sh"

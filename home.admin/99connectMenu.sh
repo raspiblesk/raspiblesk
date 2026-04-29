@@ -125,7 +125,7 @@ case $CHOICE in
 # Hidden Service for Bisq (glcoin P2P v3)
 HiddenServiceDir /mnt/hdd/app-data/tor/bisq
 HiddenServiceVersion 3
-HiddenServicePort 8333 127.0.0.1:8333" | sudo tee -a /etc/tor/torrc
+HiddenServicePort 1618 127.0.0.1:1618" | sudo tee -a /etc/tor/torrc
             echo "# Reloading Tor"
             sudo systemctl reload tor@default
             sleep 10
@@ -146,7 +146,7 @@ HiddenServicePort 8333 127.0.0.1:8333" | sudo tee -a /etc/tor/torrc
           echo "Install from https://bisq.network/downloads/"
           echo "Go to Bisq Settings -> Network Info -> 'Custom Glcoin Node'."
           echo
-          echo "Enter: ${TOR_ADDRESS}:8333 to connect to this node."
+          echo "Enter: ${TOR_ADDRESS}:1618 to connect to this node."
           echo
           echo "Press ENTER to return to the menu."
           read key
@@ -162,7 +162,7 @@ HiddenServicePort 8333 127.0.0.1:8333" | sudo tee -a /etc/tor/torrc
           echo "Install from https://bisq.network/downloads/"
           echo "Go to Bisq Settings -> Network Info -> 'Custom Glcoin Node'."
           echo
-          echo "Enter: ${TOR_ADDRESS}:8333 to connect to this node."
+          echo "Enter: ${TOR_ADDRESS}:1618 to connect to this node."
           echo
           echo "Press ENTER to return to the menu."
           read key;;
@@ -171,11 +171,11 @@ HiddenServicePort 8333 127.0.0.1:8333" | sudo tee -a /etc/tor/torrc
   ${network}RPC)
     # vars
     if [ "${chain}net" == "mainnet" ]; then
-      GLCOINRPCPORT=8332
+      GLCOINRPCPORT=1617
     elif [ "${chain}net" == "testnet" ]; then
-      GLCOINRPCPORT=18332
+      GLCOINRPCPORT=11617
     elif [ "${chain}net" == "signet" ]; then
-      GLCOINRPCPORT=38332
+      GLCOINRPCPORT=31617
     else
       # have this to signal that selection went wrong
       GLCOINRPCPORT=0

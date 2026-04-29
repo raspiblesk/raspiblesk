@@ -110,32 +110,37 @@ if [ ${configExists} -eq 1 ]; then
 
   # check whether right settings are there ("main.")
   if ! grep -Eq "^main.rpcport=.*" /mnt/hdd/app-data/${network}/${network}.conf; then
-    echo "fix issue #217 -> adding main.rpcport=8332" >> ${logFile}
-    echo "main.rpcport=8332" >> /mnt/hdd/app-data/${network}/${network}.conf
+    echo "fix -> adding main.rpcport=1617" >> ${logFile}
+    echo "main.rpcport=1617" >> /mnt/hdd/app-data/${network}/${network}.conf
   else
-    echo "check issue #217 -> ok main.rpcport exists" >> ${logFile}
+    # correct any legacy Bitcoin port value
+    sed -i 's/^main\.rpcport=8332$/main.rpcport=1617/' /mnt/hdd/app-data/${network}/${network}.conf
+    echo "check -> main.rpcport exists (corrected if needed)" >> ${logFile}
   fi
 
   if ! grep -Eq "^main.rpcbind=.*" /mnt/hdd/app-data/${network}/${network}.conf; then
-    echo "fix issue #217 -> adding main.rpcbind=127.0.0.1:8332" >> ${logFile}
-    echo "main.rpcbind=127.0.0.1:8332" >> /mnt/hdd/app-data/${network}/${network}.conf
+    echo "fix -> adding main.rpcbind=127.0.0.1:1617" >> ${logFile}
+    echo "main.rpcbind=127.0.0.1:1617" >> /mnt/hdd/app-data/${network}/${network}.conf
   else
-    echo "check issue #217 -> ok main.rpcbind exists" >> ${logFile}
+    sed -i 's/^main\.rpcbind=127\.0\.0\.1:8332$/main.rpcbind=127.0.0.1:1617/' /mnt/hdd/app-data/${network}/${network}.conf
+    echo "check -> main.rpcbind exists (corrected if needed)" >> ${logFile}
   fi
 
   # same for testnet
   if ! grep -Eq "^test.rpcport=.*" /mnt/hdd/app-data/${network}/${network}.conf; then
-    echo "fix issue #950 -> adding test.rpcport=18332" >> ${logFile}
-    echo "test.rpcport=18332" >> /mnt/hdd/app-data/${network}/${network}.conf
+    echo "fix -> adding test.rpcport=11617" >> ${logFile}
+    echo "test.rpcport=11617" >> /mnt/hdd/app-data/${network}/${network}.conf
   else
-    echo "check issue #950 -> ok test.rpcport exists" >> ${logFile}
+    sed -i 's/^test\.rpcport=18332$/test.rpcport=11617/' /mnt/hdd/app-data/${network}/${network}.conf
+    echo "check -> test.rpcport exists (corrected if needed)" >> ${logFile}
   fi
 
   if ! grep -Eq "^test.rpcbind=.*" /mnt/hdd/app-data/${network}/${network}.conf; then
-    echo "fix issue #950 -> adding test.rpcbind=127.0.0.1:18332" >> ${logFile}
-    echo "test.rpcbind=127.0.0.1:18332" >> /mnt/hdd/app-data/${network}/${network}.conf
+    echo "fix -> adding test.rpcbind=127.0.0.1:11617" >> ${logFile}
+    echo "test.rpcbind=127.0.0.1:11617" >> /mnt/hdd/app-data/${network}/${network}.conf
   else
-    echo "check issue #950 -> ok test.rpcbind exists" >> ${logFile}
+    sed -i 's/^test\.rpcbind=127\.0\.0\.1:18332$/test.rpcbind=127.0.0.1:11617/' /mnt/hdd/app-data/${network}/${network}.conf
+    echo "check -> test.rpcbind exists (corrected if needed)" >> ${logFile}
   fi
 
 else

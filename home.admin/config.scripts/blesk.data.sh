@@ -458,6 +458,42 @@ if [ "$action" = "status" ]; then
         biggerSizeGB=$(echo "${listOfBiggerDevices}" | head -n1 | awk '{print $2}')
     fi
 
+    # === FALLBACK: detect pre-mounted /mnt/disk_storage (created by build_sdcard.sh) ===
+    # On Pi5/NVMe single-drive builds, build_sdcard.sh bind-mounts /mnt/raspiblesk-data
+    # at /mnt/disk_storage. lsblk won't find it as an ext4 partition, so we check explicitly.
+    #
+    # Two states:
+    #   No raspiblesk.conf → not yet provisioned → storageMountedPath="" → scenario=setup
+    #     (gives the full guided first-boot dialog: passwords + LND wallet)
+    #   raspiblesk.conf exists → provisioned → storageMountedPath set → scenario=ready
+    #     (subsequent boots go straight to node running, no dialogs)
+    if [ ${#storageDevice} -eq 0 ] && [ -d "/mnt/disk_storage/app-storage" ]; then
+        if findmnt -n -o TARGET /mnt/disk_storage > /dev/null 2>&1; then
+            _root_dev=$(findmnt -n -o SOURCE / 2>/dev/null | head -1)
+            # Use PKNAME to get the parent block device (e.g. nvme0n1p2 -> nvme0n1)
+            storageDevice=$(lsblk -no PKNAME "${_root_dev}" 2>/dev/null | head -1)
+            [ -z "${storageDevice}" ] && storageDevice=$(echo "${_root_dev}" | sed 's/p[0-9]*$//' | xargs basename 2>/dev/null || echo "nvme0n1")
+            storagePartition=$(basename "${_root_dev}" 2>/dev/null || echo "nvme0n1p2")
+            storageSizeGB=$(df -BG /mnt/disk_storage 2>/dev/null | awk 'NR==2{gsub(/G/,"",$2);print $2}')
+            storagePartitionsCount=1
+            if [ -d "/mnt/disk_storage/app-data" ]; then
+                combinedDataStorage=1
+                dataPartition="${storagePartition}"
+            fi
+            if [ -f "/mnt/disk_storage/app-data/raspiblesk.conf" ]; then
+                # Provisioned: set storageMountedPath so scenario=ready on subsequent boots
+                dataConfigFound=1
+                storageMountedPath="/mnt/disk_storage"
+                dataMountedPath="/mnt/disk_storage"
+                echo "# pre-mounted storage (provisioned) at /mnt/disk_storage -> scenario=ready"
+            else
+                # Not yet provisioned: leave storageMountedPath empty -> scenario=setup
+                # Bootstrap will run the full guided setup (passwords + LND wallet)
+                echo "# pre-mounted storage (not yet provisioned) at /mnt/disk_storage -> scenario=setup"
+            fi
+        fi
+    fi
+
     echo "# RESULT AFTER DETECTION"
     echo "# dataDevice: ${dataDevice} (${dataSizeGB}GB) (${dataMountedPath})"
     echo "# storageDevice: ${storageDevice} (${storageSizeGB}GB) (${storageMountedPath})"
@@ -966,6 +1002,15 @@ if [ "$action" = "mount" ]; then
     storageMountPoint="/mnt/disk_storage"
     dataMountPoint="/mnt/disk_data"
 
+    # Force kernel to register any newly-created partition device nodes before scanning
+    # (critical after live NVMe repartition where udev may lag behind partprobe)
+    for _blkdev in $(lsblk -dno NAME | grep -E '^(sd|nvme)'); do
+        partx -u "/dev/${_blkdev}" 2>/dev/null || true
+    done
+    udevadm settle --timeout=15 2>/dev/null || true
+    sync
+    sleep 2
+
     # Source status to get drive configuration
     echo "# checking disk data ... please wait"
     sync
@@ -975,11 +1020,11 @@ if [ "$action" = "mount" ]; then
     # check directories are already mounted
     if [ $(df | grep -c "${storageMountPoint}") -gt 0 ]; then
         echo "# Already mounted: ${storageMountPoint}"
-        exit 1
+        exit 0
     fi
     if [ ${combinedDataStorage} -eq 0 ] && [ $(df | grep -c "${dataMountPoint}") -gt 0 ]; then
         echo "# Already mounted: ${dataMountPoint}"
-        exit 1
+        exit 0
     fi
 
     # check partitions were found
@@ -1000,11 +1045,11 @@ if [ "$action" = "mount" ]; then
     # check if partititions are already mounted
     if [ $(findmnt -n -o SOURCE,TARGET | grep -c "/dev/${storagePartition}") -gt 0 ]; then
         echo "# Already mounted: ${storagePartition}"
-        exit 1
-    fi    
+        exit 0
+    fi
     if [ ${combinedDataStorage} -eq 0 ] && [ $(findmnt -n -o SOURCE,TARGET | grep -c "/dev/${dataPartition}") -gt 0 ]; then
         echo "# Already mounted: ${dataPartition}"
-        exit 1
+        exit 0
     fi
 
     # determine UUID of storage partition
@@ -1089,8 +1134,19 @@ if [ "$action" = "link" ]; then
 
     # check drive pathes are available
     if [ ${#storageMountedPath} -eq 0 ]; then
-        echo "error='storageMountedPath not detected'"
-        exit 1
+        # Special case: pre-initialized /mnt/disk_storage (single-drive build, before provisioning)
+        # storageMountedPath is intentionally empty during first-boot setup (no raspiblesk.conf yet)
+        # but the bind-mount is already active - use it directly for linking
+        if findmnt -n -o TARGET /mnt/disk_storage > /dev/null 2>&1 && \
+           [ -d "/mnt/disk_storage/app-storage" ]; then
+            storageMountedPath="/mnt/disk_storage"
+            dataMountedPath="/mnt/disk_storage"
+            combinedDataStorage=1
+            echo "# Using pre-initialized /mnt/disk_storage for link setup"
+        else
+            echo "error='storageMountedPath not detected'"
+            exit 1
+        fi
     fi
     if [ ${combinedDataStorage} -eq 1 ]; then
         dataMountedPath="${storageMountedPath}"
@@ -1859,11 +1915,29 @@ if [ "$action" = "setup" ]; then
     elif [ "${actionType}" = "STORAGE" ] && [ ${actionCreateSystemPartition} -eq 1 ]; then
 
         echo "# STORAGE partitioning (with boot)" >> ${logFile}
-        
+
+        # === Skip repartition if /mnt/disk_storage is pre-initialized by build_sdcard.sh ===
+        # On Pi5/NVMe single-drive builds, the storage dir was created during build_sdcard.sh.
+        # Repartitioning would destroy the installed system - use the existing bind-mount instead.
+        if findmnt -n -o TARGET /mnt/disk_storage > /dev/null 2>&1 && \
+           [ -d "/mnt/disk_storage/app-storage" ]; then
+            echo "# /mnt/disk_storage pre-initialized (build_sdcard.sh) - skipping repartition" >> ${logFile}
+            # Clean the data dirs so provisioning starts fresh (user confirmed deleteData=all)
+            rm -rf /mnt/disk_storage/app-storage/* 2>/dev/null || true
+            rm -rf /mnt/disk_storage/app-data/* 2>/dev/null || true
+            mkdir -p /mnt/disk_storage/app-storage /mnt/disk_storage/app-data
+            # Report the system partition as storagePartition for bootstrap tracking
+            _rp=$(findmnt -n -o SOURCE / 2>/dev/null | head -1)
+            _sp=$(basename "${_rp}" 2>/dev/null || echo "nvme0n1p2")
+            echo "storagePartition='${_sp}'"
+            echo "# OK - setup STORAGE done (pre-initialized, no repartition)" >> ${logFile}
+            exit 0
+        fi
+
         # DEBUG: Log partition count before storage partitioning operations
         beforeStoragePartitioningCount=$(partx -g /dev/"${actionDevice}" 2>/dev/null | wc -l)
         echo "# DEBUG SETUP STORAGE: Partition count before storage partitioning: ${beforeStoragePartitioningCount}" >> ${logFile}
-        
+
         sfdisk --delete /dev/${actionDevice} >> ${logFile}
         
         # DEBUG: Log partition count after sfdisk delete
@@ -1901,13 +1975,19 @@ if [ "$action" = "setup" ]; then
         echo "# DEBUG SETUP STORAGE: Partition count after third mkpart: ${afterThirdMkpartStorageCount}" >> ${logFile}
         
         partprobe /dev/${actionDevice}
-        
+        # Force udev to register new partition device nodes (critical on live NVMe repartition)
+        udevadm trigger --subsystem-match=block --action=add 2>/dev/null || true
+        udevadm settle --timeout=30 || true
+        sleep 3
+        partx -u /dev/${actionDevice} 2>/dev/null || true
+        udevadm settle --timeout=10 || true
+
         # DEBUG: Log partition count after partprobe
         afterPartprobeStorageCount=$(partx -g /dev/"${actionDevice}" 2>/dev/null | wc -l)
         echo "# DEBUG SETUP STORAGE: Partition count after partprobe: ${afterPartprobeStorageCount}" >> ${logFile}
         echo "# DEBUG SETUP STORAGE: Partitions after partprobe:" >> ${logFile}
         lsblk -no NAME "/dev/${actionDevice}" >> ${logFile}
-        
+
         echo "# .. formating" >> ${logFile}
         wipefs -a /dev/${actionDevicePartitionBase}1 2>/dev/null >> ${logFile}
         mkfs.fat -F 32 /dev/${actionDevicePartitionBase}1 >> ${logFile}
@@ -1984,13 +2064,19 @@ if [ "$action" = "setup" ]; then
         echo "# DEBUG SETUP STORAGE NO-BOOT: Partition count after mkpart: ${afterMkpartNoBootCount}" >> ${logFile}
         
         partprobe /dev/${actionDevice}
-        
+        # Force udev to register new partition device nodes
+        udevadm trigger --subsystem-match=block --action=add 2>/dev/null || true
+        udevadm settle --timeout=30 || true
+        sleep 3
+        partx -u /dev/${actionDevice} 2>/dev/null || true
+        udevadm settle --timeout=10 || true
+
         # DEBUG: Log partition count after partprobe
         afterPartprobeNoBootCount=$(partx -g /dev/"${actionDevice}" 2>/dev/null | wc -l)
         echo "# DEBUG SETUP STORAGE NO-BOOT: Partition count after partprobe: ${afterPartprobeNoBootCount}" >> ${logFile}
         echo "# DEBUG SETUP STORAGE NO-BOOT: Partitions after partprobe:" >> ${logFile}
         lsblk -no NAME "/dev/${actionDevice}" >> ${logFile}
-        
+
         echo "# .. formating" >> ${logFile}
         wipefs -a /dev/${actionDevicePartitionBase}1 >> ${logFile}
         mkfs -t ext4  /dev/${actionDevicePartitionBase}1 >> ${logFile}

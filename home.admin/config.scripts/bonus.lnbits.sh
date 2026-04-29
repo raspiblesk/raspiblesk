@@ -659,8 +659,8 @@ if [ "$1" = "install" ]; then
 
   # make sure dependencies are installed
   # LNBits requires Python <=3.12; Debian Trixie ships 3.13 — install 3.12 explicitly
-  sudo apt-get install -y pkg-config build-essential python3-dev libsecp256k1-dev libffi-dev libgmp-dev \
-    python3.12 python3.12-venv python3.12-dev
+  sudo apt-get install -y pkg-config build-essential python3-dev libsecp256k1-dev libffi-dev libgmp-dev || true
+  sudo apt-get install -y python3.12 python3.12-venv python3.12-dev || true
 
   # add lnbits user
   echo "*** Add the 'lnbits' user ***"
@@ -684,12 +684,35 @@ if [ "$1" = "install" ]; then
   if ! sudo -u lnbits which poetry; then
     echo "# install poetry"
     sudo pip3 config set global.break-system-packages true
-    sudo pip3 install --upgrade pip
-    sudo pip3 install poetry
+    sudo pip3 install --upgrade pip || true
+    sudo pip3 install poetry || { echo "# FAIL - could not install poetry"; exit 1; }
   fi
 
   # Pin Poetry to Python 3.12 (LNBits does not yet support 3.13)
-  sudo -u lnbits poetry env use /usr/bin/python3.12 || { echo "# FAIL - python3.12 not found"; exit 1; }
+  # Search common locations for python3.12 binary
+  LNBITS_PYTHON=""
+  for _py in /usr/bin/python3.12 /usr/local/bin/python3.12 "$(which python3.12 2>/dev/null)"; do
+    if [ -x "${_py}" ]; then
+      LNBITS_PYTHON="${_py}"
+      break
+    fi
+  done
+  if [ -z "${LNBITS_PYTHON}" ]; then
+    echo "# WARNING: python3.12 not found at standard paths - trying deadsnakes or system python"
+    # Last resort: try system python3 if it's 3.12 or lower
+    _syspy=$(python3 --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+' | head -1)
+    _major=$(echo "${_syspy}" | cut -d. -f1)
+    _minor=$(echo "${_syspy}" | cut -d. -f2)
+    if [ "${_major}" = "3" ] && [ "${_minor:-99}" -le "12" ]; then
+      LNBITS_PYTHON="$(which python3)"
+      echo "# INFO: using system python ${_syspy} as fallback"
+    else
+      echo "# FAIL - python3.12 not available and system python is ${_syspy} (>3.12)"
+      exit 1
+    fi
+  fi
+  echo "# Using python for LNBits: ${LNBITS_PYTHON}"
+  sudo -u lnbits poetry env use "${LNBITS_PYTHON}" || { echo "# FAIL - poetry env use failed"; exit 1; }
 
   echo "# install"
   exitCode=0
@@ -702,9 +725,9 @@ if [ "$1" = "install" ]; then
   fi
 
   # make sure default virtaulenv is used
-  sudo apt-get remove -y python3-virtualenv 2>/dev/null
-  sudo pip uninstall -y virtualenv 2>/dev/null
-  sudo apt-get install -y python3-virtualenv
+  sudo apt-get remove -y python3-virtualenv 2>/dev/null || true
+  sudo pip uninstall -y virtualenv 2>/dev/null || true
+  sudo apt-get install -y python3-virtualenv || true
 
   exit $exitCode
 fi
