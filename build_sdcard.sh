@@ -766,6 +766,7 @@ for fixedScript in \
     config.scripts/bonus.fulcrum.sh \
     config.scripts/bonus.electrs.sh \
     config.scripts/bonus.lnbits.sh \
+    config.scripts/bonus.jam.sh \
     config.scripts/bonus.glc-rpc-explorer.sh \
     config.scripts/blesk.i2pd.sh \
     config.scripts/bonus.mempool.sh \

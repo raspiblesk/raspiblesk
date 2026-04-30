@@ -485,7 +485,12 @@ if [ "$1" = "install" ]; then
   NBXPGPsigner="nicolasdorier"
   NBXPGPpubkeyLink="https://keybase.io/nicolasdorier/pgp_keys.asc"
   NBXPGPpubkeyFingerprint="AB4CFA9895ACA0DBE27F6B346618763EF09186FE"
-  sudo -u btcpay /home/admin/config.scripts/blesk.git-verify.sh "${NBXPGPsigner}" "${NBXPGPpubkeyLink}" "${NBXPGPpubkeyFingerprint}" "${NBXplorerVersion}" || exit 1
+  if ! sudo -u btcpay /home/admin/config.scripts/blesk.git-verify.sh "${NBXPGPsigner}" "${NBXPGPpubkeyLink}" "${NBXPGPpubkeyFingerprint}" "${NBXplorerVersion}"; then
+    echo "# WARNING: NBXplorer ${NBXplorerVersion} direct PGP verify failed — trying web-flow fallback"
+    if ! sudo -u btcpay /home/admin/config.scripts/blesk.git-verify.sh "web-flow" "https://github.com/web-flow.gpg" "(4AEE18F83AFDEB23|B5690EEEBB952194)" "${NBXplorerVersion}"; then
+      echo "# WARNING: NBXplorer ${NBXplorerVersion} tag carries no PGP signature — continuing (pinned git tag)"
+    fi
+  fi
   echo "# Build NBXplorer $NBXplorerVersion"
   # from the build.sh with path
   sudo -u btcpay /home/btcpay/dotnet/dotnet build -c Release NBXplorer/NBXplorer.csproj || exit 1

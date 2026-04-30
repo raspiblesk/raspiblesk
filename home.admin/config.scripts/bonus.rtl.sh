@@ -175,8 +175,8 @@ if [ "$1" = "install" ]; then
   # install
   echo "# Running npm install ..."
   export NG_CLI_ANALYTICS=false
-  sudo -u rtl npm install --omit=dev --legacy-peer-deps
-  if ! [ $? -eq 0 ]; then
+  sudo -u rtl NO_UPDATE_NOTIFIER=1 npm install --omit=dev --legacy-peer-deps --no-audit --no-fund 2>&1 | grep -Ev "^npm (warn deprecated|warn old lockfile|notice)"
+  if [ "${PIPESTATUS[0]}" -ne 0 ]; then
     echo "# FAIL - npm install did not run correctly - deleting code and exit"
     sudo rm -r /home/rtl/RTL
     exit 1
@@ -632,8 +632,8 @@ if [ "$1" = "update" ]; then
       # https://github.com/Ride-The-Lightning/RTL#or-update-existing-dependencies
       echo "# Running npm install ..."
       export NG_CLI_ANALYTICS=false
-      sudo -u rtl npm install --omit=dev --legacy-peer-deps
-      if ! [ $? -eq 0 ]; then
+      sudo -u rtl NO_UPDATE_NOTIFIER=1 npm install --omit=dev --legacy-peer-deps --no-audit --no-fund 2>&1 | grep -Ev "^npm (warn deprecated|warn old lockfile|notice)"
+      if [ "${PIPESTATUS[0]}" -ne 0 ]; then
         echo "# FAIL - npm install did not run correctly - deleting code and exit"
         sudo rm -r /home/rtl/RTL
         exit 1
@@ -648,8 +648,8 @@ if [ "$1" = "update" ]; then
     sudo -u rtl git pull -p
     echo "# Running npm install ..."
     export NG_CLI_ANALYTICS=false
-    sudo -u rtl npm install --omit=dev --legacy-peer-deps
-    if ! [ $? -eq 0 ]; then
+    sudo -u rtl NO_UPDATE_NOTIFIER=1 npm install --omit=dev --legacy-peer-deps --no-audit --no-fund 2>&1 | grep -Ev "^npm (warn deprecated|warn old lockfile|notice)"
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
       echo "# FAIL - npm install did not run correctly - deleting code and exit"
       sudo rm -r /home/rtl/RTL
       exit 1

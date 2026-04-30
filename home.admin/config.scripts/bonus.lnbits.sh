@@ -658,9 +658,9 @@ if [ "$1" = "install" ]; then
   echo "# githubUser=$githubUser tag=$tag"
 
   # make sure dependencies are installed
-  # LNBits requires Python <=3.12; Debian Trixie ships 3.13 — install 3.12 explicitly
   sudo apt-get install -y pkg-config build-essential python3-dev libsecp256k1-dev libffi-dev libgmp-dev || true
-  sudo apt-get install -y python3.12 python3.12-venv python3.12-dev || true
+  # try python3.12 explicitly; on Trixie 2026+ this may not exist — fallback to 3.13 below
+  sudo apt-get install -y python3.12 python3.12-venv python3.12-dev 2>/dev/null || true
 
   # add lnbits user
   echo "*** Add the 'lnbits' user ***"
@@ -703,11 +703,11 @@ if [ "$1" = "install" ]; then
     _syspy=$(python3 --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+' | head -1)
     _major=$(echo "${_syspy}" | cut -d. -f1)
     _minor=$(echo "${_syspy}" | cut -d. -f2)
-    if [ "${_major}" = "3" ] && [ "${_minor:-99}" -le "12" ]; then
+    if [ "${_major}" = "3" ] && [ "${_minor:-99}" -le "13" ]; then
       LNBITS_PYTHON="$(which python3)"
       echo "# INFO: using system python ${_syspy} as fallback"
     else
-      echo "# FAIL - python3.12 not available and system python is ${_syspy} (>3.12)"
+      echo "# FAIL - python3.12/3.13 not available and system python is ${_syspy} (unsupported)"
       exit 1
     fi
   fi

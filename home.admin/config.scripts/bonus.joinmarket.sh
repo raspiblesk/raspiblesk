@@ -128,7 +128,7 @@ if [ "$1" = "install" ]; then
       # no qtgui on arm
       qtgui=false
     fi
-    if sudo -u joinmarket /home/joinmarket/install.joinmarket.sh -i install -q $qtgui; then
+    if sudo -u joinmarket env PIP_NO_WARN_SCRIPT_LOCATION=1 /home/joinmarket/install.joinmarket.sh -i install -q $qtgui; then
       echo "# Installed JoinMarket"
       echo "# Run: 'sudo /home/admin/config.scripts/bonus.joinmarket.sh on' to configure and switch on"
     else

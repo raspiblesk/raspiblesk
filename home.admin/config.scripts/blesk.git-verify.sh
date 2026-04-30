@@ -72,12 +72,26 @@ elif [ $# -eq 4 ]; then
   commitOrTag="$4 tag"
 fi
 echo "# running: ${gitCommand}"
-${gitCommand} &>"$_temp"
+LC_ALL=C LANG=C ${gitCommand} &>"$_temp"
 echo
 cat "$_temp"
 echo
 
-goodSignature=$(grep "Good signature from" -c <"$_temp")
+# If verify-tag failed because it's a lightweight tag pointing to a commit, retry as verify-commit
+if grep -q "cannot verify a non-tag object of type commit" "$_temp"; then
+  commitHash=$(git rev-list -1 "$4" 2>/dev/null)
+  if [ -n "$commitHash" ]; then
+    gitCommand="git verify-commit $commitHash"
+    commitOrTag="$4 commit"
+    echo "# tag is a lightweight tag, retrying with: ${gitCommand}"
+    LC_ALL=C LANG=C ${gitCommand} &>"$_temp"
+    echo
+    cat "$_temp"
+    echo
+  fi
+fi
+
+goodSignature=$(grep -c "Good signature from" <"$_temp")
 echo "# goodSignature(${goodSignature})"
 correctKey=$(tr -d " \t\n\r" <"$_temp" | grep -Ec "${PGPpubkeyFingerprint}")
 echo "# correctKey(${correctKey})"

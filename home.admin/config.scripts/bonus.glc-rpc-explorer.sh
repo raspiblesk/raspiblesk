@@ -235,8 +235,8 @@ if [ "$1" = "install" ]; then
   cd glc-rpc-explorer
   sudo -u glcrpcexplorer git reset --hard ${GITHUBCOMMIT}
   sudo -u glcrpcexplorer /home/admin/config.scripts/blesk.git-verify.sh "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" || echo "# WARN: PGP verify skipped for pinned commit ${GITHUBCOMMIT}"
-  sudo -u glcrpcexplorer npm ci
-  if ! [ $? -eq 0 ]; then
+  sudo -u glcrpcexplorer NO_UPDATE_NOTIFIER=1 npm ci --no-audit --no-fund 2>&1 | grep -Ev "^npm (warn deprecated|warn old lockfile|notice)"
+  if [ "${PIPESTATUS[0]}" -ne 0 ]; then
       echo "FAIL - npm ci did not run correctly, aborting"
       echo "result='fail npm ci'"
       exit 1

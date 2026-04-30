@@ -112,7 +112,8 @@ if [ "$1" = "install" ]; then
 
     echo "Running npm install ..."
     sudo rm -r /home/thunderhub/thunderhub/node_modules 2>/dev/null
-    if ! sudo -u thunderhub npm install; then
+    sudo -u thunderhub NO_UPDATE_NOTIFIER=1 npm install --no-audit --no-fund 2>&1 | grep -Ev "^npm (warn deprecated|warn old lockfile|notice)"
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
       echo "FAIL - npm install did not run correctly, aborting"
       echo "result='fail npm install '"
       exit 1
@@ -122,7 +123,7 @@ if [ "$1" = "install" ]; then
     sudo -u thunderhub npx next telemetry disable
 
     echo "# run build ..."
-    sudo -u thunderhub npm run build
+    sudo -u thunderhub NO_UPDATE_NOTIFIER=1 npm run build
 
   exit 0
 fi
@@ -398,8 +399,8 @@ if [ "$1" = "update" ]; then
 
     # install deps
     echo "# Installing dependencies..."
-    sudo -u thunderhub npm install --quiet --yes
-    if ! [ $? -eq 0 ]; then
+    sudo -u thunderhub NO_UPDATE_NOTIFIER=1 npm install --no-audit --no-fund 2>&1 | grep -Ev "^npm (warn deprecated|warn old lockfile|notice)"
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
         echo "# FAIL - npm install did not run correctly, aborting"
         exit 1
     fi
@@ -413,7 +414,7 @@ if [ "$1" = "update" ]; then
 
     # build nextjs
     echo "# Building application..."
-    sudo -u thunderhub npm run build
+    sudo -u thunderhub NO_UPDATE_NOTIFIER=1 npm run build
 
     echo "# Updated to version" $TAG
   fi

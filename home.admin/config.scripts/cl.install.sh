@@ -154,7 +154,7 @@ function downloadAndVerifySourceZip() {
   echo
 
   # Verify the signature on SHA256SUMS
-  sudo -u glcoin gpg --verify "SHA256SUMS-${CLVERSION}.asc" "SHA256SUMS-${CLVERSION}" 2>&1 | tee /tmp/cl_gpg_verify.txt
+  sudo -u glcoin env LC_ALL=C LANG=C gpg --verify "SHA256SUMS-${CLVERSION}.asc" "SHA256SUMS-${CLVERSION}" 2>&1 | tee /tmp/cl_gpg_verify.txt
   goodSignature=$(grep -c "Good signature" /tmp/cl_gpg_verify.txt)
   if [ "${goodSignature}" -lt 1 ]; then
     echo "# ERROR --> SHA256SUMS signature verification failed"

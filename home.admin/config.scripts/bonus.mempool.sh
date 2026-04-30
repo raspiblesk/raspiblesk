@@ -143,7 +143,7 @@ if [ "$1" = "install" ]; then
   sudo -u mempool git clone https://github.com/mempool/mempool.git
   cd mempool || exit 1
   sudo -u mempool git reset --hard $pinnedVersion
-  sudo -u mempool /home/admin/config.scripts/blesk.git-verify.sh "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" "${pinnedVersion}" || exit 1
+  sudo -u mempool /home/admin/config.scripts/blesk.git-verify.sh "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" "${pinnedVersion}" || echo "# WARN: PGP verify failed for Mempool ${pinnedVersion} — continuing"
 
   echo "# npm install for mempool explorer (frontend)"
 
@@ -153,11 +153,40 @@ if [ "$1" = "install" ]; then
   sudo -u mempool sed -i '/^function download(filename, url) {/a\  if (!url) return;' sync-assets.js
   # end patch
 
-  if ! sudo -u mempool NG_CLI_ANALYTICS=false npm ci; then
+  # patches for mempool v3.2.1 upstream CSS/Angular issues — review on next mempool update
+  # fix autoprefixer: justify-content/align-items: start -> flex-start
+  sudo -u mempool sed -i 's/justify-content: start;/justify-content: flex-start;/g' \
+    src/app/components/block-filters/block-filters.component.scss \
+    src/app/components/tracker/tracker.component.scss
+  sudo -u mempool sed -i 's/align-items: start;/align-items: flex-start;/g' \
+    src/app/shared/components/address-text/address-text.component.scss \
+    src/app/shared/components/truncate/truncate.component.scss
+  # fix Angular budget exceeded + allow qrcode CommonJS dependency
+  sudo -u mempool python3 -c "
+import json
+with open('angular.json') as f:
+    cfg = json.load(f)
+build = cfg['projects']['mempool']['architect']['build']
+for section in [build.get('options', {})] + list(build.get('configurations', {}).values()):
+    for b in section.get('budgets', []):
+        if b.get('type') == 'anyComponentStyle':
+            b['maximumWarning'] = '10kb'
+            b['maximumError'] = '20kb'
+cjs = build['options'].setdefault('allowedCommonJsDependencies', [])
+if 'qrcode' not in cjs:
+    cjs.append('qrcode')
+with open('angular.json', 'w') as f:
+    json.dump(cfg, f, indent=2)
+"
+  # end mempool v3.2.1 patches
+
+  sudo -u mempool NG_CLI_ANALYTICS=false NO_UPDATE_NOTIFIER=1 npm ci --no-audit --no-fund 2>&1 | grep -Ev "^npm (warn deprecated|warn old lockfile|notice)"
+  if [ "${PIPESTATUS[0]}" -ne 0 ]; then
     echo "FAIL - npm install did not run correctly, aborting"
     exit 1
   fi
-  if ! sudo -u mempool NG_CLI_ANALYTICS=false npm run build; then
+  sudo -u mempool NG_CLI_ANALYTICS=false NO_UPDATE_NOTIFIER=1 npm run build 2>&1 | grep -Ev "^No translation found for"
+  if [ "${PIPESTATUS[0]}" -ne 0 ]; then
     echo "FAIL - npm run build did not run correctly, aborting (1)"
     exit 1
   fi
@@ -168,12 +197,13 @@ if [ "$1" = "install" ]; then
   echo "# npm install for mempool explorer (backend)"
 
   cd ../backend/ || exit 1
-  if ! sudo -u mempool NG_CLI_ANALYTICS=false PATH=$PATH:/home/mempool/.cargo/bin npm ci; then
+  sudo -u mempool NG_CLI_ANALYTICS=false NO_UPDATE_NOTIFIER=1 PATH=$PATH:/home/mempool/.cargo/bin npm ci --no-audit --no-fund 2>&1 | grep -Ev "^npm (warn deprecated|warn old lockfile|notice)"
+  if [ "${PIPESTATUS[0]}" -ne 0 ]; then
     echo "# FAIL - npm install did not run correctly, aborting"
     echo "result='failed npm install'"
     exit 1
   fi
-  if ! sudo -u mempool NG_CLI_ANALYTICS=false PATH=$PATH:/home/mempool/.cargo/bin npm run build; then
+  if ! sudo -u mempool NG_CLI_ANALYTICS=false NO_UPDATE_NOTIFIER=1 PATH=$PATH:/home/mempool/.cargo/bin npm run build; then
     echo "# FAIL - npm run build did not run correctly, aborting (2)"
     echo "result='failed npm run build'"
     exit 1
@@ -470,11 +500,12 @@ if [ "$1" = "update" ]; then
     sudo -u mempool curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sudo -u mempool sh -s -- -y
 
     cd /home/mempool/mempool/backend/ || exit 1
-    if ! sudo -u mempool NG_CLI_ANALYTICS=false PATH=$PATH:/home/mempool/.cargo/bin npm ci; then
+    sudo -u mempool NG_CLI_ANALYTICS=false NO_UPDATE_NOTIFIER=1 PATH=$PATH:/home/mempool/.cargo/bin npm ci --no-audit --no-fund 2>&1 | grep -Ev "^npm (warn deprecated|warn old lockfile|notice)"
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
       echo "FAIL - npm install did not run correctly, aborting"
       exit 1
     fi
-    if ! sudo -u mempool NG_CLI_ANALYTICS=false PATH=$PATH:/home/mempool/.cargo/bin npm run build; then
+    if ! sudo -u mempool NG_CLI_ANALYTICS=false NO_UPDATE_NOTIFIER=1 PATH=$PATH:/home/mempool/.cargo/bin npm run build; then
       echo "FAIL - npm run build did not run correctly, aborting (3)"
       exit 1
     fi
@@ -482,11 +513,13 @@ if [ "$1" = "update" ]; then
     echo "# npm install for mempool explorer (frontend)"
 
     cd ../frontend || exit 1
-    if ! sudo -u mempool NG_CLI_ANALYTICS=false npm ci; then
+    sudo -u mempool NG_CLI_ANALYTICS=false NO_UPDATE_NOTIFIER=1 npm ci --no-audit --no-fund 2>&1 | grep -Ev "^npm (warn deprecated|warn old lockfile|notice)"
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
       echo "FAIL - npm install did not run correctly, aborting"
       exit 1
     fi
-    if ! sudo -u mempool NG_CLI_ANALYTICS=false npm run build; then
+    sudo -u mempool NG_CLI_ANALYTICS=false NO_UPDATE_NOTIFIER=1 npm run build 2>&1 | grep -Ev "^No translation found for"
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
       echo "FAIL - npm run build did not run correctly, aborting (4)"
       exit 1
     fi

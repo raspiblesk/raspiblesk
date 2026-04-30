@@ -135,8 +135,14 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   cd /home/bleskapi/blitz_web || exit 1
   echo "# Compile WebUI"
   /home/admin/config.scripts/bonus.nodejs.sh on
-  npm install || { echo "error='npm install failed'"; exit 1; }
-  npm run build || { echo "error='npm run build failed'"; exit 1; }
+  # Debian nodejs package doesn't bundle npm; nodesource may also fail — install explicitly
+  if ! command -v npm &>/dev/null; then
+    echo "# npm not found after nodejs install — installing via apt"
+    apt-get install -y npm
+  fi
+  NO_UPDATE_NOTIFIER=1 npm install --no-audit --no-fund 2>&1 | grep -Ev "^npm (warn deprecated|warn old lockfile|notice)"
+  if [ "${PIPESTATUS[0]}" -ne 0 ]; then echo "error='npm install failed'"; exit 1; fi
+  NO_UPDATE_NOTIFIER=1 npm run build || { echo "error='npm run build failed'"; exit 1; }
 
   rm -rf /var/www/public/*
   cp -r /home/bleskapi/blitz_web/build/* /var/www/public

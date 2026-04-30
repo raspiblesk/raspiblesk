@@ -197,10 +197,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
       echo "# FAIL # Downloaded LiT BINARY not matching SHA256 checksum: ${SHA256}"
       exit 1
     fi
-    verifyResult=$(
-      LANG=en_US.utf8
-      gpg --verify manifest-$PGPsigner-v${LITVERSION}.sig manifest-v${LITVERSION}.txt 2>&1
-    )
+    verifyResult=$(LC_ALL=C LANG=C gpg --verify manifest-$PGPsigner-v${LITVERSION}.sig manifest-v${LITVERSION}.txt 2>&1)
     goodSignature=$(echo ${verifyResult} | grep 'Good signature' -c)
     echo "goodSignature(${goodSignature})"
     if  [ ${goodSignature} -lt 1 ]; then
