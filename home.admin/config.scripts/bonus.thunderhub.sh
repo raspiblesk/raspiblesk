@@ -108,7 +108,7 @@ if [ "$1" = "install" ]; then
     # https://github.com/apotdevin/thunderhub/releases
     sudo -u thunderhub git reset --hard $THUBVERSION
 
-    sudo -u thunderhub /home/admin/config.scripts/blesk.git-verify.sh "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" || exit 1
+    sudo -u thunderhub /home/admin/config.scripts/blesk.git-verify.sh "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" "${THUBVERSION}" || exit 1
 
     echo "Running npm install ..."
     sudo rm -r /home/thunderhub/thunderhub/node_modules 2>/dev/null

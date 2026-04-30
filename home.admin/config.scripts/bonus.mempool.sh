@@ -143,7 +143,7 @@ if [ "$1" = "install" ]; then
   sudo -u mempool git clone https://github.com/mempool/mempool.git
   cd mempool || exit 1
   sudo -u mempool git reset --hard $pinnedVersion
-  sudo -u mempool /home/admin/config.scripts/blesk.git-verify.sh "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" || exit 1
+  sudo -u mempool /home/admin/config.scripts/blesk.git-verify.sh "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" "${pinnedVersion}" || exit 1
 
   echo "# npm install for mempool explorer (frontend)"
 

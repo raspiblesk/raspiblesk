@@ -28,8 +28,8 @@ function copy_mac_set_perms() {
   local group_name=${2} # the unix group name (e.g. lndadmin)
   local n=${3:-glcoin} # the network (e.g. glcoin) defaults to glcoin
   local c=${4:-main}    # the chain (e.g. main, test, sim, reg) defaults to main (for mainnet)
-  sudo /bin/chown --silent admin:"${group_name}" /mnt/hdd/app-data/lnd/data/chain/"${n}"/"${c}"net/"${file_name}"
-  sudo /bin/chmod --silent 750 /mnt/hdd/app-data/lnd/data/chain/"${n}"/"${c}"net/"${file_name}"
+  sudo /bin/chown --silent admin:"${group_name}" /mnt/hdd/app-data/lnd/data/chain/bitcoin/"${n}"/"${file_name}"
+  sudo /bin/chmod --silent 750 /mnt/hdd/app-data/lnd/data/chain/bitcoin/"${n}"/"${file_name}"
 }
 
 function check_macaroons() {
@@ -40,7 +40,7 @@ do
   local file_name=${macaroon}
   local n=${1:-glcoin} # the network (e.g. glcoin) defaults to glcoin
   local c=${2:-main}    # the chain (e.g. main, test, sim, reg) defaults to main (for mainnet)
-  if [ ! -f /mnt/hdd/app-data/lnd/data/chain/"${n}"/"${c}"net/"${macaroon}" ]; then
+  if [ ! -f /mnt/hdd/app-data/lnd/data/chain/bitcoin/"${n}"/"${macaroon}" ]; then
     missing=$((missing + 1))
     echo "# ${macaroon} is missing ($missing)"
   else
@@ -85,10 +85,10 @@ if [ "$1" = "reset" ]; then
     echo "# all your macaroons get deleted and recreated"
     cd || exit
     # shellcheck disable=SC2154 # gets the ${network} from the raspiblesk.conf
-    sudo find /mnt/hdd/app-data/lnd/data/chain/"${network}"/"${chain}"net/ -iname '*.macaroon' -delete
-    sudo find /mnt/hdd/app-data/lnd/data/chain/"${network}"/"${chain}"net/ -iname '*.macaroon' -delete
+    sudo find /mnt/hdd/app-data/lnd/data/chain/bitcoin/"${network}"/ -iname '*.macaroon' -delete
+    sudo find /mnt/hdd/app-data/lnd/data/chain/bitcoin/"${network}"/ -iname '*.macaroon' -delete
     if [ "${keepOldMacaroons}" != "1" ]; then
-      sudo rm /mnt/hdd/app-data/lnd/data/chain/"${network}"/"${chain}"net/macaroons.db
+      sudo rm /mnt/hdd/app-data/lnd/data/chain/bitcoin/"${network}"/macaroons.db
     fi
 
     echo "# delete also lit macaroons if present"
@@ -133,7 +133,7 @@ elif [ "$1" = "sync" ]; then
   echo "###### SYNCING MACAROONS, RPC Password AND TLS Certificate ######"
 
   echo "# make sure LND app-data directories exist"
-  sudo /bin/mkdir --mode 0755 --parents /mnt/hdd/app-data/lnd/data/chain/"${network}"/"${chain}"net/
+  sudo /bin/mkdir --mode 0755 --parents /mnt/hdd/app-data/lnd/data/chain/bitcoin/"${network}"/
 
   echo `# make sure all user groups exist for default macaroons`
   sudo /usr/sbin/groupadd --force --gid 9700 lndadmin

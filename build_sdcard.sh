@@ -770,7 +770,18 @@ for fixedScript in \
     config.scripts/blesk.i2pd.sh \
     config.scripts/bonus.mempool.sh \
     config.scripts/lnd.check.sh \
+    config.scripts/lnd.credentials.sh \
+    setup.scripts/eventInfoWait.sh \
     config.scripts/bonus.glcoin-mining.sh \
+    config.scripts/bonus.btcpayserver.sh \
+    config.scripts/bonus.mempool.sh \
+    config.scripts/bonus.thunderhub.sh \
+    config.scripts/bonus.glc-rpc-explorer.sh \
+    config.scripts/tor.network.sh \
+    config.scripts/blesk.web.ui.sh \
+    config.scripts/blesk.git-verify.sh \
+    _provision.setup.sh \
+    _provision.xfinal.sh \
     assets/bootstrap.service \
     assets/glcoin.conf; do
   if [ -f "${SCRIPT_DIR}/home.admin/${fixedScript}" ]; then
@@ -778,9 +789,16 @@ for fixedScript in \
     echo "# Overlaid local fix: ${fixedScript}"
   fi
 done
+# Overlay build_sdcard.sh itself so defaultWEBUIuser/repo stay correct after git clone
+cp "${SCRIPT_DIR}/build_sdcard.sh" "/home/admin/raspiblesk/build_sdcard.sh"
+echo "# Overlaid local fix: build_sdcard.sh"
 if [ -f "${SCRIPT_DIR}/home.admin/assets/glcoin-0.1.8-src.tar.gz" ]; then
   cp "${SCRIPT_DIR}/home.admin/assets/glcoin-0.1.8-src.tar.gz" "/home/admin/raspiblesk/home.admin/assets/glcoin-0.1.8-src.tar.gz"
   echo "# Copied bundled glcoin-0.1.8-src.tar.gz to repo assets"
+fi
+if [ -f "${SCRIPT_DIR}/home.admin/assets/raspiblitz-web-master.tar.gz" ]; then
+  cp "${SCRIPT_DIR}/home.admin/assets/raspiblitz-web-master.tar.gz" "/home/admin/raspiblesk/home.admin/assets/raspiblitz-web-master.tar.gz"
+  echo "# Copied bundled raspiblitz-web-master.tar.gz to repo assets"
 fi
 # Stage all pre-built Glcoin tarballs in /tmp so install scripts skip source compilation
 _arch="arm64"

@@ -114,21 +114,25 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   # clean all source
   rm -rf /root/blitz_web /root/"${GITHUB_REPO}" /home/bleskapi/blitz_web /home/bleskapi/"${GITHUB_REPO}"
   cd /home/bleskapi || exit 1
-  echo "# clone github: ${GITHUB_USER}/${GITHUB_REPO}"
-  git clone https://github.com/"${GITHUB_USER}"/"${GITHUB_REPO}".git || { echo "error='git clone failed'"; exit 1; }
-  mv /home/bleskapi/"${GITHUB_REPO}" /home/bleskapi/blitz_web
-  cd blitz_web || exit 1
-  echo "# checkout branch: ${GITHUB_BRANCH}"
-  git checkout "${GITHUB_BRANCH}" || { echo "error='git checkout failed'"; exit 1; }
-  if [ "${GITHUB_COMMITORTAG}" != "" ]; then
-    echo "# setting code to tag/commit: ${GITHUB_COMMITORTAG}"
-    if ! git reset --hard "${GITHUB_COMMITORTAG}"; then
-      echo "error='git reset failed'"
-      exit 1
-    fi
+
+  BUNDLED_WEBUI="/home/admin/raspiblesk/home.admin/assets/raspiblitz-web-master.tar.gz"
+  if [ -f "${BUNDLED_WEBUI}" ]; then
+    echo "# Installing WebUI from bundled tarball (offline)"
+    tar -xzf "${BUNDLED_WEBUI}" -C /home/bleskapi/
+    mv /home/bleskapi/raspiblitz-web-master /home/bleskapi/blitz_web 2>/dev/null || \
+      mv /home/bleskapi/raspiblitz-web-* /home/bleskapi/blitz_web 2>/dev/null || true
   else
-    echo "# using lastest code in branch"
+    echo "# Bundled WebUI not found — cloning from github: ${GITHUB_USER}/${GITHUB_REPO}"
+    git clone https://github.com/"${GITHUB_USER}"/"${GITHUB_REPO}".git || { echo "error='git clone failed'"; exit 1; }
+    mv /home/bleskapi/"${GITHUB_REPO}" /home/bleskapi/blitz_web
+    echo "# checkout branch: ${GITHUB_BRANCH}"
+    git -C /home/bleskapi/blitz_web checkout "${GITHUB_BRANCH}" || { echo "error='git checkout failed'"; exit 1; }
+    if [ "${GITHUB_COMMITORTAG}" != "" ]; then
+      echo "# setting code to tag/commit: ${GITHUB_COMMITORTAG}"
+      git -C /home/bleskapi/blitz_web reset --hard "${GITHUB_COMMITORTAG}" || { echo "error='git reset failed'"; exit 1; }
+    fi
   fi
+  cd /home/bleskapi/blitz_web || exit 1
   echo "# Compile WebUI"
   /home/admin/config.scripts/bonus.nodejs.sh on
   npm install || { echo "error='npm install failed'"; exit 1; }

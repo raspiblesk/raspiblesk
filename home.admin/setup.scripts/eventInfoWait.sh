@@ -176,10 +176,10 @@ Use your Password A
 elif [ "${eventID}" == "inconsistentsystem" ]; then
 
     dialog --backtitle "${backtitle}" --cr-wrap --infobox "
-PLEASE START WITH A FRESH SD CARD IMAGE
----------------------------------------
-Cut power & remove sd card and then
-flash a fresh RaspiBlesk image on it.
+PLEASE START WITH A FRESH INSTALL
+----------------------------------
+Cut power & then re-run:
+sudo ./build_sdcard.sh -b dev
 " 8 45
 
 elif [ "${eventID}" == "waitsetup" ] && [ "${mode}" == "lcd" ]; then
@@ -369,9 +369,9 @@ elif [ "${eventID}" == "sdtoosmall" ]; then
 
     # contentWords[0] --> size string (for example '16GB')
     dialog --backtitle "${backtitle}" --cr-wrap --infobox "
-PROBLEM: SD CARD IS TOO SMALL 
-Capacity of 32GB recommended
-Cut power & create fresh sd card
+PROBLEM: STORAGE TOO SMALL
+32GB minimum recommended
+Cut power & use larger NVMe/SSD
 " 7 40
 
 elif [ "${eventID}" == "systemcopy" ]; then

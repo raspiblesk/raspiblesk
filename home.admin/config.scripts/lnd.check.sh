@@ -52,8 +52,8 @@ if [ "$1" == "prestart" ]; then
   # make sure is readable by group
   chmod g+rx /mnt/hdd/app-data/lnd/data
   chmod g+rx /mnt/hdd/app-data/lnd/data/chain
-  chmod g+rx /mnt/hdd/app-data/lnd/data/chain/${network}
-  chmod g+rx /mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net
+  chmod g+rx /mnt/hdd/app-data/lnd/data/chain/bitcoin
+  chmod g+rx /mnt/hdd/app-data/lnd/data/chain/bitcoin/${network}
 
   # Glcoin-specific ZMQ ports (NOT Bitcoin standard ports 28332/28333)
   if [ "${portprefix}" = "1" ]; then
@@ -94,7 +94,7 @@ if [ "$1" == "prestart" ]; then
   sed -i "/^sync-freelist=1/d" ${lndConfFile}
 
   # delete autounlock if passwordFile not present
-  passwordFile="/mnt/hdd/app-data/lnd/data/chain/${network}/${CHAIN}/password.info"
+  passwordFile="/mnt/hdd/app-data/lnd/data/chain/bitcoin/${network}/password.info"
   if ! ls ${passwordFile} &>/dev/null; then
     sed -i "/^wallet-unlock-password-file=/d" ${lndConfFile}
   fi
@@ -469,7 +469,7 @@ elif [ "$1" == "basic-setup" ]; then
   fi
 
   # check for admin macaroon exist (on HDD)
-  adminMacaroonExists=$(sudo ls /mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/admin.macaroon 2>/dev/null | grep -c 'admin.macaroon')
+  adminMacaroonExists=$(sudo ls /mnt/hdd/app-data/lnd/data/chain/bitcoin/${network}/admin.macaroon 2>/dev/null | grep -c 'admin.macaroon')
   if [ ${adminMacaroonExists} -gt 0 ]; then
     echo "macaroon=1"
   else
@@ -477,12 +477,12 @@ elif [ "$1" == "basic-setup" ]; then
     echo "err='admin.macaroon is missing in /mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net'"
   fi
   # check for admin macaroon exist (on SD card for admin)
-  adminMacaroonExists=$(sudo ls /home/admin/.lnd/data/chain/${network}/${chain}net/admin.macaroon 2>/dev/null | grep -c 'admin.macaroon')
+  adminMacaroonExists=$(sudo ls /home/admin/.lnd/data/chain/bitcoin/${network}/admin.macaroon 2>/dev/null | grep -c 'admin.macaroon')
   if [ ${adminMacaroonExists} -gt 0 ]; then
     echo "macaroonCopy=1"
     # check if the same
-    orgChecksum=$(sudo shasum -a 256 /mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/admin.macaroon 2>/dev/null | cut -d " " -f1)
-    cpyChecksum=$(sudo shasum -a 256 /home/admin/.lnd/data/chain/${network}/${chain}net/admin.macaroon 2>/dev/null | cut -d " " -f1)
+    orgChecksum=$(sudo shasum -a 256 /mnt/hdd/app-data/lnd/data/chain/bitcoin/${network}/admin.macaroon 2>/dev/null | cut -d " " -f1)
+    cpyChecksum=$(sudo shasum -a 256 /home/admin/.lnd/data/chain/bitcoin/${network}/admin.macaroon 2>/dev/null | cut -d " " -f1)
     if [ "${orgChecksum}" == "${cpyChecksum}" ]; then
       echo "macaroonMismatch=0"
     else

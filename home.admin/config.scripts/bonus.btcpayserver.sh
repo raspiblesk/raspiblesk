@@ -59,7 +59,7 @@ function NBXplorerConfig() {
   sudo -u btcpay mkdir -p /home/btcpay/.nbxplorer/Main
   echo "\
 network=mainnet
-btcnodeendpoint=127.0.0.1:8336
+btcnodeendpoint=127.0.0.1:1617
 glc.rpc.user=${RPC_USER}
 glc.rpc.password=${PASSWORD_B}
 postgres=User ID=nbxplorer;Host=localhost;Port=5432;Application Name=nbxplorer;MaxPoolSize=20;Database=nbxplorermainnet;Password='raspiblesk';
@@ -116,9 +116,9 @@ function BtcPayService() {
     databaseOption=""
   fi
   # see the configuration options with:
-  # sudo -u btcpay /home/btcpay/dotnet/dotnet run --no-launch-profile --no-build -c Release --project "/home/btcpay/btcpayserver/GlcoinPayServer/GlcoinPayServer.csproj" -- -h
+  # sudo -u btcpay /home/btcpay/dotnet/dotnet run --no-launch-profile --no-build -c Release --project "/home/btcpay/btcpayserver/BTCPayServer/BTCPayServer.csproj" -- -h
   # run manually to debug:
-  # sudo -u btcpay /home/btcpay/dotnet/dotnet run --no-launch-profile --no-build -c Release --project "/home/btcpay/btcpayserver/GlcoinPayServer/GlcoinPayServer.csproj" -- --sqlitefile=sqllite.db
+  # sudo -u btcpay /home/btcpay/dotnet/dotnet run --no-launch-profile --no-build -c Release --project "/home/btcpay/btcpayserver/BTCPayServer/BTCPayServer.csproj" -- --sqlitefile=sqllite.db
   echo "# create the btcpayserver.service"
   echo "
 [Unit]
@@ -128,7 +128,7 @@ After=nbxplorer.service
 
 [Service]
 ExecStart=/home/btcpay/dotnet/dotnet run --no-launch-profile --no-build \
- -c Release --project \"/home/btcpay/btcpayserver/GlcoinPayServer/GlcoinPayServer.csproj\" ${databaseOption}
+ -c Release --project \"/home/btcpay/btcpayserver/BTCPayServer/BTCPayServer.csproj\" ${databaseOption}
 User=btcpay
 Group=btcpay
 Type=simple
@@ -368,7 +368,7 @@ if [ "$1" = "write-tls-macaroon" ]; then
   # copy admin macaroon
   echo "# extra symlink to admin.macaroon for btcpay"
   if ! [[ -L "/home/btcpay/admin.macaroon" ]]; then
-    sudo ln -s "/home/btcpay/.lnd/data/chain/${network}/${chain}net/admin.macaroon" "/home/btcpay/admin.macaroon"
+    sudo ln -s "/home/btcpay/.lnd/data/chain/bitcoin/${network}/admin.macaroon" "/home/btcpay/admin.macaroon"
   fi
 
   BtcPayConfig
@@ -430,7 +430,7 @@ if [ "$1" = "install" ]; then
 
   echo "# install .NET"
   # https://dotnet.microsoft.com/en-us/download/dotnet/8.0
-  sudo apt-get -y install libunwind8 gettext libssl1.0
+  sudo apt-get -y install libunwind8 gettext
   cpu=$(uname -m)
   if [ "${cpu}" = "aarch64" ]; then
     binaryVersion="arm64"
@@ -446,7 +446,7 @@ if [ "$1" = "install" ]; then
     exit 1
   fi
   dotNetName="dotnet-sdk-8.0.403-linux-${binaryVersion}.tar.gz"
-  sudo rm /home/btcpay/${dotnetName} 2>/dev/null
+  sudo rm /home/btcpay/${dotNetName} 2>/dev/null
   sudo -u btcpay wget "${dotNetdirectLink}" -O "${dotNetName}"
   # check binary is was not manipulated (checksum test)
   actualChecksum=$(sha512sum /home/btcpay/${dotNetName} | cut -d " " -f1)
@@ -485,7 +485,7 @@ if [ "$1" = "install" ]; then
   NBXPGPsigner="nicolasdorier"
   NBXPGPpubkeyLink="https://keybase.io/nicolasdorier/pgp_keys.asc"
   NBXPGPpubkeyFingerprint="AB4CFA9895ACA0DBE27F6B346618763EF09186FE"
-  sudo -u btcpay /home/admin/config.scripts/blesk.git-verify.sh "${NBXPGPsigner}" "${NBXPGPpubkeyLink}" "${NBXPGPpubkeyFingerprint}" || exit 1
+  sudo -u btcpay /home/admin/config.scripts/blesk.git-verify.sh "${NBXPGPsigner}" "${NBXPGPpubkeyLink}" "${NBXPGPpubkeyFingerprint}" "${NBXplorerVersion}" || exit 1
   echo "# Build NBXplorer $NBXplorerVersion"
   # from the build.sh with path
   sudo -u btcpay /home/btcpay/dotnet/dotnet build -c Release NBXplorer/NBXplorer.csproj || exit 1
@@ -499,15 +499,15 @@ if [ "$1" = "install" ]; then
   sudo -u btcpay git reset --hard $BTCPayVersion
 
   echo "# verify signature of ${PGPsigner}"
-  if ! sudo -u btcpay /home/admin/config.scripts/blesk.git-verify.sh "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}"; then
+  if ! sudo -u btcpay /home/admin/config.scripts/blesk.git-verify.sh "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" "${BTCPayVersion}"; then
     # try with webflow
-    sudo -u btcpay /home/admin/config.scripts/blesk.git-verify.sh "web-flow" "https://github.com/web-flow.gpg" "B5690EEEBB952194" || exit 1
+    sudo -u btcpay /home/admin/config.scripts/blesk.git-verify.sh "web-flow" "https://github.com/web-flow.gpg" "(4AEE18F83AFDEB23|B5690EEEBB952194)" "${BTCPayVersion}" || exit 1
   fi
 
   echo "# Build GlcoinPayServer $BTCPayVersion"
   # from the build.sh with path
   sudo -u btcpay /home/btcpay/dotnet/dotnet build -c Release \
-    /home/btcpay/btcpayserver/GlcoinPayServer/GlcoinPayServer.csproj || exit 1
+    /home/btcpay/btcpayserver/BTCPayServer/BTCPayServer.csproj || exit 1
   exit 0
 fi
 
@@ -931,7 +931,7 @@ if [ "$1" = "update" ]; then
     echo "# Build GlcoinPayServer $TAG"
     # from the build.sh with path
     sudo systemctl stop btcpayserver
-    sudo -u btcpay /home/btcpay/dotnet/dotnet build -c Release /home/btcpay/btcpayserver/GlcoinPayServer/GlcoinPayServer.csproj || exit 1
+    sudo -u btcpay /home/btcpay/dotnet/dotnet build -c Release /home/btcpay/btcpayserver/BTCPayServer/BTCPayServer.csproj || exit 1
     sudo systemctl start btcpayserver
     echo "# Updated GlcoinPayServer to $TAG"
   fi

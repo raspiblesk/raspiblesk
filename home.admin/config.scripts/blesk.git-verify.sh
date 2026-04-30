@@ -72,7 +72,7 @@ elif [ $# -eq 4 ]; then
   commitOrTag="$4 tag"
 fi
 echo "# running: ${gitCommand}"
-${gitCommand} 2>&1 >&"$_temp"
+${gitCommand} &>"$_temp"
 echo
 cat "$_temp"
 echo

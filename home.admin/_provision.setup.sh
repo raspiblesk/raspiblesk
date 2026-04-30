@@ -310,12 +310,12 @@ if [ "${lightning}" == "lnd" ]; then
 
   # check if macaroon exists now - if not fail
   attempt=0
-  while [ $(sudo -u glcoin ls -la /mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/admin.macaroon 2>/dev/null | grep -c admin.macaroon) -eq 0 ]; do
+  while [ $(sudo -u glcoin ls -la /mnt/hdd/app-data/lnd/data/chain/bitcoin/${network}/admin.macaroon 2>/dev/null | grep -c admin.macaroon) -eq 0 ]; do
     echo "Waiting 2 mins for LND to create macaroons ... (${attempt}0s)" >> ${logFile}
     sleep 10
     attempt=$((attempt+1))
     if [ $attempt -eq 12 ];then
-      /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "lnd-no-macaroons" "lnd did not create macaroons" "/mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/admin.macaroon --> missing" ${logFile}
+      /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "lnd-no-macaroons" "lnd did not create macaroons" "/mnt/hdd/app-data/lnd/data/chain/bitcoin/${network}/admin.macaroon --> missing" ${logFile}
       exit 14
     fi
   done

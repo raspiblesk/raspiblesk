@@ -18,60 +18,55 @@ usage(){
 
 activateGlcoinOverTor()
 {
-  echo "*** Changing ${network} Config ***"
+  echo "*** Changing Glcoin Config for Tor ***"
+  local glcoinConf="/mnt/hdd/app-data/glcoin/glcoin.conf"
 
-  btcExists=$(sudo ls /home/glcoin/."${network}"/"${network}".conf | grep -c "${network}.conf")
+  btcExists=$(sudo ls "${glcoinConf}" 2>/dev/null | grep -c "glcoin.conf")
   if [ "${btcExists}" -gt 0 ]; then
 
     # make sure all is turned off and removed and then activate fresh (so that also old settings get removed)
     deactivateGlcoinOverTor
 
-    sudo chmod 777 "/home/glcoin/.${network}/${network}.conf"
-    sudo sed -i "s/^onlynet=.*//g" "/home/glcoin/.${network}/${network}.conf"
-    echo "Adding Tor config to the the ${network}.conf ..."
-    sudo sed -i "s/^torpassword=.*//g" "/home/glcoin/.${network}/${network}.conf"
-    echo "onlynet=onion" | sudo tee -a "/home/glcoin/.${network}/${network}.conf"
-    echo "onlynet=i2p" | sudo tee -a "/home/glcoin/.${network}/${network}.conf"
-    echo "proxy=127.0.0.1:9050" | sudo tee -a "/home/glcoin/.${network}/${network}.conf"
-    echo "main.bind=127.0.0.1" | sudo tee -a "/home/glcoin/.${network}/${network}.conf"
-    echo "test.bind=127.0.0.1" | sudo tee -a "/home/glcoin/.${network}/${network}.conf"
-    echo "dnsseed=0" | sudo tee -a "/home/glcoin/.${network}/${network}.conf"
-    echo "dns=0" | sudo tee -a "/home/glcoin/.${network}/${network}.conf"
+    sudo chmod 777 "${glcoinConf}"
+    sudo sed -i "s/^onlynet=.*//g" "${glcoinConf}"
+    echo "Adding Tor config to glcoin.conf ..."
+    sudo sed -i "s/^torpassword=.*//g" "${glcoinConf}"
+    echo "onlynet=onion" | sudo tee -a "${glcoinConf}"
+    echo "onlynet=i2p" | sudo tee -a "${glcoinConf}"
+    echo "proxy=127.0.0.1:9050" | sudo tee -a "${glcoinConf}"
+    echo "main.bind=127.0.0.1" | sudo tee -a "${glcoinConf}"
+    echo "test.bind=127.0.0.1" | sudo tee -a "${glcoinConf}"
+    echo "dnsseed=0" | sudo tee -a "${glcoinConf}"
+    echo "dns=0" | sudo tee -a "${glcoinConf}"
 
     # remove empty lines
-    sudo sed -i '/^ *$/d' "/home/glcoin/.${network}/${network}.conf"
-    sudo chmod 644 "/home/glcoin/.${network}/${network}.conf"
-
-    # copy new glcoin.conf to admin user for cli access
-    sudo cp "/home/glcoin/.${network}/${network}.conf" "/home/admin/.${network}/${network}.conf"
-    sudo chown admin:admin "/home/admin/.${network}/${network}.conf"
+    sudo sed -i '/^ *$/d' "${glcoinConf}"
+    sudo chmod 644 "${glcoinConf}"
 
   else
-    echo "GLC config does not found (yet) -  try with 'tor.network.sh btcconf-on' again later"
+    echo "FAIL: glcoin.conf not found at ${glcoinConf} - is HDD mounted?"
   fi
 }
 
 deactivateGlcoinOverTor()
 {
-  # alte/tor-bezogene Settings entfernen
-  sudo sed -i "s/^onlynet=.*//g" "/home/glcoin/.${network}/${network}.conf"
-  sudo sed -i "s/^main.addnode=.*//g" "/home/glcoin/.${network}/${network}.conf"
-  sudo sed -i "s/^test.addnode=.*//g" "/home/glcoin/.${network}/${network}.conf"
-  sudo sed -i "s/^proxy=.*//g" "/home/glcoin/.${network}/${network}.conf"
-  sudo sed -i "s/^main.bind=.*//g" "/home/glcoin/.${network}/${network}.conf"
-  sudo sed -i "s/^test.bind=.*//g" "/home/glcoin/.${network}/${network}.conf"
-  sudo sed -i "s/^dnsseed=.*//g" "/home/glcoin/.${network}/${network}.conf"
-  sudo sed -i "s/^dns=.*//g" "/home/glcoin/.${network}/${network}.conf"
+  local glcoinConf="/mnt/hdd/app-data/glcoin/glcoin.conf"
 
-  # explizit only IPv4 & IPv6
-  echo "onlynet=ipv4" | sudo tee -a "/home/glcoin/.${network}/${network}.conf" >/dev/null
-  echo "onlynet=ipv6" | sudo tee -a "/home/glcoin/.${network}/${network}.conf" >/dev/null
+  sudo sed -i "s/^onlynet=.*//g" "${glcoinConf}"
+  sudo sed -i "s/^main.addnode=.*//g" "${glcoinConf}"
+  sudo sed -i "s/^test.addnode=.*//g" "${glcoinConf}"
+  sudo sed -i "s/^proxy=.*//g" "${glcoinConf}"
+  sudo sed -i "s/^main.bind=.*//g" "${glcoinConf}"
+  sudo sed -i "s/^test.bind=.*//g" "${glcoinConf}"
+  sudo sed -i "s/^dnsseed=.*//g" "${glcoinConf}"
+  sudo sed -i "s/^dns=.*//g" "${glcoinConf}"
+
+  # restore clearnet-only mode
+  echo "onlynet=ipv4" | sudo tee -a "${glcoinConf}" >/dev/null
+  echo "onlynet=ipv6" | sudo tee -a "${glcoinConf}" >/dev/null
 
   # remove empty lines
-  sudo sed -i '/^ *$/d' "/home/glcoin/.${network}/${network}.conf"
-
-  sudo cp "/home/glcoin/.${network}/${network}.conf" "/home/admin/.${network}/${network}.conf"
-  sudo chown admin:admin "/home/admin/.${network}/${network}.conf"
+  sudo sed -i '/^ *$/d' "${glcoinConf}"
 }
 
 # check and load raspiblesk config

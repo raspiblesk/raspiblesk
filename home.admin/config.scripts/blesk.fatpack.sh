@@ -123,10 +123,10 @@ echo "* Adding Raspiblitz WebUI ..."
 # raspiblesk-web repo may not exist yet — non-fatal, node works without WebUI
 if sudo /home/admin/config.scripts/blesk.web.ui.sh on "${defaultWEBUIuser}" "${defaultWEBUIrepo}" "release/${branch}"; then
   # set build code as new www default
-  sudo rm -r /home/admin/assets/nginx/www_public
-  mkdir -p /home/admin/assets/nginx/www_public
+  sudo rm -rf /home/admin/assets/nginx/www_public
+  sudo mkdir -p /home/admin/assets/nginx/www_public
   sudo cp -a /home/bleskapi/blitz_web/build/* /home/admin/assets/nginx/www_public
-  sudo chown admin:admin /home/admin/assets/nginx/www_public
+  sudo chown -R admin:admin /home/admin/assets/nginx/www_public
   sudo rm -r /home/bleskapi/blitz_web/build/*
 else
   echo "# WARNING: WebUI install skipped — raspiblesk-web repo not available"
