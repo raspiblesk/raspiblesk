@@ -231,20 +231,23 @@ if [ ${CHAIN} = testnet ];then
   netprefix="t"
   portprefix=1
   rpcportmod=1
-  zmqprefix=21
   glcoinRpcPort=11617
+  glcoinZmqBlock=31617
+  glcoinZmqTx=31618
 elif [ ${CHAIN} = signet ];then
   netprefix="s"
   portprefix=3
   rpcportmod=3
-  zmqprefix=23
   glcoinRpcPort=31617
+  glcoinZmqBlock=41617
+  glcoinZmqTx=41618
 elif [ ${CHAIN} = mainnet ];then
   netprefix=""
   portprefix=""
   rpcportmod=0
-  zmqprefix=28
   glcoinRpcPort=1617
+  glcoinZmqBlock=21617
+  glcoinZmqTx=21618
 fi
 
 source /home/admin/raspiblesk.info
@@ -298,6 +301,24 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   sudo chmod -R 750 /mnt/hdd/app-data/lnd
 
   echo "# Create /mnt/hdd/app-data/lnd/${netprefix}lnd.conf"
+  # If a lnd.conf from the GitHub raspiblesk version exists with glcoind. backend
+  # entries (wrong ZMQ ports, wrong section prefix), purge it so we write ours.
+  if [ -f /mnt/hdd/app-data/lnd/${netprefix}lnd.conf ] && \
+     grep -q "^glcoind\." /mnt/hdd/app-data/lnd/${netprefix}lnd.conf; then
+    echo "# Detected wrong glcoind. backend entries in lnd.conf - regenerating"
+    rm /mnt/hdd/app-data/lnd/${netprefix}lnd.conf
+  fi
+  # Also purge if rpccookiefile is present — not supported by this LND binary
+  if [ -f /mnt/hdd/app-data/lnd/${netprefix}lnd.conf ] && \
+     grep -q "^bitcoind\.rpccookiefile=" /mnt/hdd/app-data/lnd/${netprefix}lnd.conf; then
+    echo "# Detected unsupported rpccookiefile in lnd.conf - regenerating"
+    rm /mnt/hdd/app-data/lnd/${netprefix}lnd.conf
+  fi
+
+  # Read RPC credentials from glcoin.conf (set by blesk.passwords.sh before this runs)
+  _LNDINSTALL_RPCUSER=$(grep "^rpcuser=" /mnt/hdd/app-data/glcoin/glcoin.conf 2>/dev/null | cut -d= -f2 | tail -1)
+  _LNDINSTALL_RPCPASS=$(grep "^rpcpassword=" /mnt/hdd/app-data/glcoin/glcoin.conf 2>/dev/null | cut -d= -f2 | tail -1)
+
   if [ ! -f /mnt/hdd/app-data/lnd/${netprefix}lnd.conf ];then
     echo "# LND configuration
 
@@ -333,19 +354,34 @@ bitcoin.node=bitcoind
 
 [Bitcoind]
 bitcoind.rpchost=127.0.0.1:${glcoinRpcPort}
-bitcoind.rpccookiefile=/mnt/hdd/app-data/glcoin/.cookie
-bitcoind.zmqpubrawblock=tcp://127.0.0.1:${zmqprefix}332
-bitcoind.zmqpubrawtx=tcp://127.0.0.1:${zmqprefix}333
+bitcoind.rpcuser=${_LNDINSTALL_RPCUSER}
+bitcoind.rpcpass=${_LNDINSTALL_RPCPASS}
+bitcoind.zmqpubrawblock=tcp://127.0.0.1:${glcoinZmqBlock}
+bitcoind.zmqpubrawtx=tcp://127.0.0.1:${glcoinZmqTx}
 
 [bolt]
 db.bolt.auto-compact=true
 db.bolt.auto-compact-min-age=672h
 
 # Allow for longer latency, especially useful for <8GB RAM Pi and congested mempool
-[healthcheck] 
+[healthcheck]
 healthcheck.chainbackend.attempts=3
-healthcheck.chainbackend.timeout=2m0s 
+healthcheck.chainbackend.timeout=2m0s
 healthcheck.chainbackend.interval=1m30s
+
+[workers]
+workers.sig=4
+workers.write=4
+
+[tor]
+tor.active=true
+tor.v3=true
+tor.privatekeypath=/mnt/hdd/lnd/v3_onion_private_key
+tor.socks=9050
+tor.control=9051
+
+[rpcmiddleware]
+rpcmiddleware.enable=true
 " | sudo -u glcoin tee /mnt/hdd/app-data/lnd/${netprefix}lnd.conf
   else
     echo "# The file /mnt/hdd/app-data/lnd/${netprefix}lnd.conf is already present"

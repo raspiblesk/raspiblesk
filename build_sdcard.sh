@@ -378,11 +378,20 @@ apt-get autoremove -y
 echo -e "\n*** UPDATE Debian***"  # add sources if not present
 echo -e "checking/adding sources ..."
 for SOURCE in "${REQUIRED_SOURCES[@]}"; do
-  if ! grep -Fxq "$SOURCE" /etc/apt/sources.list; then
+  if ! grep -Fxq "$SOURCE" /etc/apt/sources.list && \
+     ! grep -Fxq "$SOURCE" /etc/apt/sources.list.d/debian.sources 2>/dev/null; then
     echo "Adding  Source: $SOURCE"
     echo "$SOURCE" | sudo tee -a /etc/apt/sources.list > /dev/null
   fi
 done
+
+# If i2pd source is already present from a previous run, ensure key is imported
+# before apt-get update to avoid "not signed" errors
+if [ -f /etc/apt/sources.list.d/i2pd.list ] && \
+   [ ! -f /etc/apt/trusted.gpg.d/i2pd.gpg ]; then
+  echo "# Pre-importing i2pd signing key ..."
+  wget -q -O /etc/apt/trusted.gpg.d/i2pd.gpg https://repo.i2pd.xyz/r4sas.gpg || true
+fi
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
@@ -478,32 +487,27 @@ for PYTHONDIR in /usr/lib/python3.*; do
   fi
 done
 
-# make sure /usr/bin/pip exists (and calls pip3 in Debian Buster)
+# make sure /usr/bin/pip exists — reset broken alternative before adding
+update-alternatives --remove-all pip 2>/dev/null || true
 update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
-# 1. libs (for global python scripts)
-# grpcio==1.59.3 googleapis-common-protos==1.61.0 toml==0.10.2 j2cli==0.3.10 requests[socks]==2.21.0 protobuf==4.25.1 pathlib2==2.3.7.post1
-# 2. For TorBox bridges python scripts (pip3) https://github.com/radio24/TorBox/blob/master/requirements.txt
-# pytesseract mechanize PySocks urwid Pillow requests
-# 3. Nyx
-# setuptools
-sudo -H python3 -m pip install --upgrade pip || true
 # grpcio: use apt to avoid compiling from source on arm64
-apt-get install -y -q python3-grpcio || sudo -H python3 -m pip install --prefer-binary grpcio==1.59.3 || true
+apt-get install -y -q python3-grpcio || sudo -H python3 -m pip install --prefer-binary --root-user-action=ignore grpcio==1.59.3 || true
+# requests[socks]: prefer apt to avoid pip version-pin conflicts with system packages
+apt-get install -y -q python3-requests python3-socks 2>/dev/null || true
 # install python deps individually so one failure doesn't block the rest
 for _pypkg in \
     "googleapis-common-protos==1.61.0" \
     "toml==0.10.2" \
-    "requests[socks]==2.21.0" \
     "protobuf==4.25.1" \
     "pathlib2==2.3.7.post1"; do
-  sudo -H python3 -m pip install --prefer-binary "${_pypkg}" || echo "# WARNING: pip install ${_pypkg} failed - continuing"
+  sudo -H python3 -m pip install --prefer-binary --root-user-action=ignore "${_pypkg}" || echo "# WARNING: pip install ${_pypkg} failed - continuing"
 done
 # j2cli 0.3.10 has broken wheel names in pip >=25.3; try apt first, fall back silently
 apt-get install -y -q j2cli 2>/dev/null || \
-  sudo -H python3 -m pip install --prefer-binary "j2cli==0.3.10" 2>/dev/null || \
+  sudo -H python3 -m pip install --prefer-binary --root-user-action=ignore "j2cli==0.3.10" 2>/dev/null || \
   echo "# WARNING: j2cli not installed - templating features may be limited"
 for _pypkg in pytesseract mechanize PySocks urwid Pillow requests setuptools; do
-  sudo -H python3 -m pip install --prefer-binary "${_pypkg}" || echo "# WARNING: pip install ${_pypkg} failed - continuing"
+  sudo -H python3 -m pip install --prefer-binary --root-user-action=ignore "${_pypkg}" || echo "# WARNING: pip install ${_pypkg} failed - continuing"
 done
 
 echo -e "\n*** PREPARE ${baseimage} ***"
@@ -750,7 +754,9 @@ for fixedScript in \
     _bootstrap.sh \
     _provision_.sh \
     _provision.update.sh \
+    00raspiblesk.sh \
     99connectMenu.sh \
+    99lndMenu.sh \
     config.scripts/glcoin.install.sh \
     config.scripts/blesk.data.sh \
     config.scripts/blesk.fatpack.sh \
@@ -761,6 +767,10 @@ for fixedScript in \
     config.scripts/bonus.electrs.sh \
     config.scripts/bonus.lnbits.sh \
     config.scripts/bonus.glc-rpc-explorer.sh \
+    config.scripts/blesk.i2pd.sh \
+    config.scripts/bonus.mempool.sh \
+    config.scripts/lnd.check.sh \
+    config.scripts/bonus.glcoin-mining.sh \
     assets/bootstrap.service \
     assets/glcoin.conf; do
   if [ -f "${SCRIPT_DIR}/home.admin/${fixedScript}" ]; then
@@ -838,13 +848,13 @@ bash -c "echo '# https://github.com/rootzoll/raspiblesk/issues/1784' >> /home/ad
 bash -c "echo 'NG_CLI_ANALYTICS=ci' >> /home/admin/.bashrc"
 
 # raspiblesk custom command prompt #2400
-if ! grep -Eq "^[[:space:]]*PS1.*₿" /home/admin/.bashrc; then
+if ! grep -Eq "^[[:space:]]*PS1.*Ǥ" /home/admin/.bashrc; then
     sed -i '/^unset color_prompt force_color_prompt$/i # raspiblesk custom command prompt https://github.com/rootzoll/raspiblesk/issues/2400' /home/admin/.bashrc
     sed -i '/^unset color_prompt force_color_prompt$/i raspiIp=$(hostname -I | cut -d " " -f1)' /home/admin/.bashrc
     sed -i '/^unset color_prompt force_color_prompt$/i if [ "$color_prompt" = yes ]; then' /home/admin/.bashrc
-    sed -i '/^unset color_prompt force_color_prompt$/i \    PS1=\x27${debian_chroot:+($debian_chroot)}\\[\\033[00;33m\\]\\u@$raspiIp:\\[\\033[00;34m\\]\\w\\[\\033[01;35m\\]$(__git_ps1 "(%s)") \\[\\033[01;33m\\]₿\\[\\033[00m\\] \x27' /home/admin/.bashrc
+    sed -i '/^unset color_prompt force_color_prompt$/i \    PS1=\x27${debian_chroot:+($debian_chroot)}\\[\\033[00;33m\\]\\u@$raspiIp:\\[\\033[00;34m\\]\\w\\[\\033[01;35m\\]$(__git_ps1 "(%s)") \\[\\033[01;33m\\]Ǥ\\[\\033[00m\\] \x27' /home/admin/.bashrc
     sed -i '/^unset color_prompt force_color_prompt$/i else' /home/admin/.bashrc
-    sed -i '/^unset color_prompt force_color_prompt$/i \    PS1=\x27${debian_chroot:+($debian_chroot)}\\u@$raspiIp:\\w₿ \x27' /home/admin/.bashrc
+    sed -i '/^unset color_prompt force_color_prompt$/i \    PS1=\x27${debian_chroot:+($debian_chroot)}\\u@$raspiIp:\\wǤ \x27' /home/admin/.bashrc
     sed -i '/^unset color_prompt force_color_prompt$/i fi' /home/admin/.bashrc
 fi
 
@@ -976,6 +986,9 @@ echo
 #######
 echo
 /home/admin/config.scripts/blesk.i2pd.sh install || exit 1
+
+# Ensure lndadmin group exists before web API and fatpack install apps into it
+/usr/sbin/groupadd --force --gid 9700 lndadmin 2>/dev/null || true
 
 # *** BLITZ WEB SERVICE ***
 echo "Provisioning BLITZ WEB SERVICE"

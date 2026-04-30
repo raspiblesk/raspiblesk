@@ -55,8 +55,20 @@ if [ "$1" == "prestart" ]; then
   chmod g+rx /mnt/hdd/app-data/lnd/data/chain/${network}
   chmod g+rx /mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net
 
+  # Glcoin-specific ZMQ ports (NOT Bitcoin standard ports 28332/28333)
+  if [ "${portprefix}" = "1" ]; then
+    glcoinZmqBlock=31617; glcoinZmqTx=31618
+  elif [ "${portprefix}" = "3" ]; then
+    glcoinZmqBlock=41617; glcoinZmqTx=41618
+  else
+    glcoinZmqBlock=21617; glcoinZmqTx=21618
+  fi
+
   ##### CLEAN UP #####
 
+  # Remove any stale glcoin./glcoind. backend entries left by older versions
+  sed -i '/^glcoin\./d' ${lndConfFile}
+  sed -i '/^glcoind\./d' ${lndConfFile}
   # all lines with just spaces to empty lines
   sed -i 's/^[[:space:]]*$//g' /mnt/hdd/app-data/lnd/lnd.conf
   # all double empty lines to single empty lines
@@ -96,17 +108,17 @@ if [ "$1" == "prestart" ]; then
   fi
   echo "# [${sectionName}] config ..."
 
-  # make sure lnd config has a [glcoind] section
+  # make sure lnd config has a [Bitcoin] section
   sectionExists=$(cat ${lndConfFile} | grep -c "^\[${sectionName}\]")
   echo "# sectionExists(${sectionExists})"
   if [ "${sectionExists}" == "0" ]; then
-    echo "# adding section [${network}]"
+    echo "# adding section [Bitcoin]"
     echo "
-[${network}]
+[Bitcoin]
 " | tee -a ${lndConfFile}
   fi
 
-  # get line number of [glcoin] section
+  # get line number of [Bitcoin] section
   sectionLine=$(cat ${lndConfFile} | grep -n "^\[${sectionName}\]" | cut -d ":" -f1)
   echo "# sectionLine(${sectionLine})"
   insertLine=$(expr $sectionLine + 1)
@@ -119,17 +131,17 @@ if [ "$1" == "prestart" ]; then
 " | tee -a ${lndConfFile}
   fi
 
-  # SET/UPDATE glcoin.active
-  echo "# ${network}.active insert/update"
-  setting ${lndConfFile} ${insertLine} "${network}\.active" "1"
+  # SET/UPDATE bitcoin.active (LND always uses bitcoin.* keys regardless of chain)
+  echo "# bitcoin.active insert/update"
+  setting ${lndConfFile} ${insertLine} "bitcoin\.active" "1"
 
-  # SET/UPDATE glcoin.mainnet
-  echo "# ${network}.${targetchain} insert/update"
-  setting ${lndConfFile} ${insertLine} "${network}\.${targetchain}" "1"
+  # SET/UPDATE bitcoin.mainnet/testnet/signet
+  echo "# bitcoin.${targetchain} insert/update"
+  setting ${lndConfFile} ${insertLine} "bitcoin\.${targetchain}" "1"
 
-  # SET/UPDATE glcoin.node
-  echo "# ${network}.node insert/update"
-  setting ${lndConfFile} ${insertLine} "${network}\.node" "${network}d"
+  # SET/UPDATE bitcoin.node (always bitcoind for Glcoin-compatible daemon)
+  echo "# bitcoin.node insert/update"
+  setting ${lndConfFile} ${insertLine} "bitcoin\.node" "bitcoind"
 
   ##### GLCOIND OPTIONS SECTION #####
 
@@ -140,17 +152,17 @@ if [ "$1" == "prestart" ]; then
   fi
   echo "# [${sectionName}] config ..."
 
-  # make sure lnd config has a [glcoind] section
+  # make sure lnd config has a [Bitcoind] section
   sectionExists=$(cat ${lndConfFile} | grep -c "^\[${sectionName}\]")
   echo "# sectionExists(${sectionExists})"
   if [ "${sectionExists}" == "0" ]; then
-    echo "# adding section [${network}d]"
+    echo "# adding section [Bitcoind]"
     echo "
-[${network}d]
+[Bitcoind]
 " | tee -a ${lndConfFile}
   fi
 
-  # get line number of [glcoind] section
+  # get line number of [Bitcoind] section
   sectionLine=$(cat ${lndConfFile} | grep -n "^\[${sectionName}\]" | cut -d ":" -f1)
   echo "# sectionLine(${sectionLine})"
   insertLine=$(expr $sectionLine + 1)
@@ -163,34 +175,27 @@ if [ "$1" == "prestart" ]; then
 " | tee -a ${lndConfFile}
   fi
 
-  # SET/UPDATE zmqpubrawtx
-  echo "# zmqpubrawtx insert/update"
-  setting ${lndConfFile} ${insertLine} "${network}d\.zmqpubrawtx" "tcp\:\/\/127\.0\.0\.1\:${zmqprefix}333"
+  # SET/UPDATE ZMQ ports (Glcoin-specific, NOT Bitcoin standard 28332/28333)
+  echo "# bitcoind.zmqpubrawtx insert/update"
+  setting ${lndConfFile} ${insertLine} "bitcoind\.zmqpubrawtx" "tcp\:\/\/127\.0\.0\.1\:${glcoinZmqTx}"
 
-  # SET/UPDATE zmqpubrawblock
-  setting ${lndConfFile} ${insertLine} "${network}d\.zmqpubrawblock" "tcp\:\/\/127\.0\.0\.1\:${zmqprefix}332"
+  echo "# bitcoind.zmqpubrawblock insert/update"
+  setting ${lndConfFile} ${insertLine} "bitcoind\.zmqpubrawblock" "tcp\:\/\/127\.0\.0\.1\:${glcoinZmqBlock}"
 
-  # SET/UPDATE rpcpass
-  RPCPSW=$(cat /mnt/hdd/app-data/${network}/${network}.conf | grep "^rpcpassword=" | tail -1 | cut -d "=" -f2 | tail -n 1)
-  if [ "${RPCPSW}" == "" ]; then
-    RPCPSW=$(cat /mnt/hdd/app-data/${network}/${network}.conf | grep "^${network}d.rpcpassword=" | cut -d "=" -f2 | tail -n 1)
-  fi
-  if [ "${RPCPSW}" == "" ]; then
-    echo 1>&2 "FAIL: 'rpcpassword' not found in /mnt/hdd/app-data/${network}/${network}.conf"
-    exit 11
-  fi
-  setting ${lndConfFile} ${insertLine} "${network}d\.rpcpass" "${RPCPSW}"
+  # Remove rpccookiefile and any misplaced rpcuser/rpcpass entries —
+  # purging first forces setting() to re-insert at insertLine (inside [Bitcoind])
+  sed -i '/^bitcoind\.rpccookiefile=/d' ${lndConfFile}
+  sed -i '/^bitcoind\.rpcuser=/d' ${lndConfFile}
+  sed -i '/^bitcoind\.rpcpass=/d' ${lndConfFile}
 
-  # SET/UPDATE rpcuser
-  RPCUSER=$(cat /mnt/hdd/app-data/${network}/${network}.conf | grep "^rpcuser=" | cut -d "=" -f2 | tail -n 1)
-  if [ "${RPCUSER}" == "" ]; then
-    RPCUSER=$(cat /mnt/hdd/app-data/${network}/${network}.conf | grep "^${network}d.rpcuser=" | cut -d "=" -f2 | tail -n 1)
+  # SET/UPDATE rpcuser and rpcpass from glcoin.conf
+  _RPCUSER=$(grep "^rpcuser=" /mnt/hdd/app-data/glcoin/glcoin.conf 2>/dev/null | cut -d= -f2 | tail -1)
+  _RPCPASS=$(grep "^rpcpassword=" /mnt/hdd/app-data/glcoin/glcoin.conf 2>/dev/null | cut -d= -f2 | tail -1)
+  if [ -n "${_RPCUSER}" ] && [ -n "${_RPCPASS}" ]; then
+    _ESC_PASS=$(echo "${_RPCPASS}" | sed 's/[\/&]/\\&/g')
+    setting ${lndConfFile} ${insertLine} "bitcoind\.rpcuser" "${_RPCUSER}"
+    setting ${lndConfFile} ${insertLine} "bitcoind\.rpcpass" "${_ESC_PASS}"
   fi
-  if [ "${RPCUSER}" == "" ]; then
-    echo 1>&2 "FAIL: 'rpcuser' not found in /mnt/hdd/app-data/${network}/${network}.conf"
-    exit 12
-  fi
-  setting ${lndConfFile} ${insertLine} "${network}d\.rpcuser" "${RPCUSER}"
 
   # SET/UPDATE rpchost — use Glcoin RPC ports (1617/11617/31617)
   if [ "${portprefix}" = "1" ]; then glcoinRpcPort=11617

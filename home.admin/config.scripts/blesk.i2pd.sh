@@ -81,10 +81,10 @@ function add_repo {
     exit 1
   fi
   echo "Importing signing key"
-  wget -q -O - https://repo.i2pd.xyz/r4sas.gpg | sudo apt-key --keyring /etc/apt/trusted.gpg.d/i2pd.gpg add -
+  wget -q -O /etc/apt/trusted.gpg.d/i2pd.gpg https://repo.i2pd.xyz/r4sas.gpg
   echo "Adding APT repository"
-  echo "deb https://repo.i2pd.xyz/$DIST $RELEASE main" | sudo tee /etc/apt/sources.list.d/i2pd.list
-  echo "deb-src https://repo.i2pd.xyz/$DIST $RELEASE main" | sudo tee -a /etc/apt/sources.list.d/i2pd.list
+  echo "deb [signed-by=/etc/apt/trusted.gpg.d/i2pd.gpg] https://repo.i2pd.xyz/$DIST $RELEASE main" | sudo tee /etc/apt/sources.list.d/i2pd.list
+  echo "deb-src [signed-by=/etc/apt/trusted.gpg.d/i2pd.gpg] https://repo.i2pd.xyz/$DIST $RELEASE main" | sudo tee -a /etc/apt/sources.list.d/i2pd.list
 }
 
 function glcoinI2Pstatus {
@@ -108,7 +108,8 @@ function glcoinI2Pstatus {
 }
 
 echo "# Running: 'blesk.i2pd.sh $*'"
-source /mnt/hdd/app-data/raspiblesk.conf
+source /mnt/hdd/app-data/raspiblesk.conf 2>/dev/null || \
+  source /mnt/disk_storage/app-data/raspiblesk.conf 2>/dev/null || true
 
 # make sure to be present in PATH
 if ! echo "$PATH" | grep "/usr/sbin" >/dev/null; then

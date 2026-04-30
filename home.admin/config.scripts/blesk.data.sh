@@ -2034,11 +2034,25 @@ if [ "$action" = "setup" ]; then
     # STORAGE without System partition (if addSystemPartition=0)
     elif [ "${actionType}" = "STORAGE" ] && [ ${actionCreateSystemPartition} -eq 0 ]; then
         echo "# STORAGE partitioning (no boot)" >> ${logFile}
-        
+
+        # === Skip repartition if /mnt/disk_storage is pre-initialized by build_sdcard.sh ===
+        if findmnt -n -o TARGET /mnt/disk_storage > /dev/null 2>&1 && \
+           [ -d "/mnt/disk_storage/app-storage" ]; then
+            echo "# /mnt/disk_storage pre-initialized (build_sdcard.sh) - skipping repartition (no-boot)" >> ${logFile}
+            rm -rf /mnt/disk_storage/app-storage/* 2>/dev/null || true
+            rm -rf /mnt/disk_storage/app-data/* 2>/dev/null || true
+            mkdir -p /mnt/disk_storage/app-storage /mnt/disk_storage/app-data
+            _rp=$(findmnt -n -o SOURCE / 2>/dev/null | head -1)
+            _sp=$(basename "${_rp}" 2>/dev/null || echo "nvme0n1p2")
+            echo "storagePartition='${_sp}'"
+            echo "# OK - setup STORAGE done (pre-initialized no-boot, no repartition)" >> ${logFile}
+            exit 0
+        fi
+
         # DEBUG: Log partition count before storage partitioning operations (no boot)
         beforeStorageNoBootCount=$(partx -g /dev/"${actionDevice}" 2>/dev/null | wc -l)
         echo "# DEBUG SETUP STORAGE NO-BOOT: Partition count before storage partitioning: ${beforeStorageNoBootCount}" >> ${logFile}
-        
+
         sfdisk --delete /dev/${actionDevice} >> ${logFile}
         
         # DEBUG: Log partition count after sfdisk delete
