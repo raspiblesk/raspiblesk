@@ -67,3 +67,5 @@ case $CHOICE in
     /home/admin/99clMenu.sh signet
     ;;
 esac
+
+exit 0

@@ -364,14 +364,14 @@ else
   echo "- LNDg is OFF by config"
 fi
 
-if [ "${GlcoinPayServer}" == "on" ]; then
+if [ "${GLCPayServer}" == "on" ]; then
   echo
-  echo "*** LAST 20 GlcoinPayServer LOGS ***"
+  echo "*** LAST 20 GLCPay Server LOGS ***"
   echo "sudo journalctl -u btcpayserver -b --no-pager -n20"
   sudo journalctl -u btcpayserver -b --no-pager -n20
   echo
 else
-  echo "- GlcoinPayServer is OFF by config"
+  echo "- GLCPay Server is OFF by config"
 fi
 
 if [ "${GlcoinRPCexplorer}" == "on" ]; then
@@ -438,8 +438,8 @@ fi
 if [ "${glcoinMiner}" == "on" ]; then
   echo
   echo "*** LAST 20 GLCOIN MINER LOGS ***"
-  echo "sudo journalctl -u glcoin-miner -b --no-pager -n20"
-  sudo journalctl -u glcoin-miner -b --no-pager -n20
+  echo "sudo journalctl -u glcoin-mining -b --no-pager -n20"
+  sudo journalctl -u glcoin-mining -b --no-pager -n20
 else
   echo "- GLCOIN MINER is OFF by config"
 fi

@@ -254,7 +254,7 @@ if [ "$1" = "menu" ]; then
   # check if telegraf is installed
   if [ ${serviceInstalled} -eq 0 ]; then
     echo "# telegraf is not installed - no menu"
-    exit 1
+    exit 0
   fi
 
   # enter config if missing (first init)
@@ -274,7 +274,7 @@ if [ "$1" = "menu" ]; then
       exitstatus=$?
       if [ $exitstatus -ne 0 ]; then
         echo "Operation canceled by user."
-        exit 1
+        exit 0
       fi
       if ! check_empty "$telegrafInfluxUrl"; then
         whiptail --msgbox "Input cannot be empty. Please enter a valid URL." 8 78
@@ -301,7 +301,7 @@ if [ "$1" = "menu" ]; then
       exitstatus=$?
       if [ $exitstatus -ne 0 ]; then
         echo "Operation canceled by user."
-        exit 1
+        exit 0
       fi
       if ! check_empty "$telegrafInfluxDatabase"; then
         whiptail --msgbox "Input cannot be empty. Please enter a valid database name." 8 78
@@ -321,7 +321,7 @@ if [ "$1" = "menu" ]; then
       exitstatus=$?
       if [ $exitstatus -ne 0 ]; then
         echo "Operation canceled by user."
-        exit 1
+        exit 0
       fi
       if ! check_empty "$telegrafInfluxUsername"; then
         whiptail --msgbox "Input cannot be empty. Please enter a valid username." 8 78
@@ -341,7 +341,7 @@ if [ "$1" = "menu" ]; then
       exitstatus=$?
       if [ $exitstatus -ne 0 ]; then
         echo "Operation canceled by user."
-        exit 1
+        exit 0
       fi
       if ! check_empty "$telegrafInfluxPassword"; then
         whiptail --msgbox "Input cannot be empty. Please enter a valid password." 8 78
@@ -375,7 +375,7 @@ if [ "$1" = "menu" ]; then
   if [ ${serviceRunning} -eq 0 ]; then
     echo "# telegraf is not running"
     sleep 3
-    exit 1
+    exit 0
   fi
 
   # whiptail info with option to reset config

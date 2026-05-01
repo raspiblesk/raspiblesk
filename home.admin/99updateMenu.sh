@@ -604,8 +604,8 @@ if [ "${specter}" == "on" ]; then
   OPTIONS+=(SPECTER "Update Specter Desktop")
 fi
 
-if [ "${BTCPayServer}" == "on" ]; then
-  OPTIONS+=(BTCPAY "Update BTCPayServer")
+if [ "${GLCPayServer}" == "on" ]; then
+  OPTIONS+=(BTCPAY "Update GLCPay Server")
 fi
 
 if [ "${sphinxrelay}" == "on" ]; then
@@ -689,3 +689,5 @@ case $CHOICE in
     /home/admin/config.scripts/bonus.jam.sh update
     ;;
 esac
+
+exit 0

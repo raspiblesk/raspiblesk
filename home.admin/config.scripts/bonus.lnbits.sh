@@ -32,7 +32,25 @@ source /mnt/hdd/app-data/raspiblesk.conf
 lnbitsDataDir="/mnt/hdd/app-data/LNBits/data"
 lnbitsConfig="${lnbitsDataDir}/.env"
 
+LNBITS_DB_PASS_FILE="/mnt/hdd/app-data/LNBits/db_password.conf"
+
+loadOrGenerateLNBitsDBPassword() {
+  if [ -f "${LNBITS_DB_PASS_FILE}" ]; then
+    source "${LNBITS_DB_PASS_FILE}"
+  else
+    mkdir -p "$(dirname ${LNBITS_DB_PASS_FILE})"
+    LNBITS_DB_PASS=$(openssl rand -base64 32 | tr -dc 'A-Za-z0-9!@#%^&*_+=<>?.-' | head -c 32)
+    echo "LNBITS_DB_PASS=${LNBITS_DB_PASS}" > "${LNBITS_DB_PASS_FILE}"
+    chmod 600 "${LNBITS_DB_PASS_FILE}"
+    chown lnbits:lnbits "${LNBITS_DB_PASS_FILE}" 2>/dev/null || true
+  fi
+}
+
+# use full path — lnbits is a system user and /usr/local/bin may not be in PATH
+POETRY_BIN="/usr/local/bin/poetry"
+
 function postgresConfig() {
+  loadOrGenerateLNBitsDBPassword
 
   sudo /home/admin/config.scripts/bonus.postgresql.sh on || exit 1
   echo "# Generate the database lnbits_db"
@@ -46,7 +64,7 @@ function postgresConfig() {
   fi
   # create database for new installations and keep old
   sudo -u postgres psql -c "create database lnbits_db;" 2>/dev/null
-  sudo -u postgres psql -c "create user lnbits_user with encrypted password 'raspiblesk';" 2>/dev/null
+  sudo -u postgres psql -c "create user lnbits_user with encrypted password '${LNBITS_DB_PASS}';" 2>/dev/null
   sudo -u postgres psql -c "grant all privileges on database lnbits_db to lnbits_user;" 2>/dev/null
 
   # check
@@ -327,7 +345,7 @@ ${toraddress}"
     fi
     if [ "$backup_file" = "" ]; then
       echo "ABORT - No Backup found to restore from"
-      exit 1
+      exit 0
     else
       # build dialog to choose backup file from menu
       OPTIONS_RESTORE=()
@@ -612,7 +630,7 @@ if [ "$1" = "sync" ] || [ "$1" = "repo" ]; then
   sudo -u lnbits git pull
 
   echo "# check if poetry in installed, if not install it"
-  if ! sudo -u lnbits which poetry; then
+  if ! test -x "${POETRY_BIN}"; then
     echo "# install poetry"
     sudo pip3 config set global.break-system-packages true
     sudo pip3 install --upgrade pip
@@ -620,7 +638,7 @@ if [ "$1" = "sync" ] || [ "$1" = "repo" ]; then
   fi
 
   echo "# install"
-  sudo -u lnbits poetry install
+  sudo -u lnbits "${POETRY_BIN}" install
 
   echo "# make sure the default virtualenv is used"
   sudo apt-get remove -y python3-virtualenv 2>/dev/null
@@ -659,8 +677,13 @@ if [ "$1" = "install" ]; then
 
   # make sure dependencies are installed
   sudo apt-get install -y pkg-config build-essential python3-dev libsecp256k1-dev libffi-dev libgmp-dev || true
-  # try python3.12 explicitly; on Trixie 2026+ this may not exist — fallback to 3.13 below
-  sudo apt-get install -y python3.12 python3.12-venv python3.12-dev 2>/dev/null || true
+  # LNbits requires Python 3.10-3.12; install 3.12 explicitly (available in Debian Trixie repos).
+  # Trixie ships python3.13 by default; python3.12 must be installed alongside it.
+  sudo apt-get update -qq || true
+  if ! sudo apt-get install -y python3.12 python3.12-venv python3.12-dev; then
+    echo "# WARNING: python3.12 apt install failed — LNbits may not be installable on this system"
+    echo "# On Debian Trixie: sudo apt-get install python3.12 python3.12-venv python3.12-dev"
+  fi
 
   # add lnbits user
   echo "*** Add the 'lnbits' user ***"
@@ -681,42 +704,48 @@ if [ "$1" = "install" ]; then
   cd /home/lnbits/lnbits || exit 1
 
   # check if poetry is installed
-  if ! sudo -u lnbits which poetry; then
+  if ! test -x "${POETRY_BIN}"; then
     echo "# install poetry"
     sudo pip3 config set global.break-system-packages true
     sudo pip3 install --upgrade pip || true
     sudo pip3 install poetry || { echo "# FAIL - could not install poetry"; exit 1; }
   fi
 
-  # Pin Poetry to Python 3.12 (LNBits does not yet support 3.13)
-  # Search common locations for python3.12 binary
+  # LNbits supports Python 3.10-3.12 only; locate a compatible interpreter.
+  # IMPORTANT: on Debian Trixie, /usr/bin/python3.11 may be a symlink to python3.13
+  # (created by build_sdcard.sh for backwards compat). We must verify the actual
+  # runtime version, not just the filename.
   LNBITS_PYTHON=""
-  for _py in /usr/bin/python3.12 /usr/local/bin/python3.12 "$(which python3.12 2>/dev/null)"; do
-    if [ -x "${_py}" ]; then
+  for _py in /usr/bin/python3.12 /usr/local/bin/python3.12 "$(which python3.12 2>/dev/null)" \
+             /usr/bin/python3.11 /usr/local/bin/python3.11 "$(which python3.11 2>/dev/null)" \
+             /usr/bin/python3.10 /usr/local/bin/python3.10 "$(which python3.10 2>/dev/null)"; do
+    [ -x "${_py}" ] || continue
+    _actual_minor=$("${_py}" -c "import sys; print(sys.version_info.minor)" 2>/dev/null)
+    if [ -n "${_actual_minor}" ] && [ "${_actual_minor}" -ge 10 ] && [ "${_actual_minor}" -le 12 ]; then
       LNBITS_PYTHON="${_py}"
       break
     fi
   done
   if [ -z "${LNBITS_PYTHON}" ]; then
-    echo "# WARNING: python3.12 not found at standard paths - trying deadsnakes or system python"
-    # Last resort: try system python3 if it's 3.12 or lower
+    # Last resort: system python3 only if it is 3.10-3.12
     _syspy=$(python3 --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+' | head -1)
     _major=$(echo "${_syspy}" | cut -d. -f1)
     _minor=$(echo "${_syspy}" | cut -d. -f2)
-    if [ "${_major}" = "3" ] && [ "${_minor:-99}" -le "13" ]; then
+    if [ "${_major}" = "3" ] && [ "${_minor:-99}" -ge "10" ] && [ "${_minor:-99}" -le "12" ]; then
       LNBITS_PYTHON="$(which python3)"
-      echo "# INFO: using system python ${_syspy} as fallback"
+      echo "# INFO: using system python ${_syspy} for LNbits"
     else
-      echo "# FAIL - python3.12/3.13 not available and system python is ${_syspy} (unsupported)"
-      exit 1
+      echo "# WARNING: LNbits requires Python 3.10-3.12; system python is ${_syspy} (unsupported)"
+      echo "# Skipping LNbits install — install python3.12 manually and re-run this script"
+      exit 0
     fi
   fi
   echo "# Using python for LNBits: ${LNBITS_PYTHON}"
-  sudo -u lnbits poetry env use "${LNBITS_PYTHON}" || { echo "# FAIL - poetry env use failed"; exit 1; }
+  sudo -u lnbits "${POETRY_BIN}" env use "${LNBITS_PYTHON}" || { echo "# FAIL - poetry env use failed"; exit 1; }
 
   echo "# install"
   exitCode=0
-  if sudo -u lnbits poetry install; then
+  if sudo -u lnbits "${POETRY_BIN}" install; then
     echo "Poetry install completed successfully."
   else
     echo "Error: Poetry install failed (see above).. waiting 10 seconds"
@@ -756,7 +785,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   # check if already installed
   if compgen -u | grep -w lnbits; then
     # check poetry if the user exists
-    if ! sudo -u lnbits which poetry; then
+    if ! test -x "${POETRY_BIN}"; then
       echo "# Fix faulty installation"
       /home/admin/config.scripts/bonus.lnbits.sh off --keep-data
       /home/admin/config.scripts/bonus.lnbits.sh install || exit 1
@@ -851,7 +880,8 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     # example: postgres://<user>:<password>@<host>/<database>
     sudo sed -i "/^LNBITS_DATABASE_URL=/d" $lnbitsConfig 2>/dev/null
     sudo sed -i "/^LNBITS_DATA_FOLDER=/d" $lnbitsConfig 2>/dev/null
-    sudo bash -c "echo 'LNBITS_DATABASE_URL=postgres://postgres:postgres@localhost:5432/lnbits_db' >> ${lnbitsConfig}"
+    loadOrGenerateLNBitsDBPassword
+    sudo bash -c "echo 'LNBITS_DATABASE_URL=postgres://lnbits_user:${LNBITS_DB_PASS}@localhost:5432/lnbits_db' >> ${lnbitsConfig}"
     sudo bash -c "echo 'LNBITS_DATA_FOLDER=/mnt/hdd/app-data/LNBits/data' >> ${lnbitsConfig}"
 
   else
@@ -897,7 +927,7 @@ PartOf=${systemdDependency}
 [Service]
 WorkingDirectory=/home/lnbits/lnbits
 ExecStartPre=/home/admin/config.scripts/bonus.lnbits.sh prestart
-ExecStart=/bin/sh -c 'cd /home/lnbits/lnbits && poetry run lnbits --port 5000 --host 0.0.0.0'
+ExecStart=/bin/sh -c 'cd /home/lnbits/lnbits && /usr/local/bin/poetry run lnbits --port 5000 --host 0.0.0.0'
 User=lnbits
 Restart=always
 TimeoutSec=120
@@ -1275,7 +1305,8 @@ if [ "$1" = "migrate" ]; then
     # example: postgres://<user>:<password>@<host>/<database>
     # add new postgres config
     sudo sed -i "/^LNBITS_DATABASE_URL=/d" $lnbitsConfig 2>/dev/null
-    sudo bash -c "echo 'LNBITS_DATABASE_URL=postgres://lnbits_user:raspiblesk@localhost:5432/lnbits_db' >> ${lnbitsConfig}"
+    loadOrGenerateLNBitsDBPassword
+    sudo bash -c "echo 'LNBITS_DATABASE_URL=postgres://lnbits_user:${LNBITS_DB_PASS}@localhost:5432/lnbits_db' >> ${lnbitsConfig}"
 
     # clean start on new postgres db prior migration
     echo "# LNBits first start with clean PostgreSQL"
@@ -1301,7 +1332,7 @@ if [ "$1" = "migrate" ]; then
     sudo systemctl stop lnbits
 
     echo "# Start convert old SQLite to new PostgreSQL"
-    if ! sudo -u lnbits poetry run python tools/conv.py; then
+    if ! sudo -u lnbits "${POETRY_BIN}" run python tools/conv.py; then
       echo "FAIL - Convert failed, revert migration process"
       revertMigration
       exit 1

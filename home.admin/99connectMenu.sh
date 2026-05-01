@@ -20,11 +20,11 @@ OPTIONS+=(MOBILE "Connect Mobile Wallet")
 if [ "${ElectRS}" == "on" ]; then
   OPTIONS+=(ELECTRS "Electrum Rust Server")
 fi
-if [ "${BTCPayServer}" == "on" ] && [ "${lnd}" = "on" ]; then
-  OPTIONS+=(BTCPAY-LND "Show LND connection string")
+if [ "${GLCPayServer}" == "on" ] && [ "${lnd}" = "on" ]; then
+  OPTIONS+=(BTCPAY-LND "GLCPay Server - LND connection string")
 fi
-if [ "${BTCPayServer}" == "on" ] && [ "${cl}" = "on" ]; then
-  OPTIONS+=(BTCPAY-CLN "Show CLN connection string")
+if [ "${GLCPayServer}" == "on" ] && [ "${cl}" = "on" ]; then
+  OPTIONS+=(BTCPAY-CLN "GLCPay Server - CLN connection string")
 fi
 OPTIONS+=(${network}RPC "Connect Specter Desktop or JoinMarket")
 OPTIONS+=(BISQ "Connect Bisq to this node")
@@ -309,3 +309,5 @@ HiddenServicePort 1618 127.0.0.1:1618" | sudo tee -a /etc/tor/torrc
     esac
   ;;
 esac
+
+exit 0

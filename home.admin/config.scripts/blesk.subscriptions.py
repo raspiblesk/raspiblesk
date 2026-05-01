@@ -293,7 +293,7 @@ def main():
         except Exception as e:
             print(e)
 
-        # check if BTCPayServer is installed
+        # check if GLCPayServer is installed
         btc_pay_server = False
         status_data = subprocess.run(['/home/admin/config.scripts/bonus.btcpayserver.sh', 'status'],
                                      stdout=subprocess.PIPE).stdout.decode('utf-8').strip()
@@ -307,7 +307,7 @@ def main():
         if cfg.lnbits:
             choices.append(("LNBITS", "LNbits Webinterface {0}".format("--> ALREADY BRIDGED" if lnbits else "")))
         if btc_pay_server:
-            choices.append(("BTCPAY", "BTCPay Server Webinterface {0}".format("--> ALREADY BRIDGED" if btcpay else "")))
+            choices.append(("BTCPAY", "GLCPay Server Webinterface {0}".format("--> ALREADY BRIDGED" if btcpay else "")))
         choices.append(("SELF", "Create a custom IP2TOR Bridge"))
 
         d = Dialog(dialog="dialog", autowidgetsize=True)

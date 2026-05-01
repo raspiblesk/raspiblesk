@@ -62,7 +62,7 @@ function installBinary {
   # download the signed binary sha256 hash sum file and check
   sudo -u admin wget --prefer-family=ipv4 --progress=bar:force -O SHA256SUMS.asc https://github.com/ElementsProject/elements/releases/download/${VERSION}/SHA256SUMS.asc
 
-  if gpg --verify SHA256SUMS.asc; then
+  if LC_ALL=C LANG=C gpg --verify SHA256SUMS.asc; then
     echo
     echo "****************************************"
     echo "OK --> ELEMENTS MANIFEST IS CORRECT"

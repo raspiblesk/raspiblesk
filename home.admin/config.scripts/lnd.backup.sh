@@ -295,7 +295,7 @@ if [ ${mode} = "lnd-import-gui" ]; then
 
   # determine password info based on scenario
   if [ "${scenario}" == "setup" ]; then
-    passwordInfo="password 'raspiblesk'"
+    passwordInfo="auto-generated password (see password.info in LND chain data dir)"
   else
     passwordInfo="your Password A"
   fi
@@ -483,7 +483,7 @@ if [ ${mode} = "scb-import-gui" ]; then
 
   # determine password info based on scenario
   if [ "${scenario}" == "setup" ]; then
-    passwordInfo="password 'raspiblesk'"
+    passwordInfo="auto-generated password (see password.info in LND chain data dir)"
   else
     passwordInfo="your Password A"
   fi
@@ -663,7 +663,7 @@ to protect the seed words. Most users did not set this.
     sudo rm /var/cache/raspiblesk/.pass.tmp 2>/dev/null
     sudo touch /var/cache/raspiblesk/.pass.tmp
     sudo chown admin:admin /var/cache/raspiblesk/.pass.tmp
-    sudo /home/admin/config.scripts/blesk.password.sh set x "Enter extra Password D" /var/cache/raspiblesk/.pass.tmp empty-allowed
+    sudo /home/admin/config.scripts/blesk.passwords.sh set x "Enter extra Password D" /var/cache/raspiblesk/.pass.tmp empty-allowed
     passwordD=$(sudo cat /var/cache/raspiblesk/.pass.tmp)
     sudo shred -u /var/cache/raspiblesk/.pass.tmp 2>/dev/null
   fi

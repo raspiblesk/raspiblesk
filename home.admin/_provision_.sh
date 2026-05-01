@@ -131,8 +131,11 @@ echo "allow: glcoin testnet P2P"
 ufw allow 11618 comment 'glcoin testnet P2P'
 echo "allow: glcoin mainnet P2P"
 ufw allow 1618 comment 'glcoin mainnet P2P'
-echo 'allow: glcoin mainnet RPC'
-ufw allow 1617 comment 'glcoin mainnet RPC'
+echo 'allow: glcoin mainnet RPC (localhost + LAN only)'
+ufw allow from 127.0.0.1 to any port 1617 comment 'glcoin mainnet RPC localhost'
+ufw allow from 10.0.0.0/8 to any port 1617 comment 'glcoin mainnet RPC LAN'
+ufw allow from 172.16.0.0/12 to any port 1617 comment 'glcoin mainnet RPC LAN'
+ufw allow from 192.168.0.0/16 to any port 1617 comment 'glcoin mainnet RPC LAN'
 echo 'allow: lightning testnet'
 ufw allow 19735 comment 'lightning testnet'
 echo "allow: lightning mainnet"
@@ -438,14 +441,14 @@ else
 fi
 
 # BTCPAYSERVER
-if [ "${GlcoinPayServer}" = "on" ]; then
+if [ "${GLCPayServer}" = "on" ]; then
 
   echo "Provisioning BTCPAYSERVER on TOR - running setup" >> ${logFile}
   /home/admin/_cache.sh set message "Setup BTCPay (takes time)"
   sudo -u admin /home/admin/config.scripts/bonus.btcpayserver.sh on >> ${logFile} 2>&1
 
 else
-  echo "Provisioning GlcoinPayServer - keep default" >> ${logFile}
+  echo "Provisioning GLCPayServer - keep default" >> ${logFile}
 fi
 
 # CUSTOM PORT

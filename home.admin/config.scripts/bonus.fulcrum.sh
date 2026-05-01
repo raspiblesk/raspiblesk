@@ -180,7 +180,7 @@ if [ "$1" = "menu" ]; then
 
   if [ ${serviceInstalled} -eq 0 ]; then
     echo "# FAIL not installed"
-    exit 1
+    exit 0
   fi
 
   if [ ${serviceRunning} -eq 0 ]; then

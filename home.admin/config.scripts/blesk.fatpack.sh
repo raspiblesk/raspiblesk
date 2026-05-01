@@ -149,7 +149,6 @@ _fatpack_bonus() {
 _fatpack_bonus "ALBYHUB"       "bonus.albyhub.sh"
 _fatpack_bonus "LNBITS"        "bonus.lnbits.sh"
 _fatpack_bonus "JAM"           "bonus.jam.sh"
-_fatpack_bonus "BTCPAYSERVER"  "bonus.btcpayserver.sh"
 _fatpack_bonus "RTL"           "bonus.rtl.sh"
 _fatpack_bonus "THUNDERHUB"    "bonus.thunderhub.sh"
 _fatpack_bonus "GLC-RPC-EXPLORER" "bonus.glc-rpc-explorer.sh"

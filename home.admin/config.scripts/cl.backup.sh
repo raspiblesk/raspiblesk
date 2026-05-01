@@ -268,7 +268,7 @@ if [ ${mode} = "cl-import-gui" ]; then
 
   # determine password info based on scenario
   if [ "${scenario}" == "setup" ]; then
-    passwordInfo="password 'raspiblesk'"
+    passwordInfo="auto-generated password (see password.info in LND chain data dir)"
   else
     passwordInfo="your Password A"
   fi

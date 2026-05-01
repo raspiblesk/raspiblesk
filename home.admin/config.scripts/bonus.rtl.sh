@@ -99,7 +99,7 @@ if [ "$1" = "menu" ]; then
     clear
     echo "# FAIL missing parameter"
     sleep 2
-    exit 1
+    exit 0
   fi
 
   # info with Tor

@@ -212,3 +212,5 @@ thunderhub, tor@default, tor
     echo "#######################################################################################"
     sudo journalctl -n 10 -fu $SERVICE;;
 esac
+
+exit 0

@@ -476,14 +476,43 @@ alias ${netprefix}lndconf=\"sudo nano /mnt/hdd/app-data/lnd/${netprefix}lnd.conf
   walletExists=$(sudo ls /mnt/hdd/app-data/lnd/data/chain/${network}/${CHAIN}/wallet.db 2>/dev/null | grep -c "wallet.db")
   echo "# initwallet(${initwallet}) walletExists(${walletExists})"
   if [ "${initwallet}" == "1" ] && [ "${walletExists}" == "0" ]; then
-      # only ask on mainnet for passwordC - for the testnet/signet its default 'raspiblesk'
       if [ "${CHAIN}" == "mainnet" ]; then
         tempFile="/var/cache/raspiblesk/passwordc.tmp"
         sudo /home/admin/config.scripts/blesk.passwords.sh set x "PASSWORD C - LND Wallet Password" ${tempFile}
         passwordC=$(sudo cat ${tempFile})
         sudo rm ${tempFile}
       else
-        passwordC="raspiblesk"
+        # generate random wallet password for testnet/signet — stored in password.info for auto-unlock
+        _pwFile="/mnt/hdd/app-data/lnd/data/chain/${network}/${CHAIN}/password.info"
+        _blobFile="/mnt/hdd/app-data/lnd/data/chain/${network}/${CHAIN}/password.glce"
+        if sudo ls ${_blobFile} &>/dev/null; then
+          # decrypt GLCE blob to get wallet password
+          _blob=$(sudo cat ${_blobFile})
+          passwordC=$(sudo -u glcoin /usr/local/bin/glcoin-cli -rpcport=1617 decryptcontent "${_blob}" 2>/dev/null | \
+            python3 -c "import sys,json; print(bytes.fromhex(json.load(sys.stdin)['content']).decode())" 2>/dev/null)
+        elif sudo ls ${_pwFile} &>/dev/null; then
+          passwordC=$(sudo cat ${_pwFile})
+        else
+          passwordC=$(openssl rand -base64 32 | tr -dc 'A-Za-z0-9!@#%^&*_+=<>?.-' | head -c 32)
+          sudo mkdir -p "$(dirname ${_pwFile})"
+          # try GLCE encryption
+          _hex=$(printf '%s' "${passwordC}" | xxd -p -c 1000 | tr -d '\n')
+          _pubkey=$(sudo -u glcoin /usr/local/bin/glcoin-cli -rpcport=1617 getencryptionpubkey 2>/dev/null | \
+            python3 -c "import sys,json; print(json.load(sys.stdin)['pubkey'])" 2>/dev/null)
+          if [ -n "${_pubkey}" ]; then
+            _blob=$(sudo -u glcoin /usr/local/bin/glcoin-cli -rpcport=1617 encryptcontent "${_hex}" "${_pubkey}" 2>/dev/null | \
+              python3 -c "import sys,json; print(json.load(sys.stdin)['blob'])" 2>/dev/null)
+            if [ -n "${_blob}" ]; then
+              echo "${_blob}" | sudo -u glcoin tee ${_blobFile} 1>/dev/null
+              sudo chmod 600 ${_blobFile}
+              echo "# LND ${CHAIN} wallet password GLCE-encrypted in ${_blobFile}"
+              # password.info not needed — auto-unlock reads via wrapper or we store placeholder
+            fi
+          fi
+          # always write plaintext password.info as fallback for auto-unlock compatibility
+          echo "${passwordC}" | sudo -u glcoin tee ${_pwFile} 1>/dev/null
+          sudo chmod 600 ${_pwFile}
+        fi
       fi
       source <(sudo /home/admin/config.scripts/lnd.initwallet.py new ${CHAIN} ${passwordC})
       if [ "${err}" != "" ]; then
@@ -504,9 +533,11 @@ alias ${netprefix}lndconf=\"sudo nano /mnt/hdd/app-data/lnd/${netprefix}lnd.conf
     echo "# Setting autounlock for ${CHAIN}"
     source <(/home/admin/config.scripts/network.aliases.sh getvars lnd ${CHAIN})
     passwordFile="/mnt/hdd/app-data/lnd/data/chain/${network}/${CHAIN}/password.info"
-    # create passwordfile
+    # create passwordfile if not already written during wallet init above
     if ! sudo ls ${passwordFile} &>/dev/null; then
-      echo "raspiblesk" | sudo -u glcoin tee ${passwordFile} 1>/dev/null
+      _newpw=$(openssl rand -base64 32 | tr -dc 'A-Za-z0-9' | head -c 32)
+      echo "${_newpw}" | sudo -u glcoin tee ${passwordFile} 1>/dev/null
+      sudo chmod 600 ${passwordFile}
     fi
     # add autounlock to lnd.conf
     if ! grep "^wallet-unlock-password-file=${passwordFile}" < ${lndConfFile}; then

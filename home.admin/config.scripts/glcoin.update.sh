@@ -228,9 +228,9 @@ if [ "${mode}" = "tested" ] || [ "${mode}" = "reckless" ] || [ "${mode}" = "cust
   if [ "${mode}" = "custom" ] && [ "$3" = "skipverify" ]; then
     echo "# skipping signature verification"
     echo "# display the output of 'gpg --verify SHA256SUMS.asc'"
-    gpg --verify SHA256SUMS.asc
+    LC_ALL=C LANG=C gpg --verify SHA256SUMS.asc
   else
-    if gpg --verify SHA256SUMS.asc; then
+    if LC_ALL=C LANG=C gpg --verify SHA256SUMS.asc; then
       echo
       echo "****************************************"
       echo "OK --> GLCOIN MANIFEST IS CORRECT"

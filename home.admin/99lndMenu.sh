@@ -154,3 +154,5 @@ case $CHOICE in
     read key
 
 esac
+
+exit 0

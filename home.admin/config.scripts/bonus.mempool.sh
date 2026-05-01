@@ -452,8 +452,8 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   fi
 
   # always close ports on firewall
-  sudo ufw deny 4080
-  sudo ufw deny 4081
+  sudo ufw delete allow 4080
+  sudo ufw delete allow 4081
 
   isInstalled=$(sudo ls /etc/systemd/system/mempool.service 2>/dev/null | grep -c 'mempool.service')
   if [ ${isInstalled} -eq 1 ]; then

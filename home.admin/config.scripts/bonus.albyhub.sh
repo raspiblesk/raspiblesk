@@ -122,7 +122,7 @@ if [ "$1" = "menu" ]; then
     /home/admin/config.scripts/bonus.albyhub.sh on
   elif [ ${isInstalled} -lt 1 ]; then
     echo "error='App not installed'"
-    exit 1
+    exit 0
   fi
 
   # set the title for the dialog

@@ -152,7 +152,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   
   echo "Verify bin"
   cd /home/${APPID}/${APPID}
-  sudo -u ${APPID} gpg --verify SHA256SUMS.asc SHA256SUMS
+  sudo -u ${APPID} LC_ALL=C LANG=C gpg --verify SHA256SUMS.asc SHA256SUMS
   sudo -u ${APPID} sha256sum -c SHA256SUMS --ignore-missing
 
 

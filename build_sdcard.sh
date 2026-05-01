@@ -60,7 +60,8 @@ Options:
   -b, --branch [v1.7|v1.8]                 branch to be built on (default: ${defaultBranch})
   -d, --display [lcd|hdmi|headless]        display class (default: lcd)
   -t, --tweak-boot-drive [0|1]             tweak boot drives (default: 1)
-  -w, --wifi-region [off|US|GB|other]      wifi iso code (default: US) or 'off'
+  -w, --wifi-region [off|US|GB|other]      wifi iso code (default: off) — WiFi disabled by default for security
+  -c, --credentials-only                   skip package installation — only generate credentials (offline safe)
 
 Notes:
   all options, long and short accept --opt=value mode also
@@ -161,6 +162,7 @@ while :; do
     -d|-d=*|--display|--display=*) get_arg display "${opt}" "${arg}";;
     -t|-t=*|--tweak-boot-drive|--tweak-boot-drive=*) get_arg tweak_boot_drive "${opt}" "${arg}";;
     -w|-w=*|--wifi-region|--wifi-region=*) get_arg wifi_region "${opt}" "${arg}";;
+    -c|--credentials-only) credentials_only="true"; shift_n=1;;
     "") break;;
     *) error_msg "Invalid option: ${opt}";;
   esac
@@ -226,7 +228,7 @@ range_argument fatpack "0" "1" "false" "true"
 
 # GITHUB-USERNAME
 # ---------------------------------------
-# could be any valid github-user that has a fork of the raspiblesk repo - 'rootzoll' is default
+# could be any valid github-user that has a fork of the raspiblesk repo
 # The 'raspiblesk' repo of this user is used to provisioning sd card with raspiblesk assets/scripts later on.
 : "${github_user:=$defaultRepo}"
 curl --header "X-GitHub-Api-Version:2022-11-28" -s "https://api.github.com/repos/${github_user}/raspiblesk" | grep -q "\"message\": \"Not Found\"" && error_msg "Repository 'raspiblesk' not found for user '${github_user}"
@@ -253,9 +255,9 @@ range_argument tweak_boot_drive "0" "1" "false" "true"
 
 # WIFI
 # ---------------------------------------
-# WIFI country code like 'US' (default)
-# If any valid wifi country code Wifi will be activated with that country code by default
-: "${wifi_region:=US}"
+# WIFI — disabled by default (node uses wired Ethernet; WiFi is unnecessary attack surface)
+# Pass --wifi-region US (or your country code) only if you specifically need WiFi
+: "${wifi_region:=off}"
 
 echo "*****************************************"
 echo "*     RASPIBLESK BOOT IMAGE SETUP       *"
@@ -310,12 +312,101 @@ fi
 echo "raspi_configfile=${raspi_configfile}"
 echo "raspi_commandfile=${raspi_commandfile}"
 
+##############################################################
+# setup_credentials — OFFLINE PHASE
+# No internet required. Generates all credentials, hardens
+# SSH, locks unused accounts. Prints summary to terminal.
+# Works for SD card, USB, and NVMe equally.
+##############################################################
+setup_credentials() {
+  echo ""
+  echo "############################################################"
+  echo "#          RASPIBLESK — CREDENTIAL GENERATION              #"
+  echo "#              (no internet required)                      #"
+  echo "############################################################"
+
+  # generate ED25519 SSH key pair
+  TMPKEYDIR=$(mktemp -d)
+  ssh-keygen -t ed25519 -f "${TMPKEYDIR}/raspiblesk_key" -N "" -C "raspiblesk-admin" >/dev/null 2>&1
+  SSH_PRIVKEY=$(cat "${TMPKEYDIR}/raspiblesk_key")
+  SSH_PUBKEY=$(cat "${TMPKEYDIR}/raspiblesk_key.pub")
+
+  # inject public key for admin
+  mkdir -p /home/admin/.ssh
+  chmod 700 /home/admin/.ssh
+  echo "${SSH_PUBKEY}" > /home/admin/.ssh/authorized_keys
+  chmod 600 /home/admin/.ssh/authorized_keys
+  chown -R admin:admin /home/admin/.ssh
+
+  # harden sshd — key-only, no passwords, no root
+  sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+  grep -q "^PasswordAuthentication" /etc/ssh/sshd_config || echo "PasswordAuthentication no" >> /etc/ssh/sshd_config
+  sed -i 's/^#*PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
+  grep -q "^PermitRootLogin" /etc/ssh/sshd_config || echo "PermitRootLogin no" >> /etc/ssh/sshd_config
+  sed -i 's/^#*PubkeyAuthentication.*/PubkeyAuthentication yes/' /etc/ssh/sshd_config
+  grep -q "^PubkeyAuthentication" /etc/ssh/sshd_config || echo "PubkeyAuthentication yes" >> /etc/ssh/sshd_config
+
+  # lock root and pi — no login possible
+  passwd -l root
+  passwd -l pi 2>/dev/null || true
+
+  # set random admin default password (used for sudo password prompts, not SSH)
+  ADMIN_DEFAULT_PW=$(openssl rand -base64 24 | tr -dc 'A-Za-z0-9!@#%^&*_+=' | head -c 20)
+  echo "admin:${ADMIN_DEFAULT_PW}" | chpasswd
+
+  # save private key to boot partition if accessible (SD card / USB convenience)
+  BOOT_DIR=""
+  [ -d /boot/firmware ] && BOOT_DIR="/boot/firmware"
+  [ -d /boot ] && [ -z "${BOOT_DIR}" ] && BOOT_DIR="/boot"
+  if [ -n "${BOOT_DIR}" ]; then
+    echo "${SSH_PRIVKEY}" > "${BOOT_DIR}/raspiblesk_key"
+    chmod 600 "${BOOT_DIR}/raspiblesk_key"
+    echo "# Private key also saved to: ${BOOT_DIR}/raspiblesk_key"
+    echo "# (readable from your laptop when SD card / USB is plugged in)"
+  fi
+
+  rm -rf "${TMPKEYDIR}"
+
+  # print summary — operator records this before flashing
+  echo ""
+  echo "############################################################"
+  echo "#         SAVE THE FOLLOWING BEFORE FLASHING               #"
+  echo "############################################################"
+  echo ""
+  echo "--- SSH PRIVATE KEY (copy to your laptop as raspiblesk_key) ---"
+  echo "${SSH_PRIVKEY}"
+  echo "--- END SSH PRIVATE KEY ---"
+  echo ""
+  echo "First login command:"
+  echo "  chmod 600 raspiblesk_key"
+  echo "  ssh -i raspiblesk_key admin@<pi-ip>"
+  echo ""
+  echo "Admin sudo password (for local console use only):"
+  echo "  ${ADMIN_DEFAULT_PW}"
+  echo ""
+  echo "############################################################"
+  echo "# After first login the setup wizard will guide you        #"
+  echo "# through setting your own permanent passwords.            #"
+  echo "# The temporary key above will be deleted after setup.     #"
+  echo "############################################################"
+  echo ""
+}
+
 # USER-CONFIRMATION
-if [ "${interaction}" = "true" ]; then
+if [ "${interaction}" = "true" ] && [ "${credentials_only}" != "true" ]; then
   echo -n "# Do you agree with all parameters above? (yes/no) "
   read -r installRaspiblitzAnswer
   [ "$installRaspiblitzAnswer" != "yes" ] && exit 1
 fi
+
+# CREDENTIALS-ONLY MODE — skip all package installation
+if [ "${credentials_only}" = "true" ]; then
+  echo "# Running in credentials-only mode (offline safe) ..."
+  setup_credentials
+  echo "# Done. Flash the image and boot the Pi."
+  exit 0
+fi
+
 echo -e "Building RaspiBlesk ...\n"
 sleep 3 ## give time to cancel
 
@@ -405,7 +496,7 @@ echo -e "\n*** SOFTWARE UPDATE ***"
 # autossh telnet vnstat -> network tools bandwidth monitoring for future statistics
 # parted dosfstools -> prepare for format data drive
 # btrfs-progs -> prepare for BTRFS data drive raid
-# fbi -> prepare for display graphics mode. https://github.com/rootzoll/raspiblesk/pull/334
+# fbi -> framebuffer image viewer, needed for display graphics mode (LCD/HDMI)
 # sysbench -> prepare for powertest
 # build-essential -> check for build dependencies on Ubuntu, Armbian
 # dialog -> dialog bc python3-dialog
@@ -421,8 +512,8 @@ echo -e "\n*** SOFTWARE UPDATE ***"
 # lsb-release -> needed to know which distro version we're running to add APT sources
 general_utils="sudo htop git curl bash-completion vim jq dphys-swapfile bsdmainutils autossh telnet vnstat parted dosfstools fbi sysbench build-essential dialog bc python3-dialog unzip whois fdisk lsb-release smartmontools rsyslog qrencode dnsutils"
 # add btrfs-progs if not trixie on aarch64
-[ "${architecture}" = "aarch64" ] && ! grep "13 (trixie)" < /etc/os-release && general_utils="${general_utils} btrfs-progs"
-# python3-mako --> https://github.com/rootzoll/raspiblesk/issues/3441
+[ "${architecture}" = "arm64" ] && ! grep -q "13 (trixie)" /etc/os-release && general_utils="${general_utils} btrfs-progs"
+# python3-mako -> template engine required by several bonus services
 python_dependencies="python3-venv python3-dev python3-wheel python3-jinja2 python3-pip python3-mako"
 server_utils="rsync net-tools xxd netcat-openbsd openssh-client openssh-sftp-server sshpass psmisc ufw sqlite3"
 [ "${architecture}" = "amd64" ] && amd64_dependencies="network-manager" # add amd64 dependency
@@ -542,12 +633,12 @@ if [ "${baseimage}" = "raspios_arm64" ]; then
   # set WIFI country so boot does not block
   # this will undo the softblock of rfkill on RaspiOS
   [ "${wifi_region}" != "off" ] && raspi-config nonint do_wifi_country $wifi_region
-  # see https://github.com/rootzoll/raspiblesk/issues/428#issuecomment-472822840
+  # setting wifi country clears rfkill soft block so wifi hardware is usable
 
-  if ! grep "Raspiblitz" $raspi_configfile; then
-    echo "# Adding Raspiblitz Edits to $raspi_configfile"
+  if ! grep "RaspiBlesk" $raspi_configfile; then
+    echo "# Adding RaspiBlesk Edits to $raspi_configfile"
     echo | tee -a $raspi_configfile
-    echo "# Raspiblitz" | tee -a $raspi_configfile
+    echo "# RaspiBlesk" | tee -a $raspi_configfile
     # ensure that kernel8.img is used to set PAGE_SIZE to 4K
     # https://github.com/raspiblesk/raspiblesk/issues/4346
     if [ -f /boot/kernel8.img ] || [ -f /boot/firmware/kernel8.img ]; then
@@ -557,14 +648,14 @@ if [ "${baseimage}" = "raspios_arm64" ]; then
     echo "dtparam=nvme" | tee -a $raspi_configfile
     echo 'dtoverlay=pi3-disable-bt' | tee -a $raspi_configfile
     echo 'dtoverlay=disable-bt' | tee -a $raspi_configfile
+    echo 'dtoverlay=disable-wifi' | tee -a $raspi_configfile
     echo 'program_usb_timeout=1' | tee -a $raspi_configfile #4552
   else
-    echo "# Raspiblitz Edits are already in $raspi_configfile"
+    echo "# RaspiBlesk Edits are already in $raspi_configfile"
   fi
 
   # run fsck on sd root partition on every startup to prevent "maintenance login" screen
-  # see: https://github.com/rootzoll/raspiblesk/issues/782#issuecomment-564981630
-  # see https://github.com/rootzoll/raspiblesk/issues/1053#issuecomment-600878695
+  # on unclean shutdown — without this the Pi drops to emergency console instead of booting
   # use command to check last fsck check: tune2fs -l /dev/mmcblk0p2
   if [ "${tweak_boot_drive}" == "true" ]; then
     echo "* running tune2fs"
@@ -615,11 +706,10 @@ apt purge piwiz -y
 userdel -r rpi-first-boot-wizard
 
 echo -e "\n*** CONFIG ***"
-# based on https://raspibolt.github.io/raspibolt/raspibolt_20_pi.html#raspi-config
 
-# set new default password for root user
-echo "root:raspiblesk" | chpasswd
-echo "pi:raspiblesk" | chpasswd
+# lock root and pi — no interactive login (credentials are set in setup_credentials)
+passwd -l root
+passwd -l pi 2>/dev/null || true
 
 # Auto-Login if RaspberryPi
 # (just kicks in if auto-login of pi is activated in HDMI or LCD mode)
@@ -629,7 +719,7 @@ if [ "${baseimage}" = "raspios_arm64" ]; then
   if [ ${autostartDone} -eq 0 ]; then
     # bash autostart for pi
     # run as exec to dont allow easy physical access by keyboard
-    # see https://github.com/rootzoll/raspiblesk/issues/54
+    # exec replaces the shell so Ctrl+C drops the user out rather than to a bash prompt
     bash -c 'echo "# automatic start the LCD info loop" >> /home/pi/.bashrc'
     bash -c 'echo "SCRIPT=\"sudo /home/admin/00infoLCD.sh\"" >> /home/pi/.bashrc'
     bash -c 'echo "# replace shell with script => logout when exiting script" >> /home/pi/.bashrc'
@@ -701,11 +791,12 @@ service rsyslog restart
 
 echo -e "\n*** ADDING MAIN USER admin ***"
 # based on https://raspibolt.org/system-configuration.html#add-users
-# using the default password 'raspiblesk'
+# password set to random value — finalized in setup_credentials()
 adduser --disabled-password --gecos "" admin
 # make the home folder world readable
 chmod 0755 /home/admin
-echo "admin:raspiblesk" | chpasswd
+# password set securely in setup_credentials — placeholder only
+echo "admin:$(openssl rand -base64 24)" | chpasswd
 adduser admin sudo
 chsh admin -s /bin/bash
 # configure sudo for usage without password entry
@@ -725,7 +816,8 @@ echo -e "\n*** ADDING SERVICE USER glcoin"
 adduser --system --group --shell /bin/bash --home /home/glcoin glcoin
 # copy the skeleton files for login
 sudo -u glcoin cp -r /etc/skel/. /home/glcoin/
-echo "glcoin:raspiblesk" | chpasswd
+# service user — lock interactive login
+passwd -l glcoin
 # make home directory readable
 chmod 755 /home/glcoin
 usermod -a -G glcoin admin
@@ -774,12 +866,16 @@ for fixedScript in \
     config.scripts/lnd.credentials.sh \
     setup.scripts/eventInfoWait.sh \
     config.scripts/bonus.glcoin-mining.sh \
+    config.scripts/bonus.glcoin-miner.sh \
+    config.scripts/glcoin_miner.py \
     config.scripts/bonus.btcpayserver.sh \
-    config.scripts/bonus.mempool.sh \
     config.scripts/bonus.thunderhub.sh \
-    config.scripts/bonus.glc-rpc-explorer.sh \
     config.scripts/tor.network.sh \
+    config.scripts/tor.install.sh \
+    config.scripts/internet.wireguard.sh \
+    config.scripts/blesk.web.sh \
     config.scripts/blesk.web.ui.sh \
+    config.scripts/blesk.display.sh \
     config.scripts/blesk.git-verify.sh \
     _provision.setup.sh \
     _provision.xfinal.sh \
@@ -839,7 +935,7 @@ sudo -u admin git config --global --add safe.directory /home/admin/raspiblesk
 git config --global --add safe.directory /home/admin/raspiblesk
 
 # install newest version of BlitzPy
-blitzpy_wheel=$(ls -tR /home/admin/raspiblesk/home.admin/BlitzPy/dist | grep -E "any.whl" | tail -n 1)
+blitzpy_wheel=$(ls -t /home/admin/raspiblesk/home.admin/BlitzPy/dist/*.whl 2>/dev/null | head -n 1 | xargs basename 2>/dev/null)
 blitzpy_version=$(echo "${blitzpy_wheel}" | grep -oE "([0-9]\.[0-9]\.[0-9])")
 echo -e "\n*** INSTALLING BlitzPy Version: ${blitzpy_version} ***"
 sudo -H /usr/bin/python -m pip install "/home/admin/raspiblesk/home.admin/BlitzPy/dist/${blitzpy_wheel}" >/dev/null 2>&1
@@ -858,17 +954,17 @@ bash -c "echo 'PATH=\$PATH:/sbin' >> /etc/profile"
 echo -e "\n*** RASPIBLESK EXTRAS ***"
 
 # screen for background processes
-# tmux for multiple (detachable/background) sessions when using SSH https://github.com/rootzoll/raspiblesk/issues/990
+# tmux for multiple (detachable/background) sessions when using SSH
 # fzf install a command-line fuzzy finder (https://github.com/junegunn/fzf)
 apt_install tmux screen fzf
 
 bash -c "echo '' >> /home/admin/.bashrc"
-bash -c "echo '# https://github.com/rootzoll/raspiblesk/issues/1784' >> /home/admin/.bashrc"
+bash -c "echo '# disable Angular CLI telemetry' >> /home/admin/.bashrc"
 bash -c "echo 'NG_CLI_ANALYTICS=ci' >> /home/admin/.bashrc"
 
 # raspiblesk custom command prompt #2400
 if ! grep -Eq "^[[:space:]]*PS1.*Ǥ" /home/admin/.bashrc; then
-    sed -i '/^unset color_prompt force_color_prompt$/i # raspiblesk custom command prompt https://github.com/rootzoll/raspiblesk/issues/2400' /home/admin/.bashrc
+    sed -i '/^unset color_prompt force_color_prompt$/i # raspiblesk custom command prompt' /home/admin/.bashrc
     sed -i '/^unset color_prompt force_color_prompt$/i raspiIp=$(hostname -I | cut -d " " -f1)' /home/admin/.bashrc
     sed -i '/^unset color_prompt force_color_prompt$/i if [ "$color_prompt" = yes ]; then' /home/admin/.bashrc
     sed -i '/^unset color_prompt force_color_prompt$/i \    PS1=\x27${debian_chroot:+($debian_chroot)}\\[\\033[00;33m\\]\\u@$raspiIp:\\[\\033[00;34m\\]\\w\\[\\033[01;35m\\]$(__git_ps1 "(%s)") \\[\\033[01;33m\\]Ǥ\\[\\033[00m\\] \x27' /home/admin/.bashrc
@@ -903,6 +999,9 @@ if [ ${autostartDone} -eq 0 ]; then
 else
   echo "autostart already in $homeFile"
 fi
+
+echo -e "\n*** CREDENTIAL GENERATION (OFFLINE PHASE) ***"
+setup_credentials
 
 echo -e "\n*** SWAP FILE ***"
 # based on https://stadicus.github.io/RaspiBolt/raspibolt_20_pi.html#move-swap-file
@@ -946,15 +1045,20 @@ echo "Activating CACHE RAM DISK ... "
 # *** Wifi, Bluetooth & other RaspberryPi configs ***
 if [ "${baseimage}" = "raspios_arm64"  ] || [ "${baseimage}" = "debian" ]; then
 
-  if [ "${wifi_region}" == "off" ]; then
-    echo -e "\n*** DISABLE WIFI ***"
-    systemctl disable wpa_supplicant.service
-    ifconfig wlan0 down
+  echo -e "\n*** DISABLE WIFI ***"
+  # WiFi is always disabled — node runs on wired Ethernet
+  # hardware-level disable is in config.txt (dtoverlay=disable-wifi)
+  systemctl disable wpa_supplicant.service 2>/dev/null || true
+  rfkill block wifi 2>/dev/null || true
+  ifconfig wlan0 down 2>/dev/null || true
+  if [ "${wifi_region}" != "off" ]; then
+    echo "# NOTE: --wifi-region ${wifi_region} was passed but WiFi is still disabled by default."
+    echo "# To enable WiFi, remove dtoverlay=disable-wifi from ${raspi_configfile} after flashing."
   fi
 
   # remove bluetooth services
-  systemctl disable bluetooth.service
-  systemctl disable hciuart.service
+  systemctl disable bluetooth.service 2>/dev/null || true
+  systemctl disable hciuart.service 2>/dev/null || true
 
   # remove bluetooth packages
   apt-get remove -y --purge pi-bluetooth bluez bluez-firmware
@@ -969,7 +1073,7 @@ if [ "${baseimage}" = "raspios_arm64"  ] || [ "${baseimage}" = "debian" ]; then
   sed -i "s/^dtoverlay=${dtoverlay}/# dtoverlay=${dtoverlay}/g" ${raspi_configfile}
 
   # I2C fix (make sure dtparam=i2c_arm is not on)
-  # see: https://github.com/rootzoll/raspiblesk/issues/1058#issuecomment-739517713
+  # leaving i2c_arm enabled causes conflicts with the RaspiBlesk LCD driver on boot
   sed -i "s/^dtparam=i2c_arm=.*//g" ${raspi_configfile}
 fi
 
@@ -1082,7 +1186,7 @@ echo -e "**********************************************\n"
 echo "Your SD Card Image for RaspiBlesk is ready (might still do display config)."
 echo "Take the chance & look through the output above if you can spot any errors or warnings."
 echo -e "\nIMPORTANT IF YOU WANT TO MAKE A RELEASE IMAGE FROM THIS BUILD:"
-echo "1. login fresh --> user:admin password:raspiblesk"
+echo "1. login fresh --> ssh -i raspiblesk_key admin@<pi-ip>  (key printed during build)"
 echo -e "2. run --> release\n"
 
 # make sure that at least the code is available (also if no internet)

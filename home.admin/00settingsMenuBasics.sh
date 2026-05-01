@@ -538,3 +538,5 @@ if [ ${needsReboot} -eq 1 ]; then
    sleep 4
    sudo /home/admin/config.scripts/blesk.shutdown.sh reboot
 fi
+
+exit 0

@@ -460,8 +460,8 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   fi
 
   # close ports on firewall
-  sudo ufw deny 3020
-  sudo ufw deny 3021
+  sudo ufw delete allow 3020
+  sudo ufw delete allow 3021
 
   # needed for API/WebUI to signal successfull install
   echo "result='OK'"

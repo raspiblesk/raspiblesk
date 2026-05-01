@@ -325,6 +325,95 @@ def verify_link(rpc: RPCClient, link: dict, gateways: Iterable[str],
 
 
 # ---------------------------------------------------------------------------
+# Address → scriptPubKey (without wallet / getaddressinfo)
+# ---------------------------------------------------------------------------
+_BECH32_CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
+_BECH32M_CONST = 0x2BC830A3
+
+
+def _bech32_polymod(values: Iterable[int]) -> int:
+    GEN = [0x3B6A57B2, 0x26508E6D, 0x1EA119FA, 0x3D4233DD, 0x2A1462B3]
+    chk = 1
+    for v in values:
+        b = chk >> 25
+        chk = (chk & 0x1FFFFFF) << 5 ^ v
+        for i in range(5):
+            chk ^= GEN[i] if (b >> i) & 1 else 0
+    return chk
+
+
+def _bech32_hrp_expand(hrp: str) -> list:
+    return [ord(c) >> 5 for c in hrp] + [0] + [ord(c) & 31 for c in hrp]
+
+
+def _bech32_decode_raw(bech: str):
+    bech = bech.lower()
+    if any(ord(c) < 33 or ord(c) > 126 for c in bech):
+        return None
+    pos = bech.rfind("1")
+    if pos < 1 or len(bech) - pos - 1 < 6:
+        return None
+    hrp = bech[:pos]
+    data_chars = bech[pos + 1:]
+    if any(c not in _BECH32_CHARSET for c in data_chars):
+        return None
+    data = [_BECH32_CHARSET.index(c) for c in data_chars]
+    const = _bech32_polymod(_bech32_hrp_expand(hrp) + data)
+    if const == 1:
+        enc = "bech32"
+    elif const == _BECH32M_CONST:
+        enc = "bech32m"
+    else:
+        return None
+    return hrp, data[:-6], enc
+
+
+def _convertbits_addr(data: list, frombits: int, tobits: int, pad: bool = True):
+    acc, bits = 0, 0
+    ret: list = []
+    maxv = (1 << tobits) - 1
+    max_acc = (1 << (frombits + tobits - 1)) - 1
+    for value in data:
+        if value < 0 or value >> frombits:
+            return None
+        acc = ((acc << frombits) | value) & max_acc
+        bits += frombits
+        while bits >= tobits:
+            bits -= tobits
+            ret.append((acc >> bits) & maxv)
+    if pad:
+        if bits:
+            ret.append((acc << (tobits - bits)) & maxv)
+    elif bits >= frombits or ((acc << (tobits - bits)) & maxv):
+        return None
+    return ret
+
+
+def _segwit_scriptpubkey(addr: str) -> bytes | None:
+    """Derive the scriptPubKey from a bech32/bech32m address without wallet RPC."""
+    decoded = _bech32_decode_raw(addr)
+    if decoded is None:
+        return None
+    _hrp, data, enc = decoded
+    if not data:
+        return None
+    witver = data[0]
+    if witver > 16:
+        return None
+    witprog = _convertbits_addr(data[1:], 5, 8, False)
+    if witprog is None or len(witprog) < 2 or len(witprog) > 40:
+        return None
+    if witver == 0 and enc != "bech32":
+        return None
+    if witver != 0 and enc != "bech32m":
+        return None
+    if witver == 0 and len(witprog) not in (20, 32):
+        return None
+    op = 0x00 if witver == 0 else (0x50 + witver)
+    return bytes([op, len(witprog)] + witprog)
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 def rpc_from_args(args: argparse.Namespace) -> RPCClient:
@@ -601,6 +690,10 @@ def build_ipfs_commitment_script(anchor_txid_hex: str, cid: str) -> bytes:
 
 
 def decode_address_to_scriptpubkey(rpc: RPCClient, address: str) -> bytes:
+    spk = _segwit_scriptpubkey(address)
+    if spk is not None:
+        return spk
+    # Fall back to RPC for non-bech32 addresses (requires wallet)
     info = rpc.call("getaddressinfo", address)
     spk_hex = info.get("scriptPubKey")
     if not spk_hex:
@@ -610,7 +703,7 @@ def decode_address_to_scriptpubkey(rpc: RPCClient, address: str) -> bytes:
 
 def mine_block(rpc: RPCClient, payout_address: str, ipfs_cid: str | None,
                ipfs_anchor_txid: str | None = None,
-               max_tries: int = 1_000_000, progress_every: int = 100_000) -> dict:
+               max_tries: int = 1_000_000, progress_every: int = 500_000) -> dict:
     """Assemble + PoW-search a single block.  Returns the submit result
     (empty string on success)."""
     template = rpc.call("getblocktemplate", {"rules": ["segwit"]})
@@ -649,6 +742,8 @@ def mine_block(rpc: RPCClient, payout_address: str, ipfs_cid: str | None,
     tries = 0
     start = time.monotonic()
 
+    # Each extra_nonce iteration covers the full 32-bit nonce space (4G hashes).
+    # max_tries caps the total search regardless of how many extra_nonce steps are used.
     while tries < max_tries:
         cb = encode_coinbase(height, extra_nonce, reward, payout_spk, witness_spk, ipfs_spk)
         cb_id = coinbase_txid(cb)
@@ -657,7 +752,6 @@ def mine_block(rpc: RPCClient, payout_address: str, ipfs_cid: str | None,
             header = assemble_header(template, root, nonce)
             h = int.from_bytes(dsha256(header)[::-1], "big")
             if h < target:
-                # Assemble block: header + tx count + coinbase + other txs
                 block_hex = header.hex() + varint(1 + len(tx_hashes)).hex() + cb.hex() + tx_hex_blob
                 result = rpc.call("submitblock", block_hex)
                 elapsed = time.monotonic() - start
@@ -688,13 +782,29 @@ def mine_block(rpc: RPCClient, payout_address: str, ipfs_cid: str | None,
 # ---------------------------------------------------------------------------
 def cmd_mine_plain(args: argparse.Namespace) -> int:
     rpc = rpc_from_args(args)
-    info = mine_block(rpc, args.address, ipfs_cid=None, max_tries=args.max_tries)
-    print(json.dumps(info, indent=2))
-    return 0 if info["accepted"] else 1
+    while True:
+        try:
+            info = mine_block(rpc, args.address, ipfs_cid=None, max_tries=args.max_tries)
+        except RPCError as exc:
+            msg = str(exc)
+            if "no solution" in msg:
+                # Template exhausted without finding a block — fetch a fresh one and retry immediately.
+                continue
+            print(f"error: {exc}", file=sys.stderr)
+            time.sleep(30)
+            continue
+        print(json.dumps(info, indent=2), flush=True)
+        if not info["accepted"]:
+            print(f"warning: block rejected ({info['result']}), retrying", file=sys.stderr)
+            time.sleep(5)
 
 
 def cmd_mine_ipfs(args: argparse.Namespace) -> int:
     rpc = rpc_from_args(args)
+
+    if not args.from_store and not args.cid:
+        print("error: --cid is required when --from-store is not set", file=sys.stderr)
+        return 2
 
     link = {"txid": args.txid, "cid": args.cid, "description": args.description,
             "timestamp": int(time.time())}
@@ -721,17 +831,23 @@ def cmd_mine_ipfs(args: argparse.Namespace) -> int:
             if not args.force:
                 return 2
 
-    info = mine_block(rpc, args.address, ipfs_cid=link["cid"],
-                      ipfs_anchor_txid=link["txid"], max_tries=args.max_tries)
-    print(json.dumps(info, indent=2))
-    # After success: persist the link in the node DB (idempotent).  If the
-    # record already existed (store was not the reason we mined) we ignore
-    # the expected "record already exists" error.
-    try:
-        rpc.call("storeipfslink", link["txid"], link["cid"], link.get("description", ""))
-    except RPCError:
-        pass
-    return 0 if info["accepted"] else 1
+    while True:
+        try:
+            info = mine_block(rpc, args.address, ipfs_cid=link["cid"],
+                              ipfs_anchor_txid=link["txid"], max_tries=args.max_tries)
+        except RPCError as exc:
+            msg = str(exc)
+            if "no solution" in msg:
+                continue
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(info, indent=2), flush=True)
+        # After success: persist the link in the node DB (idempotent).
+        try:
+            rpc.call("storeipfslink", link["txid"], link["cid"], link.get("description", ""))
+        except RPCError:
+            pass
+        return 0 if info["accepted"] else 1
 
 
 def cmd_verify(args: argparse.Namespace) -> int:

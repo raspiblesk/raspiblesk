@@ -65,9 +65,9 @@ fi
 
 # MENU INFO
 if [ "${mode}" = "menu" ]; then
-  if [ ${installed} -q 0 ]; then
+  if [ ${installed} -eq 0 ]; then
     whiptail --title " ERROR " --msgbox "Faraday is not installed" 7 30
-    exit 1
+    exit 0
   fi
   whiptail --title " Faraday " --msgbox "
 Faraday is a command line tool. Details see:
@@ -76,7 +76,7 @@ https://github.com/lightninglabs/faraday
 Terminal-Shortcut: 'faraday' to switch to the dedicated user.
 Or use like: sudo -u faraday /home/faraday/bin/frcli -help
 " 13 70
-  exit 1
+  exit 0
 fi
 
 # INSTALL

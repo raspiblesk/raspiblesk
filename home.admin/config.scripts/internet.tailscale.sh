@@ -160,7 +160,7 @@ if [ "$1" = "menu" ]; then
       if [ -z "$login_url" ]; then
         echo "# Error getting login URL"
         sleep 3
-        exit 1
+        exit 0
       fi
 
       # ask user to login

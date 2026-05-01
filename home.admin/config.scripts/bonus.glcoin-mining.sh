@@ -100,6 +100,19 @@ if [ "$1" = "install" ]; then
 
   echo "# *** INSTALL cpuminer-multi ***"
 
+  # Try bundled pre-built binary first (avoids internet + build deps at runtime)
+  ARCH=$(uname -m)
+  BUNDLED_BINARY="/home/admin/assets/minerd-${ARCH}"
+  if [ -f "${BUNDLED_BINARY}" ]; then
+    echo "# Using bundled minerd for ${ARCH}"
+    install -m 0755 "${BUNDLED_BINARY}" "${MINER_BINARY}"
+    echo "# OK - cpuminer-multi installed from bundle"
+    echo "result='installed'"
+    exit 0
+  fi
+
+  # Fall back: build from source (requires internet + build deps)
+  echo "# No bundled binary for ${ARCH} — building from source"
   apt-get install -y build-essential libcurl4-openssl-dev libssl-dev \
     libjansson-dev automake git 2>/dev/null
 
@@ -112,7 +125,7 @@ if [ "$1" = "install" ]; then
   cd "${BUILD_DIR}" || exit 1
   ./autogen.sh
   ./configure --disable-assembly \
-    CFLAGS="-Ofast -march=native" \
+    CFLAGS="-O2 -march=native" \
     --with-crypto --with-curl || {
     echo "error='configure failed'"
     rm -rf "${BUILD_DIR}"
@@ -142,7 +155,7 @@ if [ "$1" = "uninstall" ]; then
   systemctl daemon-reload
   rm -f "${MINER_BINARY}"
   rm -f "${MINER_CONFIG}"
-  /home/admin/config.scripts/blesk.conf.sh delete glcoinMining 2>/dev/null
+  /home/admin/config.scripts/blesk.conf.sh delete glcoinMiner 2>/dev/null
 
   echo "# OK - Glcoin miner uninstalled"
   exit 0
@@ -274,18 +287,14 @@ if [ "$1" = "on" ] || [ "$1" = "1" ]; then
     exit 1
   fi
 
-  # get or create mining address
+  # get mining address — must be pre-configured (wallet is disabled on this node)
   mkdir -p "$(dirname ${MINER_CONFIG})"
   miningAddress=$(getMiningAddress)
   if [ -z "${miningAddress}" ]; then
-    echo "# Generating new mining address ..."
-    miningAddress=$(${GLCOIN_CLI} getnewaddress "mining" 2>/dev/null)
-    if [ -z "${miningAddress}" ]; then
-      echo "error='could not generate mining address — is glcoind running?'"
-      exit 1
-    fi
-    echo "miningAddress=${miningAddress}" >> "${MINER_CONFIG}"
-    echo "# Mining address: ${miningAddress}"
+    echo "error='no mining address configured'"
+    echo "# Set your payout address (gc1...) first:"
+    echo "#   sudo bash -c \"echo miningAddress=gc1... >> ${MINER_CONFIG}\""
+    exit 1
   fi
 
   # check registry status and warn if needed
@@ -359,7 +368,7 @@ EOF
   sleep 3
 
   if systemctl is-active --quiet glcoin-mining.service; then
-    /home/admin/config.scripts/blesk.conf.sh set glcoinMining "on"
+    /home/admin/config.scripts/blesk.conf.sh set glcoinMiner "on"
     echo "# OK - Glcoin CPU mining started"
     echo "# Address: ${miningAddress}  (registry: ${registryStatus})"
     echo "# Threads: ${threadCount}"
@@ -380,8 +389,114 @@ if [ "$1" = "off" ] || [ "$1" = "0" ]; then
 
   systemctl stop glcoin-mining.service 2>/dev/null
   systemctl disable glcoin-mining.service 2>/dev/null
-  /home/admin/config.scripts/blesk.conf.sh set glcoinMining "off"
+  /home/admin/config.scripts/blesk.conf.sh set glcoinMiner "off"
 
   echo "# OK - Glcoin CPU mining stopped"
+  exit 0
+fi
+
+##############
+# MENU
+##############
+if [ "$1" = "menu" ]; then
+
+  # collect status
+  isInstalled=0
+  [ -f "${MINER_BINARY}" ] && isInstalled=1
+
+  isRunning=0
+  systemctl is-active --quiet glcoin-mining.service 2>/dev/null && isRunning=1
+
+  miningAddress=$(getMiningAddress)
+  threadCount=$(grep "^threads=" "${MINER_CONFIG}" 2>/dev/null | cut -d= -f2)
+  [ -z "${threadCount}" ] && threadCount="auto ($(( $(nproc) > 1 ? $(nproc) - 1 : 1 )))"
+
+  registryStatus="n/a"
+  if [ -n "${miningAddress}" ]; then
+    registryStatus=$(getRegistryStatus "${miningAddress}")
+  fi
+
+  currentHeight=$(${GLCOIN_CLI} getblockcount 2>/dev/null || echo "0")
+  hashrate=""
+  if [ "${isRunning}" = "1" ]; then
+    hashrate=$(journalctl -u glcoin-mining.service --no-pager -n 100 2>/dev/null | \
+      grep -oP '\d+\.\d+ [kMG]?H/s' | tail -1)
+  fi
+
+  # build status lines
+  statusLine="Status:  $([ "${isRunning}" = "1" ] && echo "RUNNING" || echo "stopped")"
+  [ -n "${hashrate}" ] && statusLine="${statusLine}  (${hashrate})"
+  addrLine="Address: ${miningAddress:-not set}"
+  regLine="Registry: ${registryStatus}  |  Block: ${currentHeight}"
+  threadLine="Threads: ${threadCount}"
+
+  OPTIONS=()
+  if [ "${isRunning}" = "1" ]; then
+    OPTIONS+=(OFF "Stop Mining")
+  else
+    OPTIONS+=(ON "Start Mining")
+  fi
+  OPTIONS+=(THREADS "Set Thread Count")
+  OPTIONS+=(REGISTER "Register KYC Identity")
+  OPTIONS+=(STATUS "Show Full Status")
+
+  CHOICE=$(dialog --clear \
+    --backtitle "RaspiBlesk" \
+    --title " Glcoin CPU Miner " \
+    --menu "\n${statusLine}\n${addrLine}\n${regLine}\n${threadLine}\n\nOptions:" \
+    18 60 5 \
+    "${OPTIONS[@]}" \
+    2>&1 >/dev/tty)
+
+  case $CHOICE in
+    ON)
+      clear
+      /home/admin/config.scripts/bonus.glcoin-mining.sh on
+      echo ""
+      echo "Press ENTER to return to menu."
+      read -r key
+      ;;
+    OFF)
+      clear
+      /home/admin/config.scripts/bonus.glcoin-mining.sh off
+      echo ""
+      echo "Press ENTER to return to menu."
+      read -r key
+      ;;
+    THREADS)
+      n=$(dialog --clear --title " Set Thread Count " \
+        --inputbox "Enter number of CPU threads (1-$(nproc)):" 8 40 \
+        2>&1 >/dev/tty)
+      if [[ "${n}" =~ ^[0-9]+$ ]] && [ "${n}" -ge 1 ]; then
+        /home/admin/config.scripts/bonus.glcoin-mining.sh threads "${n}"
+        dialog --msgbox "Thread count set to ${n}." 6 40
+      fi
+      ;;
+    REGISTER)
+      kycId=$(dialog --clear --title " KYC Registration " \
+        --inputbox "Enter your KYC ID:" 8 50 \
+        2>&1 >/dev/tty)
+      if [ -n "${kycId}" ]; then
+        dispName=$(dialog --clear --title " KYC Registration " \
+          --inputbox "Enter display name:" 8 50 \
+          2>&1 >/dev/tty)
+        if [ -n "${dispName}" ]; then
+          clear
+          /home/admin/config.scripts/bonus.glcoin-mining.sh register "${kycId}" "${dispName}"
+          echo ""
+          echo "Press ENTER to return to menu."
+          read -r key
+        fi
+      fi
+      ;;
+    STATUS)
+      clear
+      /home/admin/config.scripts/bonus.glcoin-mining.sh status
+      echo ""
+      echo "Press ENTER to return to menu."
+      read -r key
+      ;;
+  esac
+
   exit 0
 fi

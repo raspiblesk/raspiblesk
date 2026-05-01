@@ -80,8 +80,8 @@ fi
 if [ "${crtlWebinterface}" == "on" ]; then
   OPTIONS+=(CRTL "Core Lightning RTL Webinterface")
 fi
-if [ "${GlcoinPayServer}" == "on" ]; then
-  OPTIONS+=(BTCPAY "BTCPay Server Info")
+if [ "${GLCPayServer}" == "on" ]; then
+  OPTIONS+=(BTCPAY "GLCPay Server Info")
 fi
 if [ "${lit}" == "on" ]; then
   OPTIONS+=(LIT "LIT (loop, pool, faraday)")
@@ -176,6 +176,9 @@ if [ "${glcoinMiner}" == "on" ]; then
 fi
 if [ "${tailscale}" == "on" ]; then
   OPTIONS+=(TAILSCALE "Tailscale VPN")
+fi
+if [ "${wireguard}" == "on" ]; then
+  OPTIONS+=(WIREGUARD "WireGuard VPN")
 fi
 if [ "${telegraf}" == "on" ]; then
   OPTIONS+=(TELEGRAF "Telegraf InfluxDB/Grafana Metrics")
@@ -301,6 +304,15 @@ case $CHOICE in
         MEMPOOL)
             /home/admin/config.scripts/bonus.mempool.sh menu
             ;;
+        LOOP)
+            /home/admin/config.scripts/bonus.loop.sh menu
+            ;;
+        FARADAY)
+            sudo /home/admin/config.scripts/bonus.faraday.sh menu
+            ;;
+        POOL)
+            /home/admin/config.scripts/bonus.pool.sh menu
+            ;;
         SPECTER)
             /home/admin/config.scripts/bonus.specter.sh menu
             ;;
@@ -351,6 +363,9 @@ case $CHOICE in
             ;;
         TAILSCALE)
             sudo /home/admin/config.scripts/internet.tailscale.sh menu
+            ;;
+        WIREGUARD)
+            sudo /home/admin/config.scripts/internet.wireguard.sh menu
             ;;
         TELEGRAF)
             /home/admin/config.scripts/bonus.telegraf.sh menu

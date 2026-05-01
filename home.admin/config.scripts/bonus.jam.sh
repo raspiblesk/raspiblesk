@@ -119,13 +119,13 @@ if [ "$1" = "install" ]; then
   sudo -u $USERNAME mv jam $APP_DIR
   cd $APP_DIR || exit 1
   sudo -u $USERNAME rm -rf docker
-  if ! sudo -u $USERNAME npm install; then
+  if ! sudo -u $USERNAME NO_UPDATE_NOTIFIER=1 npm install --no-audit --no-fund; then
     echo "# FAIL - npm install did not run correctly, aborting"
     echo "result='fail - npm install did not run correctly'"
     exit 1
   fi
 
-  sudo -u $USERNAME npm run build
+  sudo -u $USERNAME NO_UPDATE_NOTIFIER=1 npm run build --no-fund
   echo "#  OK JAM user/codebase installed"
   exit 0
 fi
@@ -328,12 +328,12 @@ if [ "$1" = "update" ]; then
     sudo -u $USERNAME mv jam $APP_DIR
     cd $APP_DIR || exit 1
     sudo -u $USERNAME rm -rf docker
-    if ! sudo -u $USERNAME npm install; then
+    if ! sudo -u $USERNAME NO_UPDATE_NOTIFIER=1 npm install --no-audit --no-fund; then
       echo "FAIL - npm install did not run correctly, aborting"
       exit 1
     fi
 
-    sudo -u $USERNAME npm run build
+    sudo -u $USERNAME NO_UPDATE_NOTIFIER=1 npm run build --no-fund
     echo "*** JAM UPDATED to $version ***"
   else
     echo "*** JAM IS NOT INSTALLED ***"

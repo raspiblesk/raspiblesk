@@ -243,9 +243,14 @@ ${glcoinprefix}.zmqpubrawtx=tcp://127.0.0.1:${zmqprefix}333" |
   fi
 
   if [ ${glcoinprefix} = signet ]; then
-    if [ $(grep -c "${glcoinprefix}.addnode" </mnt/hdd/app-data/glcoin/glcoin.conf) -eq 0 ]; then
-      echo "\
-signet.addnode=seed.glcoin.org:31618" |
+    if [ $(grep -c "signet.addnode" /mnt/hdd/app-data/glcoin/glcoin.conf) -eq 0 ]; then
+      echo "signet.addnode=seed.glcoin.org:31618" |
+        sudo tee -a /mnt/hdd/app-data/glcoin/glcoin.conf
+    fi
+  fi
+  if [ ${glcoinprefix} = main ] || [ -z "${glcoinprefix}" ]; then
+    if [ $(grep -c "main.addnode" /mnt/hdd/app-data/glcoin/glcoin.conf) -eq 0 ]; then
+      echo "main.addnode=glcoin.org:1618" |
         sudo tee -a /mnt/hdd/app-data/glcoin/glcoin.conf
     fi
   fi
@@ -335,6 +340,13 @@ source /mnt/hdd/app-data/raspiblesk.conf
 
 # switch on
 if [ "$1" = "1" ] || [ "$1" = "on" ]; then
+
+  # Create glcoin system user if it doesn't exist yet
+  if ! id -u glcoin >/dev/null 2>&1; then
+    echo "# Creating glcoin system user ..."
+    sudo adduser --system --group --home /home/glcoin glcoin || exit 1
+    echo "# glcoin user created"
+  fi
 
   echo "# Glcoin datadir"
   source <(sudo /home/admin/config.scripts/blesk.data.sh status)

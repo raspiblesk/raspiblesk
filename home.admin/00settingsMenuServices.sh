@@ -11,7 +11,7 @@ if [ ${#rtlWebinterface} -eq 0 ]; then rtlWebinterface="off"; fi
 if [ ${#crtlWebinterface} -eq 0 ]; then crtlWebinterface="off"; fi
 if [ ${#GlcoinRPCexplorer} -eq 0 ]; then GlcoinRPCexplorer="off"; fi
 if [ ${#specter} -eq 0 ]; then specter="off"; fi
-if [ ${#GlcoinPayServer} -eq 0 ]; then GlcoinPayServer="off"; fi
+if [ ${#GLCPayServer} -eq 0 ]; then GLCPayServer="off"; fi
 if [ ${#ElectRS} -eq 0 ]; then ElectRS="off"; fi
 if [ ${#fulcrum} -eq 0 ]; then fulcrum="off"; fi
 if [ ${#lndmanage} -eq 0 ]; then lndmanage="off"; fi
@@ -35,6 +35,7 @@ if [ ${#labelbase} -eq 0 ]; then labelbase="off"; fi
 if [ ${#glcoinMiner} -eq 0 ]; then glcoinMiner="off"; fi
 if [ ${#albyhub} -eq 0 ]; then albyhub="off"; fi
 if [ "${albyhub}" == "on" ] && [ $(sudo ls /etc/systemd/system/albyhub.service 2>/dev/null | grep -c 'albyhub.service') -lt 1 ]; then albyhub="off"; fi
+if [ ${#wireguard} -eq 0 ]; then wireguard="off"; fi
 
 # show select dialog
 echo "run dialog ..."
@@ -45,7 +46,7 @@ OPTIONS=()
 if [ "${network}" == "glcoin" ]; then
   OPTIONS+=(ea 'GLC Electrum Rust Server' ${ElectRS})
   OPTIONS+=(fu 'GLC Fulcrum Electrum Server' ${fulcrum})
-  OPTIONS+=(pa 'GLC PayServer' ${GlcoinPayServer})
+  OPTIONS+=(pa 'GLCPay Server' ${GLCPayServer})
   OPTIONS+=(ba 'GLC RPC-Explorer' ${GlcoinRPCexplorer})
   OPTIONS+=(sa 'GLC Specter Desktop' ${specter})
   OPTIONS+=(aa 'GLC Mempool Space' ${mempoolExplorer})
@@ -81,6 +82,7 @@ if [ "${lightning}" == "cl" ] || [ "${cl}" == "on" ]; then
   OPTIONS+=(ca 'Core Lightning RTL Webinterface' ${crtlWebinterface})
 fi
 
+OPTIONS+=(wg 'WireGuard VPN (admin tunnel)' ${wireguard})
 OPTIONS+=(fn 'FinTS/HBCI Interface (experimental)' ${fints})
 
 CHOICES=$(dialog --title ' Additional Mainnet Services ' \
@@ -306,16 +308,16 @@ else
   echo "Fulcrum Setting unchanged."
 fi
 
-# GlcoinPayServer process choice
+# GLCPayServer process choice
 choice="off"; check=$(echo "${CHOICES}" | grep -c "pa")
 if [ ${check} -eq 1 ]; then choice="on"; fi
-if [ "${GlcoinPayServer}" != "${choice}" ]; then
-  echo "GlcoinPayServer setting changed .."
+if [ "${GLCPayServer}" != "${choice}" ]; then
+  echo "GLCPay Server setting changed .."
 
   #4049 warn if system has less than 8GB RAM
   ramGB=$(free -g | awk '/^Mem:/{print $2}')
   if [ "${choice}" =  "on" ] && [ ${ramGB} -lt 7 ]; then
-    whiptail --title "Your RaspiBlesk has less than the recommended 8GB of RAM to run GlcoinPayServer.\nDo you really want to proceed?" 10 50 --defaultno --yes-button "Continue" --no-button "Cancel"
+    whiptail --title "Your RaspiBlesk has less than the recommended 8GB of RAM to run GLCPay Server.\nDo you really want to proceed?" 10 50 --defaultno --yes-button "Continue" --no-button "Cancel"
     if [ $? -eq 1 ]; then
       # if user choosed CANCEL just null the choice
       choice=""
@@ -325,10 +327,10 @@ if [ "${GlcoinPayServer}" != "${choice}" ]; then
   # check if TOR is installed
   source /mnt/hdd/app-data/raspiblesk.conf
   if [ "${choice}" =  "on" ] && [ "${runBehindTor}" = "off" ]; then
-    whiptail --title " GlcoinPayServer needs TOR " --msgbox "\
-At the moment the GlcoinPayServer on the RaspiBlesk needs TOR.\n
+    whiptail --title " GLCPay Server needs TOR " --msgbox "\
+At the moment the GLCPay Server on the RaspiBlesk needs TOR.\n
 Please activate TOR in SERVICES first.\n
-Then try activating GlcoinPayServer again in SERVICES.\n
+Then try activating GLCPay Server again in SERVICES.\n
 " 13 42
   else
     anychange=1
@@ -337,12 +339,12 @@ Then try activating GlcoinPayServer again in SERVICES.\n
     if [ "${choice}" =  "on" ]; then
       if [ ${errorOnInstall} -eq 0 ]; then
         source /home/btcpay/.btcpayserver/Main/settings.config
-        whiptail --title " Installed BTCPay Server " --msgbox "\
-BTCPay server was installed.\n
-Use the new 'BTCPay' entry in Main Menu for more info.\n
+        whiptail --title " GLCPay Server Installed " --msgbox "\
+GLCPay Server was installed.\n
+Use the new 'GLCPay Server' entry in Main Menu for more info.\n
 " 10 35
       else
-        l1="GlcoinPayServer installation is cancelled"
+        l1="GLCPay Server installation is cancelled"
         l2="Try again from the menu or install from the terminal with:"
         l3="/home/admin/config.scripts/bonus.btcpayserver.sh on"
         dialog --title 'FAIL' --msgbox "${l1}\n${l2}\n${l3}" 7 65
@@ -350,7 +352,7 @@ Use the new 'BTCPay' entry in Main Menu for more info.\n
     fi
   fi
 else
-  echo "GlcoinPayServer setting not changed."
+  echo "GLCPay Server setting not changed."
 fi
 
 # LNDMANAGE process choice
@@ -705,7 +707,21 @@ else
   echo "AlbyHub setting unchanged."
 fi
 
-# fints process choice  
+# wireguard process choice
+choice="off"; check=$(echo "${CHOICES}" | grep -c "wg")
+if [ ${check} -eq 1 ]; then choice="on"; fi
+if [ "${wireguard}" != "${choice}" ]; then
+  echo "WireGuard setting changed .."
+  anychange=1
+  sudo /home/admin/config.scripts/internet.wireguard.sh ${choice}
+  if [ "${choice}" = "on" ]; then
+    sudo /home/admin/config.scripts/internet.wireguard.sh menu
+  fi
+else
+  echo "WireGuard setting unchanged."
+fi
+
+# fints process choice
 choice="off"; check=$(echo "${CHOICES}" | grep -c "fn")
 if [ ${check} -eq 1 ]; then choice="on"; fi
 if [ "${fints}" != "${choice}" ]; then
@@ -731,3 +747,5 @@ if [ ${needsReboot} -eq 1 ]; then
    sleep 4
    sudo /home/admin/config.scripts/blesk.shutdown.sh reboot
 fi
+
+exit 0

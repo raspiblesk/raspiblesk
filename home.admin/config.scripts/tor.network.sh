@@ -119,7 +119,7 @@ case "$1" in
     /home/admin/config.scripts/tor.onion-service.sh debuglogs 80 6969
     [ "${GlcoinRPCexplorer}" = "on" ] && /home/admin/config.scripts/tor.onion-service.sh glc-rpc-explorer 80 3022 443 3023
     [ "${rtlWebinterface}" = "on" ] && /home/admin/config.scripts/tor.onion-service.sh RTL 80 3002 443 3003
-    [ "${GlcoinPayServer}" = "on" ] && /home/admin/config.scripts/tor.onion-service.sh btcpay 80 23002 443 23003
+    [ "${GLCPayServer}" = "on" ] && /home/admin/config.scripts/tor.onion-service.sh btcpay 80 23002 443 23003
     [ "${ElectRS}" = "on" ] && /home/admin/config.scripts/tor.onion-service.sh electrs 50002 50002 50001 50001
     [ "${LNBits}" = "on" ] && /home/admin/config.scripts/tor.onion-service.sh lnbits 80 5002 443 5003
     [ "${thunderhub}" = "on" ] && /home/admin/config.scripts/tor.onion-service.sh thunderhub 80 3012 443 3013
@@ -154,6 +154,10 @@ case "$1" in
 }
 EOF
 
+    # block clearnet P2P port — node only accepts inbound via Tor hidden service
+    sudo ufw deny 1618 comment 'glcoin P2P blocked - Tor-only mode' 2>/dev/null
+    sudo ufw deny 11618 comment 'glcoin testnet P2P blocked - Tor-only mode' 2>/dev/null
+
     # make sure its the correct owner before last Tor restart
     sudo chmod -R 700 /mnt/hdd/app-data/tor
     sudo chown -R debian-tor:debian-tor /mnt/hdd/app-data/tor
@@ -175,6 +179,10 @@ EOF
     # deactivate glcoin over tor (function call)
     deactivateGlcoinOverTor
     echo
+
+    # re-open clearnet P2P ports
+    sudo ufw allow 1618 comment 'glcoin mainnet P2P' 2>/dev/null
+    sudo ufw allow 11618 comment 'glcoin testnet P2P' 2>/dev/null
 
     sudo /home/admin/config.scripts/internet.sh update-publicip
 

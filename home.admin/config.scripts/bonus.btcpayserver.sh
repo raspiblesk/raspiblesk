@@ -22,11 +22,11 @@ PGPpubkeyFingerprint="AB4CFA9895ACA0DBE27F6B346618763EF09186FE"
 
 # command info
 if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
-  echo "Config script to switch BTCPay Server on or off"
+  echo "Config script to switch GLCPay Server on or off"
   echo "bonus.btcpayserver.sh menu"
   echo "bonus.btcpayserver.sh [install|uninstall]"
   echo "bonus.btcpayserver.sh [on|off|menu|write-tls-macaroon|cln-lightning-rpc-access]"
-  echo "installs GlcoinPayServer $BTCPayVersion with NBXplorer $NBXplorerVersion"
+  echo "installs GLCPay Server $BTCPayVersion with NBXplorer $NBXplorerVersion"
   echo "To update to the latest release published on github run:"
   echo "bonus.btcpayserver.sh update"
   echo
@@ -38,14 +38,77 @@ source /mnt/hdd/app-data/raspiblesk.conf
 source /home/admin/raspiblesk.info
 source <(/home/admin/_cache.sh get state)
 
+DB_PASS_FILE="/mnt/hdd/app-data/btcpay/db_passwords.conf"
+GLCOIN_CLI="sudo -u glcoin /usr/local/bin/glcoin-cli -rpcport=1617"
+
+# encrypt a plaintext string with GLCE and return the blob hex
+glce_encrypt() {
+  local plaintext="$1"
+  local hex
+  hex=$(printf '%s' "${plaintext}" | xxd -p -c 1000 | tr -d '\n')
+  local pubkey
+  pubkey=$(${GLCOIN_CLI} getencryptionpubkey 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['pubkey'])" 2>/dev/null)
+  if [ -z "${pubkey}" ]; then
+    echo ""
+    return 1
+  fi
+  ${GLCOIN_CLI} encryptcontent "${hex}" "${pubkey}" 2>/dev/null | \
+    python3 -c "import sys,json; print(json.load(sys.stdin)['blob'])" 2>/dev/null
+}
+
+# decrypt a GLCE blob and return the plaintext
+glce_decrypt() {
+  local blob="$1"
+  ${GLCOIN_CLI} decryptcontent "${blob}" 2>/dev/null | \
+    python3 -c "import sys,json; print(bytes.fromhex(json.load(sys.stdin)['content']).decode())" 2>/dev/null
+}
+
+loadOrGenerateDBPasswords() {
+  if [ -f "${DB_PASS_FILE}" ]; then
+    source "${DB_PASS_FILE}"
+    # decrypt GLCE blobs if present
+    if [ -n "${NBXPLORER_DB_BLOB}" ]; then
+      NBXPLORER_DB_PASS=$(glce_decrypt "${NBXPLORER_DB_BLOB}")
+    fi
+    if [ -n "${BTCPAY_DB_BLOB}" ]; then
+      BTCPAY_DB_PASS=$(glce_decrypt "${BTCPAY_DB_BLOB}")
+    fi
+  else
+    mkdir -p "$(dirname ${DB_PASS_FILE})"
+    # full charset — GLCE blob stored on disk, plaintext only in memory
+    NBXPLORER_DB_PASS=$(openssl rand -base64 32 | tr -dc 'A-Za-z0-9!@#%^&*_+=<>?.-' | head -c 32)
+    BTCPAY_DB_PASS=$(openssl rand -base64 32 | tr -dc 'A-Za-z0-9!@#%^&*_+=<>?.-' | head -c 32)
+
+    # try GLCE encryption (requires glcoind running)
+    NBXPLORER_DB_BLOB=$(glce_encrypt "${NBXPLORER_DB_PASS}")
+    BTCPAY_DB_BLOB=$(glce_encrypt "${BTCPAY_DB_PASS}")
+
+    if [ -n "${NBXPLORER_DB_BLOB}" ] && [ -n "${BTCPAY_DB_BLOB}" ]; then
+      # store only encrypted blobs — no plaintext on disk
+      echo "NBXPLORER_DB_BLOB=${NBXPLORER_DB_BLOB}" > "${DB_PASS_FILE}"
+      echo "BTCPAY_DB_BLOB=${BTCPAY_DB_BLOB}" >> "${DB_PASS_FILE}"
+      echo "# Passwords encrypted with GLCE — decrypt with: glcoin-cli decryptcontent <blob>" >> "${DB_PASS_FILE}"
+    else
+      # GLCE not available yet — store plaintext but warn
+      echo "# WARNING: GLCE unavailable at install time — store this file securely" >> "${DB_PASS_FILE}"
+      echo "NBXPLORER_DB_PASS=${NBXPLORER_DB_PASS}" >> "${DB_PASS_FILE}"
+      echo "BTCPAY_DB_PASS=${BTCPAY_DB_PASS}" >> "${DB_PASS_FILE}"
+    fi
+    chmod 600 "${DB_PASS_FILE}"
+    chown btcpay:btcpay "${DB_PASS_FILE}" 2>/dev/null || true
+  fi
+}
+
 function NBXplorerConfig() {
+  loadOrGenerateDBPasswords
+
   # check the postgres database
   if sudo -u postgres psql -c '\l' | grep nbxplorermainnet; then
     echo "# nbxplorermainnet database already exists"
   else
     echo "# Generate the database for nbxplorer"
     sudo -u postgres psql -c "CREATE DATABASE nbxplorermainnet TEMPLATE template0 LC_CTYPE 'C' LC_COLLATE 'C' ENCODING 'UTF8';"
-    sudo -u postgres psql -c "CREATE USER nbxplorer WITH ENCRYPTED PASSWORD 'raspiblesk';"
+    sudo -u postgres psql -c "CREATE USER nbxplorer WITH ENCRYPTED PASSWORD '${NBXPLORER_DB_PASS}';"
     sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE nbxplorermainnet TO nbxplorer;"
     # for migrations
     sudo -u postgres psql -d nbxplorermainnet -c "GRANT ALL PRIVILEGES ON SCHEMA public TO nbxplorer;"
@@ -62,7 +125,7 @@ network=mainnet
 btcnodeendpoint=127.0.0.1:1617
 glc.rpc.user=${RPC_USER}
 glc.rpc.password=${PASSWORD_B}
-postgres=User ID=nbxplorer;Host=localhost;Port=5432;Application Name=nbxplorer;MaxPoolSize=20;Database=nbxplorermainnet;Password='raspiblesk';
+postgres=User ID=nbxplorer;Host=localhost;Port=5432;Application Name=nbxplorer;MaxPoolSize=20;Database=nbxplorermainnet;Password='${NBXPLORER_DB_PASS}';
 automigrate=1
 nomigrateevts=1
 " | sudo -u btcpay tee /home/btcpay/.nbxplorer/Main/settings.config
@@ -70,6 +133,8 @@ nomigrateevts=1
 }
 
 function BtcPayConfig() {
+  loadOrGenerateDBPasswords
+
   # set thumbprint (remove colons and make lowercase)
   FINGERPRINT=$(openssl x509 -noout -fingerprint -sha256 -inform pem -in /home/btcpay/.lnd/tls.cert | cut -d"=" -f2 | tr -d ':' | awk '{print tolower($0)}')
   # set up postgres
@@ -78,7 +143,7 @@ function BtcPayConfig() {
   else
     echo "# Generate the database for btcpay"
     sudo -u postgres psql -c "CREATE DATABASE btcpaymainnet TEMPLATE template0 LC_CTYPE 'C' LC_COLLATE 'C' ENCODING 'UTF8';"
-    sudo -u postgres psql -c "CREATE USER btcpay WITH ENCRYPTED PASSWORD 'raspiblesk';"
+    sudo -u postgres psql -c "CREATE USER btcpay WITH ENCRYPTED PASSWORD '${BTCPAY_DB_PASS}';"
     sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE btcpaymainnet TO btcpay;"
     # for migrations
     sudo -u postgres psql -d btcpaymainnet -c "GRANT ALL PRIVILEGES ON SCHEMA public TO btcpay;"
@@ -94,7 +159,7 @@ network=mainnet
 ### Server settings ###
 port=23000
 bind=127.0.0.1
-externalurl=https://$BTCPayDomain
+externalurl=https://$GLCPayDomain
 socksendpoint=127.0.0.1:9050
 
 ### NBXplorer settings ###
@@ -102,8 +167,8 @@ GLC.explorer.url=http://127.0.0.1:24444/
 GLC.lightning=type=lnd-rest;server=https://127.0.0.1:8080/;macaroonfilepath=/home/btcpay/admin.macaroon;certthumbprint=$FINGERPRINT
 
 ### Database ###
-postgres=User ID=btcpay;Host=localhost;Port=5432;Application Name=btcpay;MaxPoolSize=20;Database=btcpaymainnet;Password='raspiblesk';
-explorer.postgres=User ID=nbxplorer;Host=localhost;Port=5432;Application Name=nbxplorer;MaxPoolSize=20;Database=nbxplorermainnet;Password='raspiblesk';
+postgres=User ID=btcpay;Host=localhost;Port=5432;Application Name=btcpay;MaxPoolSize=20;Database=btcpaymainnet;Password='${BTCPAY_DB_PASS}';
+explorer.postgres=User ID=nbxplorer;Host=localhost;Port=5432;Application Name=nbxplorer;MaxPoolSize=20;Database=nbxplorermainnet;Password='${NBXPLORER_DB_PASS}';
 " | sudo -u btcpay tee /home/btcpay/.btcpayserver/Main/settings.config
 }
 
@@ -160,7 +225,7 @@ if [ "$1" = "status" ]; then
   isActive=$(sudo ls /etc/systemd/system/btcpayserver.service 2>/dev/null | grep -c 'btcpayserver.service')
   echo "installed=${isActive}"
 
-  if [ "${GlcoinPayServer}" = "on" ]; then
+  if [ "${GLCPayServer}" = "on" ]; then
     echo "switchedon=1"
     localIP=$(hostname -I | awk '{print $1}')
     echo "localIP='${localIP}'"
@@ -200,12 +265,12 @@ if [ "$1" = "menu" ]; then
   source <(sudo /home/admin/config.scripts/bonus.btcpayserver.sh status)
 
   if [ ${switchedon} -eq 0 ]; then
-    whiptail --title " BTCPay Server " --msgbox "BTCPay Server is not activated." 7 36
+    whiptail --title " GLCPay Server" --msgbox "GLCPay Server is not activated." 7 36
     exit 0
   fi
 
   if [ ${installed} -eq 0 ]; then
-    whiptail --title " BTCPay Server " --msgbox "BTCPay Server needs to be re-installed.\nPress OK to start process." 8 45
+    whiptail --title " GLCPay Server" --msgbox "GLCPay Server needs to be re-installed.\nPress OK to start process." 8 45
     /home/admin/config.scripts/bonus.btcpayserver.sh on
     exit 0
   fi
@@ -256,9 +321,9 @@ consider adding a IP2TOR Bridge: MAINMENU > SUBSCRIBE > IP2TOR"
 
   text="${text}\n
 To get the 'Connection String' to activate Lightning Payments:
-MAINMENU > CONNECT > BTCPay Server"
+MAINMENU > CONNECT > GLCPay Server"
 
-  whiptail --title " BTCPay Server " --yes-button "OK" --no-button "OPTIONS" --yesno "${text}" 17 69
+  whiptail --title " GLCPay Server" --yes-button "OK" --no-button "OPTIONS" --yesno "${text}" 17 69
   result=$?
   sudo /home/admin/config.scripts/blesk.display.sh hide
   echo "# please wait ..."
@@ -270,16 +335,17 @@ MAINMENU > CONNECT > BTCPay Server"
 
   OPTIONS=()
   # Backup database
-  OPTIONS+=(BACKUP "Backup database")
+  OPTIONS+=(BACKUP   "Backup database")
   if [ -d /mnt/hdd/app-data/backup ]; then
     OPTIONS+=(RESTORE "Restore database")
   fi
+  OPTIONS+=(SHOWPASS "Show database passwords (for cold backup)")
 
   WIDTH=66
   CHOICE_HEIGHT=$(("${#OPTIONS[@]}/2+1"))
   HEIGHT=$((CHOICE_HEIGHT + 7))
   CHOICE=$(dialog --clear \
-    --title " GlcoinPayServer - Options" \
+    --title " GLCPay Server - Options" \
     --ok-label "Select" \
     --cancel-label "Back" \
     --menu "Choose one of the following options:" \
@@ -306,13 +372,13 @@ MAINMENU > CONNECT > BTCPay Server"
 
     if [ "$backup_file" = "" ]; then
       echo "ABORT - No Backup found to restore from"
-      exit 1
+      exit 0
     else
       # build dialog to choose backup file from menu
       OPTIONS_RESTORE=()
 
       counter=0
-      cd $backup_target || exit 1
+      cd $backup_target || exit 0
       for f in $(find *.* -maxdepth 1 -type f); do
         [[ -f "$f" ]] || continue
         counter=$(($counter + 1))
@@ -323,7 +389,7 @@ MAINMENU > CONNECT > BTCPay Server"
       CHOICE_HEIGHT_RESTORE=$(("${#OPTIONS_RESTORE[@]}/2+1"))
       HEIGHT_RESTORE=$((CHOICE_HEIGHT_RESTORE + 7))
       CHOICE_RESTORE=$(dialog --clear \
-        --title "GlcoinPayServer - Backup restore" \
+        --title " GLCPay Server - Backup restore" \
         --ok-label "Select" \
         --cancel-label "Back" \
         --menu "Choose one of the following backups:" \
@@ -343,6 +409,17 @@ MAINMENU > CONNECT > BTCPay Server"
       fi
       exit 0
     fi
+    ;;
+  SHOWPASS)
+    source "${DB_PASS_FILE}" 2>/dev/null
+    if [ -z "${NBXPLORER_DB_PASS}" ]; then
+      whiptail --title " GLCPay Server " --msgbox "Password file not found:\n${DB_PASS_FILE}" 8 60
+    else
+      whiptail --title " GLCPay Server — Database Passwords " \
+        --msgbox "Store these in a cold backup.\n\nNBXplorer DB password:\n${NBXPLORER_DB_PASS}\n\nGLCPay DB password:\n${BTCPAY_DB_PASS}\n\nFile location:\n${DB_PASS_FILE}" \
+        18 70
+    fi
+    exit 0
     ;;
   *)
     clear
@@ -403,7 +480,7 @@ if [ "$1" = "cln-lightning-rpc-access" ]; then
   fi
 
   echo "
-In the GlcoinPayServer Lightning Wallet settings 'Connect to a Lightning node' page
+In the GLCPay Server Lightning Wallet settings 'Connect to a Lightning node' page
 fill in the 'Connection configuration for your custom Lightning node:' box on with:
 
 type=clightning;server=unix:///home/glcoin/.lightning/glcoin/lightning-rpc
@@ -495,10 +572,10 @@ if [ "$1" = "install" ]; then
   # from the build.sh with path
   sudo -u btcpay /home/btcpay/dotnet/dotnet build -c Release NBXplorer/NBXplorer.csproj || exit 1
 
-  # GlcoinPayServer
-  echo "# Install GlcoinPayServer"
+  # GLCPay Server
+  echo "# Install GLCPay Server"
   cd /home/btcpay || exit 1
-  echo "# Download the GlcoinPayServer source code $BTCPayVersion"
+  echo "# Download the GLCPay Server source code $BTCPayVersion"
   sudo -u btcpay git clone https://github.com/btcpayserver/btcpayserver.git 2>/dev/null
   cd btcpayserver || exit 1
   sudo -u btcpay git reset --hard $BTCPayVersion
@@ -509,7 +586,7 @@ if [ "$1" = "install" ]; then
     sudo -u btcpay /home/admin/config.scripts/blesk.git-verify.sh "web-flow" "https://github.com/web-flow.gpg" "(4AEE18F83AFDEB23|B5690EEEBB952194)" "${BTCPayVersion}" || exit 1
   fi
 
-  echo "# Build GlcoinPayServer $BTCPayVersion"
+  echo "# Build GLCPay Server $BTCPayVersion"
   # from the build.sh with path
   sudo -u btcpay /home/btcpay/dotnet/dotnet build -c Release \
     /home/btcpay/btcpayserver/BTCPayServer/BTCPayServer.csproj || exit 1
@@ -595,10 +672,10 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     /home/admin/config.scripts/tor.onion-service.sh btcpay 80 23002 443 23003
   fi
 
-  # check for $BTCPayDomain
+  # check for $GLCPayDomain
   source /mnt/hdd/app-data/raspiblesk.conf
-  if [ "${BTCPayDomain}" == "off" ]; then
-    BTCPayDomain=""
+  if [ "${GLCPayDomain}" == "off" ]; then
+    GLCPayDomain=""
   fi
 
   # stop services
@@ -734,7 +811,13 @@ WantedBy=multi-user.target
   fi
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blesk.conf.sh set GlcoinPayServer "on"
+  /home/admin/config.scripts/blesk.conf.sh set GLCPayServer "on"
+
+  # show generated DB passwords — user must store these cold
+  source "${DB_PASS_FILE}" 2>/dev/null
+  whiptail --title " GLCPay Server — Save These Passwords! " \
+    --msgbox "GLCPay Server installed. Store these database passwords somewhere safe (cold backup).\n\nThey are also saved at:\n${DB_PASS_FILE}\n\nNBXplorer DB password:\n${NBXPLORER_DB_PASS}\n\nGLCPay DB password:\n${BTCPAY_DB_PASS}\n\nPress OK once you have recorded them." \
+    20 70
 
   # needed for API/WebUI as signal that install ran thru
   echo "result='OK'"
@@ -754,7 +837,7 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   elif [ "$2" = "--keep-data" ]; then
     deleteData=0
   else
-    if (whiptail --title " DELETE DATA? " --yesno "Do you want to delete\nthe BTCPay Server Data?" 8 30); then
+    if (whiptail --title " DELETE DATA? " --yesno "Do you want to delete\nthe GLCPay Server Data?" 8 30); then
       deleteData=1
     else
       deleteData=0
@@ -763,7 +846,7 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   echo "# deleteData(${deleteData})"
 
   # setting value in raspi blitz config
-  /home/admin/config.scripts/blesk.conf.sh set GlcoinPayServer "off"
+  /home/admin/config.scripts/blesk.conf.sh set GLCPayServer "off"
 
   # Hidden Service if Tor is active
   if [ "${runBehindTor}" = "on" ]; then
@@ -808,7 +891,7 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   else
     echo "# keeping data"
   fi
-  echo "# OK GlcoinPayServer deactivated."
+  echo "# OK GLCPay Server deactivated."
 
   # needed for API/WebUI as signal that install ran thru
   echo "result='OK'"
@@ -909,7 +992,7 @@ if [ "$1" = "update" ]; then
   # always update the btcpayserver.service
   BtcPayService
 
-  echo "# Update GlcoinPayServer"
+  echo "# Update GLCPay Server"
   cd /home/btcpay || exit 1
   cd btcpayserver || exit 1
   # fetch latest master
@@ -933,12 +1016,12 @@ if [ "$1" = "update" ]; then
     TAG=$(git tag | grep v2 | sort -V | tail -1)
     echo "# Reset to the latest release tag: $TAG"
     sudo -u btcpay git reset --hard $TAG
-    echo "# Build GlcoinPayServer $TAG"
+    echo "# Build GLCPay Server $TAG"
     # from the build.sh with path
     sudo systemctl stop btcpayserver
     sudo -u btcpay /home/btcpay/dotnet/dotnet build -c Release /home/btcpay/btcpayserver/BTCPayServer/BTCPayServer.csproj || exit 1
     sudo systemctl start btcpayserver
-    echo "# Updated GlcoinPayServer to $TAG"
+    echo "# Updated GLCPay Server to $TAG"
   fi
   # always start after BtcPayConfig
   sudo systemctl start btcpayserver

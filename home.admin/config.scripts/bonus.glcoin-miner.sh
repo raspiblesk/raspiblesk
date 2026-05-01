@@ -32,7 +32,8 @@ if [ "$1" = "status" ]; then
   mode="plain"
   txid=""
 
-  [ -f "${MINER_SCRIPT}" ] && installed=1
+  # installed = service file exists (MINER_SCRIPT always exists in a full install)
+  [ -f "${SERVICE_FILE}" ] && installed=1
   if [ -f "${SERVICE_FILE}" ]; then
     active=$(systemctl is-active glcoin-miner 2>/dev/null | grep -c "^active")
   fi
@@ -50,6 +51,34 @@ fi
 if [ "$1" = "menu" ]; then
   source <(sudo /home/admin/config.scripts/bonus.glcoin-miner.sh status)
   if [ "${installed}" = "0" ]; then
+    # Pre-flight: glcoind must be running
+    if ! systemctl is-active glcoind >/dev/null 2>&1; then
+      whiptail --title " Glcoind nicht aktiv " --msgbox \
+"glcoind muss laufen und synchronisiert sein, bevor der Miner gestartet werden kann.
+
+Starte zuerst glcoind über das Glcoin-Menü." 10 64
+      exit 0
+    fi
+    # Pre-flight: glcoin.conf mit RPC-Credentials muss vorhanden sein
+    _CONF_CHECK="/mnt/hdd/app-data/glcoin/glcoin.conf"
+    if [ ! -f "${_CONF_CHECK}" ]; then
+      whiptail --title " Konfiguration fehlt " --msgbox \
+"Glcoin-Konfiguration nicht gefunden:
+${_CONF_CHECK}
+
+Stelle sicher dass glcoind vollständig eingerichtet ist." 10 70
+      exit 0
+    fi
+    _RPC_USER_CHECK=$(grep "^rpcuser=" "${_CONF_CHECK}" 2>/dev/null | cut -d= -f2 | tail -1)
+    _RPC_PASS_CHECK=$(grep "^rpcpassword=" "${_CONF_CHECK}" 2>/dev/null | cut -d= -f2 | tail -1)
+    if [ -z "${_RPC_USER_CHECK}" ] || [ -z "${_RPC_PASS_CHECK}" ]; then
+      whiptail --title " RPC-Credentials fehlen " --msgbox \
+"In ${_CONF_CHECK} fehlen rpcuser oder rpcpassword.
+
+Ergänze die RPC-Zugangsdaten und versuche es erneut." 10 70
+      exit 0
+    fi
+
     whiptail --title " Glcoin Miner " --yesno "
 Install the Glcoin CPU miner?
 
@@ -57,9 +86,42 @@ Mines blocks and sends rewards to your Glcoin address.
 Requires glcoind to be running and synced.
 " 12 52
     [ $? -eq 0 ] || exit 0
-    sudo /home/admin/config.scripts/bonus.glcoin-miner.sh on
+    # Ask for payout address before installing
+    NEW_ADDR=$(whiptail --title " Payout Address " --inputbox \
+"Enter your Glcoin mining address (bech32 gc1...)
+
+This address receives all block rewards.
+Example: gc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh" \
+      12 66 "" 3>&1 1>&2 2>&3)
+    if [ -z "${NEW_ADDR}" ]; then
+      whiptail --title " Cancelled " --msgbox "No address entered. Installation cancelled." 7 50
+      exit 0
+    fi
+    if ! echo "${NEW_ADDR}" | grep -qE '^gc1[a-z0-9]{10,}$'; then
+      whiptail --title " Invalid Address " --msgbox \
+        "Address must be a valid Glcoin bech32 address starting with gc1." 7 58
+      exit 0
+    fi
+    sudo /home/admin/config.scripts/bonus.glcoin-miner.sh set-address "${NEW_ADDR}"
+    INSTALL_OUT=$(sudo /home/admin/config.scripts/bonus.glcoin-miner.sh on 2>&1)
+    INSTALL_RC=$?
+    if [ ${INSTALL_RC} -ne 0 ]; then
+      whiptail --title " Installation fehlgeschlagen " --msgbox \
+"Der Glcoin Miner konnte nicht installiert werden.
+
+Fehler:
+${INSTALL_OUT}" 16 72
+      exit 1
+    fi
+    whiptail --title " Miner gestartet " --msgbox \
+"Glcoin Miner wurde installiert und gestartet!
+
+Mining-Adresse:
+${NEW_ADDR}
+
+Öffne das Miner-Menü erneut um Status und Einstellungen zu verwalten." 13 64
   else
-    GLC_CLI="glcoin-cli -datadir=/mnt/hdd/app-data/glcoin"
+    GLC_CLI="sudo -u glcoin /usr/local/bin/glcoin-cli -rpcport=1617"
 
     # Block height
     BLOCKCOUNT=$(${GLC_CLI} getblockcount 2>/dev/null || echo "?")
@@ -242,24 +304,28 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   [ -f "${MINER_CONF}" ] && source "${MINER_CONF}" 2>/dev/null
 
   if [ -z "${address}" ]; then
-    echo "# WARNING: no payout address configured."
-    echo "# Run: sudo /home/admin/config.scripts/bonus.glcoin-miner.sh set-address <gc1...>"
-    echo "# Then restart: sudo systemctl restart glcoin-miner"
+    # No address yet — mark as enabled in config so the menu can configure it,
+    # but don't create a broken service. The user sets the address via the menu.
+    /home/admin/config.scripts/blesk.conf.sh set glcoinMiner "on"
+    echo "# Glcoin Miner enabled — set payout address to start mining:"
+    echo "# sudo /home/admin/config.scripts/bonus.glcoin-miner.sh set-address <gc1...>"
+    exit 0
   fi
 
-  # Build ExecStart depending on mode
+  # read RPC credentials from glcoin.conf (wallet is disabled — no cookie fallback)
+  GLCOIN_CONF_FILE="/mnt/hdd/app-data/glcoin/glcoin.conf"
+  RPC_USER=$(grep "^rpcuser=" "${GLCOIN_CONF_FILE}" 2>/dev/null | cut -d= -f2 | tail -1)
+  RPC_PASS=$(grep "^rpcpassword=" "${GLCOIN_CONF_FILE}" 2>/dev/null | cut -d= -f2 | tail -1)
+  if [ -z "${RPC_USER}" ] || [ -z "${RPC_PASS}" ]; then
+    echo "error='could not read RPC credentials from ${GLCOIN_CONF_FILE}'"
+    exit 1
+  fi
+
+  # Build ExecStart as a single line — no backslash continuations (safer for systemd)
   if [ "${mode}" = "ipfs" ] && [ -n "${txid}" ]; then
-    EXEC_START="/usr/bin/python3 ${MINER_SCRIPT} \
-    --datadir=/mnt/hdd/app-data/glcoin \
-    mine-ipfs \
-    --address ${address:-PAYOUT_ADDRESS_NOT_SET} \
-    --txid ${txid} \
-    --from-store"
+    EXEC_START="/usr/bin/python3 ${MINER_SCRIPT} --rpc-url http://127.0.0.1:1617/ --rpc-user ${RPC_USER} --rpc-password ${RPC_PASS} mine-ipfs --address ${address} --txid ${txid} --from-store"
   else
-    EXEC_START="/usr/bin/python3 ${MINER_SCRIPT} \
-    --datadir=/mnt/hdd/app-data/glcoin \
-    mine-plain \
-    --address ${address:-PAYOUT_ADDRESS_NOT_SET}"
+    EXEC_START="/usr/bin/python3 ${MINER_SCRIPT} --rpc-url http://127.0.0.1:1617/ --rpc-user ${RPC_USER} --rpc-password ${RPC_PASS} mine-plain --address ${address}"
   fi
 
   echo "
@@ -273,8 +339,8 @@ User=glcoin
 Group=glcoin
 WorkingDirectory=${MINER_DIR}
 ExecStart=${EXEC_START}
-Restart=on-failure
-RestartSec=30s
+Restart=always
+RestartSec=10s
 StandardOutput=journal
 StandardError=journal
 
@@ -284,15 +350,8 @@ WantedBy=multi-user.target
 
   sudo systemctl daemon-reload
   sudo systemctl enable glcoin-miner
-
-  if [ -n "${address}" ]; then
-    sudo systemctl restart glcoin-miner
-    echo "# Glcoin Miner started — mining to ${address} (mode: ${mode})"
-  else
-    echo "# Glcoin Miner installed but NOT started (no address set)"
-    echo "# sudo /home/admin/config.scripts/bonus.glcoin-miner.sh set-address <gc1...>"
-    echo "# sudo systemctl start glcoin-miner"
-  fi
+  sudo systemctl restart glcoin-miner
+  echo "# Glcoin Miner started — mining to ${address} (mode: ${mode})"
 
   /home/admin/config.scripts/blesk.conf.sh set glcoinMiner "on"
   echo "OK glcoin-miner installed"

@@ -133,10 +133,10 @@ elif [ "${exportType}" = "btcpay" ]; then
 
   # add info about outside reachability (type would have a value if IP2TOR tunnel was found)
   if [ ${#type} -gt 0 ]; then
-    echo "NOTE: You have a IP2TOR connection for LND REST API .. so you can use this connection string also with a external BTCPay server."
+    echo "NOTE: You have a IP2TOR connection for LND REST API .. so you can use this connection string also with an external GLCPay Server."
   else
-    echo "IMPORTANT: You can only use this connection string for a BTCPay server running on this RaspiBlesk."
-    echo "If you want to connect from a external BTCPay server activate a IP2TOR tunnel for LND-REST first:"
+    echo "IMPORTANT: You can only use this connection string for a GLCPay Server running on this RaspiBlesk."
+    echo "If you want to connect from an external GLCPay Server activate a IP2TOR tunnel for LND-REST first:"
     echo "MAIN MENU > SUBSCRIBE > IP2TOR > LND REST API"
     echo "Then come back and get a new connection string."
   fi

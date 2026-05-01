@@ -59,7 +59,7 @@ if [ "$1" == "check" ]; then
   fi
 
   passwordToCheck=$3
-  clearedPassword=$(echo "${passwordToCheck}" | tr -dc '[:alnum:]-.' | tr -d ' ')
+  clearedPassword=$(echo "${passwordToCheck}" | tr -dc 'A-Za-z0-9!@#%^&*()_+=<>?.-' | tr -d ' ')
   if [ ${#clearedPassword} -lt ${#passwordToCheck} ]; then
     echo "error='password to check contains unvalid chars'"
     echo "correct=0"
@@ -178,7 +178,7 @@ if [ "${abcd}" = "a" ]; then
     clear
 
     # ask user for new password A (first time)
-    password1=$(whiptail --passwordbox "\nSet new Admin/SSH Password A:\n(min 8chars, 1word, chars+number, no specials)" 10 52 "" --title "Password A" --backtitle "RaspiBlesk - Setup" 3>&1 1>&2 2>&3)
+    password1=$(whiptail --passwordbox "\nSet new Admin/SSH Password A:\n(min 8chars, 1word, chars+number+specials, no spaces)" 10 52 "" --title "Password A" --backtitle "RaspiBlesk - Setup" 3>&1 1>&2 2>&3)
     if [ $? -eq 1 ]; then
       if [ ${emptyAllowed} -eq 0 ]; then
         echo "# CANCEL not possible"
@@ -216,9 +216,9 @@ if [ "${abcd}" = "a" ]; then
     fi
 
     # check that password does not contain bad characters
-    clearedResult=$(echo "${password1}" | tr -dc '[:alnum:]-.' | tr -d ' ')
+    clearedResult=$(echo "${password1}" | tr -dc 'A-Za-z0-9!@#%^&*()_+=<>?.-' | tr -d ' ')
     if [ ${#clearedResult} != ${#password1} ] || [ ${#clearedResult} -eq 0 ]; then
-      dialog --backtitle "RaspiBlesk - Setup" --msgbox "FAIL -> Contains bad characters (spaces, special chars)\nPlease try again ..." 6 52
+      dialog --backtitle "RaspiBlesk - Setup" --msgbox "FAIL -> Contains invalid characters (spaces, quotes, backslash not allowed)\nPlease try again ..." 6 52
       # calling recursive repeat
       /home/admin/config.scripts/blesk.passwords.sh set a
       exit 0
@@ -269,7 +269,7 @@ elif [ "${abcd}" = "b" ]; then
     clear
 
     # ask user for new password B (first time)
-    password1=$(whiptail --passwordbox "\nPlease enter your new Password B:\n(min 8chars, 1word, chars+number, no specials)" 10 52 "" --title "Password B" --backtitle "RaspiBlesk - Setup" 3>&1 1>&2 2>&3)
+    password1=$(whiptail --passwordbox "\nPlease enter your new Password B:\n(min 8chars, 1word, chars+number+specials, no spaces)" 10 52 "" --title "Password B" --backtitle "RaspiBlesk - Setup" 3>&1 1>&2 2>&3)
     if [ $? -eq 1 ]; then
       if [ "${emptyAllowed}" == "0" ]; then
         echo "# CANCEL not possible"
@@ -307,9 +307,9 @@ elif [ "${abcd}" = "b" ]; then
     fi
 
     # check that password does not contain bad characters
-    clearedResult=$(echo "${password1}" | tr -dc '[:alnum:]-.' | tr -d ' ')
+    clearedResult=$(echo "${password1}" | tr -dc 'A-Za-z0-9!@#%^&*()_+=<>?.-' | tr -d ' ')
     if [ ${#clearedResult} != ${#password1} ] || [ ${#clearedResult} -eq 0 ]; then
-      dialog --backtitle "RaspiBlesk - Setup" --msgbox "FAIL -> Contains bad characters (spaces, special chars)\nPlease try again ..." 6 52
+      dialog --backtitle "RaspiBlesk - Setup" --msgbox "FAIL -> Contains invalid characters (spaces, quotes, backslash not allowed)\nPlease try again ..." 6 52
       # calling recursive repeat
       /home/admin/config.scripts/blesk.passwords.sh set b
       exit 0
@@ -332,12 +332,15 @@ elif [ "${abcd}" = "b" ]; then
   chown admin:admin ${hashedPasswordStoragePath}/b.hash
   chmod 660 ${hashedPasswordStoragePath}/b.hash
 
+  # escape sed metacharacters in password before substitution
+  _escapedPw=$(printf '%s' "${newPassword}" | sed 's/[\/&]/\\&/g')
+
   # change in assets (just in case this is used on setup)
-  sed -i "s/^rpcpassword=.*/rpcpassword=${newPassword}/g" /home/admin/assets/${network}.conf 2>/dev/null
+  sed -i "s/^rpcpassword=.*/rpcpassword=${_escapedPw}/g" /home/admin/assets/${network}.conf 2>/dev/null
 
   # change in real configs
-  sed -i "s/^rpcpassword=.*/rpcpassword=${newPassword}/g" /mnt/hdd/app-data/${network}/${network}.conf 2>/dev/null
-  sed -i "s/^rpcpassword=.*/rpcpassword=${newPassword}/g" /home/admin/.${network}/${network}.conf 2>/dev/null
+  sed -i "s/^rpcpassword=.*/rpcpassword=${_escapedPw}/g" /mnt/hdd/app-data/${network}/${network}.conf 2>/dev/null
+  sed -i "s/^rpcpassword=.*/rpcpassword=${_escapedPw}/g" /home/admin/.${network}/${network}.conf 2>/dev/null
 
   # dont reboot - starting either services manually below or they get restarted thru
   # systemd dependencies like on glcoind (Partof=...) after all configs changed
@@ -358,11 +361,11 @@ elif [ "${abcd}" = "b" ]; then
     sudo systemctl restart electrs.service
   fi
 
-  # GlcoinPayServer
-  if [ "${GlcoinPayServer}" == "on" ]; then
+  # GLCPayServer
+  if [ "${GLCPayServer}" == "on" ]; then
     echo "# changing the RPC password for BTCPAYSERVER"
     sudo sed -i "s/^glc.rpc.password=.*/glc.rpc.password=${newPassword}/g" /home/btcpay/.nbxplorer/Main/settings.config
-    echo "# restarting btcpay server"
+    echo "# restarting GLCPay Server"
     sudo systemctl restart btcpayserver.service
   fi
 
@@ -475,18 +478,18 @@ elif [ "${abcd}" = "c" ]; then
       exit 0
     fi
     # check new password does not contain bad characters
-    clearedResult=$(echo "${newPassword}" | tr -dc '[:alnum:]-.' | tr -d ' ')
+    clearedResult=$(echo "${newPassword}" | tr -dc 'A-Za-z0-9!@#%^&*()_+=<>?.-' | tr -d ' ')
     if [ ${#clearedResult} != ${#newPassword} ] || [ ${#clearedResult} -eq 0 ]; then
-      dialog --backtitle "RaspiBlesk - Setup" --msgbox "FAIL -> Contains bad characters (spaces, special chars)" 6 52
+      dialog --backtitle "RaspiBlesk - Setup" --msgbox "FAIL -> Contains invalid characters (spaces, quotes, backslash not allowed)" 6 52
       # calling recursive repeat
-      /home/admin/config.scripts/blesk.password.sh set c ${oldPassword}
+      /home/admin/config.scripts/blesk.passwords.sh set c ${oldPassword}
       exit 0
     fi
     # check new password longer than 8
     if [ ${#newPassword} -lt 8 ]; then
       dialog --backtitle "RaspiBlesk - Setup" --msgbox "FAIL -> Password length under 8" 6 52
       # calling recursive repeat
-      /home/admin/config.scripts/blesk.password.sh set c ${oldPassword}
+      /home/admin/config.scripts/blesk.passwords.sh set c ${oldPassword}
       exit 0
     fi
 
@@ -579,7 +582,7 @@ elif [ "${abcd}" = "x" ]; then
     shred -u "$4" 2>/dev/null
 
     # ask user for new password (first time)
-    password1=$(whiptail --passwordbox "\n${text}:\n(min 8chars, 1word, chars+number, no specials)" 10 52 "" --backtitle "RaspiBlesk" 3>&1 1>&2 2>&3)
+    password1=$(whiptail --passwordbox "\n${text}:\n(min 8chars, 1word, chars+number+specials, no spaces)" 10 52 "" --backtitle "RaspiBlesk" 3>&1 1>&2 2>&3)
 
     # ask user for new password A (second time)
     password2=""
@@ -606,11 +609,11 @@ elif [ "${abcd}" = "x" ]; then
       fi
 
       # check that password does not contain bad characters
-      clearedResult=$(echo "${password1}" | tr -dc '[:alnum:]-.' | tr -d ' ')
+      clearedResult=$(echo "${password1}" | tr -dc 'A-Za-z0-9!@#%^&*()_+=<>?.-' | tr -d ' ')
       if [ ${#clearedResult} != ${#password1} ] || [ ${#clearedResult} -eq 0 ]; then
-        dialog --backtitle "RaspiBlesk" --msgbox "FAIL -> Contains bad characters (spaces, special chars)\nPlease try again ..." 6 62
+        dialog --backtitle "RaspiBlesk" --msgbox "FAIL -> Contains invalid characters (spaces, quotes, backslash not allowed)\nPlease try again ..." 6 62
         # calling recursive repeat
-        /home/admin/config.scripts/blesk.password.sh set x "$3" "$4" "$5"
+        /home/admin/config.scripts/blesk.passwords.sh set x "$3" "$4" "$5"
         exit 0
       fi
 
