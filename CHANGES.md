@@ -1,3 +1,12 @@
+## What's new in Version 0.13.0 of RaspiBlesk?
+
+Glcoin Core v0.1.9 with on-chain miner authorization.
+
+- Update: Glcoin Core v0.1.9 — miner permission enforcement via on-chain GLCM transactions (no authority signature required by miners; admin approves directly from authority wallet). Enforcement begins at block 1000.
+- Fix: `approveminer` / `revokeminer` / `suspendminer` RPC now broadcast GLCM on-chain transactions instead of using off-chain signatures. All nodes update their registry automatically when the transaction is mined.
+- Fix: `glcoin-authority.sh` admin panel updated for new on-chain GLCM API — shows txid on successful approve/revoke/suspend.
+- Fix: `bonus.glcoin-mining.sh` `approve` command updated — no longer requires authority signature parameter.
+
 ## What's new in Version 0.12.1 of RaspiBlesk?
 
 App updates, fixes and optimizations.

@@ -17,7 +17,7 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
   echo "# bonus.glcoin-mining.sh [on|off|status]"
   echo "# bonus.glcoin-mining.sh threads <n>"
   echo "# bonus.glcoin-mining.sh register <kyc_id> <display_name>"
-  echo "# bonus.glcoin-mining.sh approve <authority_sig>"
+  echo "# bonus.glcoin-mining.sh approve [address]   # admin: approve via on-chain GLCM tx"
   exit 1
 fi
 
@@ -222,10 +222,9 @@ if [ "$1" = "register" ]; then
   echo "#"
   echo "# Next step: send your address and KYC ID to the Glcoin admin"
   echo "# for approval before block ${REGISTRY_HEIGHT}."
-  echo "# The admin will run:"
-  echo "#   glcoin-cli approveminer ${miningAddress} <authority_sig>"
-  echo "# where the signature is generated with:"
-  echo "#   glcoin-cli signmessage <authority_address> \"GLCOIN-MINER-APPROVE:${miningAddress}:<unix_time/3600>\""
+  echo "# The admin approves on-chain from the authority wallet:"
+  echo "#   glcoin-cli approveminer ${miningAddress}"
+  echo "# The approval is final once that transaction is mined."
 
   # save kyc info to mining config for reference
   sed -i '/^kycId=/d' "${MINER_CONFIG}" 2>/dev/null
@@ -238,32 +237,34 @@ fi
 
 ##############
 # APPROVE
-# Admin-side: approve a miner given the authority signature.
+# Admin-side: approve a miner via on-chain GLCM transaction.
+# Authority wallet must be loaded and unlocked on this node.
 ##############
 if [ "$1" = "approve" ]; then
 
-  authSig="$2"
-  miningAddress="$3"
+  miningAddress="$2"
 
   # if no explicit address, use local mining address
   if [ -z "${miningAddress}" ]; then
     miningAddress=$(getMiningAddress)
   fi
 
-  if [ -z "${miningAddress}" ] || [ -z "${authSig}" ]; then
-    echo "error='usage: bonus.glcoin-mining.sh approve <authority_sig> [address]'"
+  if [ -z "${miningAddress}" ]; then
+    echo "error='usage: bonus.glcoin-mining.sh approve [address]'"
     exit 1
   fi
 
-  result=$(${GLCOIN_CLI} approveminer "${miningAddress}" "${authSig}" 2>&1)
-  if echo "${result}" | grep -q "error\|Error"; then
+  result=$(${GLCOIN_CLI} approveminer "${miningAddress}" 2>&1)
+  txid=$(echo "${result}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('txid',''))" 2>/dev/null)
+  if [ -n "${txid}" ]; then
+    echo "# OK - GLCM approval tx broadcast. Registry updates when mined."
+    echo "# Miner:  ${miningAddress}"
+    echo "# Txid:   ${txid}"
+  else
     echo "# Registry response: ${result}"
-    echo "error='approval failed'"
+    echo "error='approval failed — is the authority wallet loaded and unlocked?'"
     exit 1
   fi
-
-  echo "# OK - Miner approved:"
-  echo "${result}"
   exit 0
 fi
 
