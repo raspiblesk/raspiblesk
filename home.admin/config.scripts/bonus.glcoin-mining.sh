@@ -9,7 +9,7 @@ MINER_SERVICE="/etc/systemd/system/glcoin-mining.service"
 MINER_CONFIG="/mnt/hdd/app-data/glcoin/mining.conf"
 GLCOIN_CONF="/mnt/hdd/app-data/glcoin/glcoin.conf"
 GLCOIN_CLI="sudo -u glcoin /usr/local/bin/glcoin-cli -rpcport=1617"
-REGISTRY_HEIGHT=1000
+REGISTRY_HEIGHT=1111
 
 if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
   echo "# Glcoin CPU miner — KYC registry integrated"

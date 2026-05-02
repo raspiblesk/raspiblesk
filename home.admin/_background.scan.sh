@@ -863,7 +863,7 @@ do
             /home/admin/_cache.sh set ln_default_peers "${ln_cl_fees_total}"
             /home/admin/_cache.sh set ln_default_sync_chain "${ln_cl_sync_chain}"
             /home/admin/_cache.sh set ln_default_sync_progress "${ln_cl_sync_progress}"
-            /home/admin/_cache.sh set ln_default_hannels_pending "${ln_cl_channels_pending}"
+            /home/admin/_cache.sh set ln_default_channels_pending "${ln_cl_channels_pending}"
             /home/admin/_cache.sh set ln_default_channels_active "${ln_cl_channels_active}"
             /home/admin/_cache.sh set ln_default_channels_inactive "${ln_cl_channels_inactive}"
             /home/admin/_cache.sh set ln_default_channels_total "${ln_cl_channels_total}"

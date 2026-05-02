@@ -889,9 +889,9 @@ done
 # Overlay build_sdcard.sh itself so defaultWEBUIuser/repo stay correct after git clone
 cp "${SCRIPT_DIR}/build_sdcard.sh" "/home/admin/raspiblesk/build_sdcard.sh"
 echo "# Overlaid local fix: build_sdcard.sh"
-if [ -f "${SCRIPT_DIR}/home.admin/assets/glcoin-0.1.9-src.tar.gz" ]; then
-  cp "${SCRIPT_DIR}/home.admin/assets/glcoin-0.1.9-src.tar.gz" "/home/admin/raspiblesk/home.admin/assets/glcoin-0.1.9-src.tar.gz"
-  echo "# Copied bundled glcoin-0.1.9-src.tar.gz to repo assets"
+if [ -f "${SCRIPT_DIR}/home.admin/assets/glcoin-0.1.10-src.tar.gz" ]; then
+  cp "${SCRIPT_DIR}/home.admin/assets/glcoin-0.1.10-src.tar.gz" "/home/admin/raspiblesk/home.admin/assets/glcoin-0.1.10-src.tar.gz"
+  echo "# Copied bundled glcoin-0.1.10-src.tar.gz to repo assets"
 fi
 if [ -f "${SCRIPT_DIR}/home.admin/assets/raspiblitz-web-master.tar.gz" ]; then
   cp "${SCRIPT_DIR}/home.admin/assets/raspiblitz-web-master.tar.gz" "/home/admin/raspiblesk/home.admin/assets/raspiblitz-web-master.tar.gz"
