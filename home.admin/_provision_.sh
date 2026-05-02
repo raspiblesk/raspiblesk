@@ -287,13 +287,13 @@ else
     echo "Provisioning LND Binary - not active" >> ${logFile}
 fi
 
-# LND Mainnet (only when not main instance)
-if [ "${lnd}" == "on" ] && [ "${lightning}" != "lnd" ]; then
+# LND Mainnet — covers both: lightning=lnd (primary) and lnd=on (secondary)
+if [ "${lightning}" == "lnd" ] || [ "${lnd}" == "on" ]; then
     echo "Provisioning LND Mainnet - run config script" >> ${logFile}
     /home/admin/config.scripts/lnd.install.sh on mainnet >> ${logFile} 2>&1
     /home/admin/config.scripts/lnd.credentials.sh sync mainnet >> $logFile
 else
-    echo "Provisioning LND Mainnet - not active as secondary option" >> ${logFile}
+    echo "Provisioning LND Mainnet - not active" >> ${logFile}
 fi
 
 # LND Testnet

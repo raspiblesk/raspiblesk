@@ -39,18 +39,21 @@ fi
 if [ "${CHAIN}" = testnet ]; then
   prefix="t"
   glcoinprefix="test"
-  zmqprefix=21
   rpcprefix=1
+  glcoinZmqBlock=31617
+  glcoinZmqTx=31618
 elif [ ${CHAIN} = signet ]; then
   prefix="s"
   glcoinprefix="signet"
-  zmqprefix=23
   rpcprefix=3
+  glcoinZmqBlock=41617
+  glcoinZmqTx=41618
 elif [ ${CHAIN} = mainnet ]; then
   prefix=""
   glcoinprefix="main"
-  zmqprefix=28
   rpcprefix=""
+  glcoinZmqBlock=21617
+  glcoinZmqTx=21618
 fi
 
 # glcoinlogpath
@@ -237,8 +240,8 @@ function installParallelService() {
   sudo sed -i s/^zmqpubraw/main.zmqpubraw/g /mnt/hdd/app-data/glcoin/glcoin.conf
   if ! grep "${glcoinprefix}.zmqpubrawblock" /mnt/hdd/app-data/glcoin/glcoin.conf; then
     echo "\
-${glcoinprefix}.zmqpubrawblock=tcp://127.0.0.1:${zmqprefix}332
-${glcoinprefix}.zmqpubrawtx=tcp://127.0.0.1:${zmqprefix}333" |
+${glcoinprefix}.zmqpubrawblock=tcp://127.0.0.1:${glcoinZmqBlock}
+${glcoinprefix}.zmqpubrawtx=tcp://127.0.0.1:${glcoinZmqTx}" |
       sudo tee -a /mnt/hdd/app-data/glcoin/glcoin.conf
   fi
 
