@@ -122,7 +122,7 @@ if [ "$1" = "install" ]; then
     echo "# Extracting source tarball: ${TARBALL_PATH}"
     rm -rf "${SRC_DIR}"
     mkdir -p "${SRC_DIR}"
-    tar -xzf "${TARBALL_PATH}" -C "${SRC_DIR}" --strip-components=1 || exit 1
+    tar -xzf "${TARBALL_PATH}" -C "${SRC_DIR}" --strip-components=2 || exit 1
     LOCAL_SOURCE="${SRC_DIR}"
   fi
 
@@ -136,7 +136,7 @@ if [ "$1" = "install" ]; then
     echo "# No local source found — downloading tarball from ${GLCOIN_TARBALL_URL} ..."
     wget -O /tmp/glcoin-src.tar.gz "${GLCOIN_TARBALL_URL}" || exit 1
     mkdir -p "${SRC_DIR}"
-    tar -xzf /tmp/glcoin-src.tar.gz -C "${SRC_DIR}" --strip-components=1 || exit 1
+    tar -xzf /tmp/glcoin-src.tar.gz -C "${SRC_DIR}" --strip-components=2 || exit 1
   fi
 
   # build
