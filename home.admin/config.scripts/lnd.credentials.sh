@@ -145,6 +145,13 @@ elif [ "$1" = "sync" ]; then
   sudo /usr/sbin/groupadd --force --gid 9706 lndwalletkit
   sudo /usr/sbin/groupadd --force --gid 9707 lndrouter
 
+  echo "# ensure /home/admin/.lnd is a symlink to /mnt/hdd/app-data/lnd"
+  if [ ! -L /home/admin/.lnd ]; then
+    sudo rm -rf /home/admin/.lnd
+    sudo ln -s /mnt/hdd/app-data/lnd/ /home/admin/.lnd
+    sudo chown -h admin:admin /home/admin/.lnd
+  fi
+
   echo "# copy macaroons to central app-data directory and ensure unix ownerships and permissions"
   copy_mac_set_perms admin.macaroon lndadmin "${network}" "${chain}"
   copy_mac_set_perms invoice.macaroon lndinvoice "${network}" "${chain}"
