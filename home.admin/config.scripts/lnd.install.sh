@@ -314,6 +314,13 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     echo "# Detected unsupported rpccookiefile in lnd.conf - regenerating"
     rm /mnt/hdd/app-data/lnd/${netprefix}lnd.conf
   fi
+  # Also purge if lnddir is missing — LND would default to ~/.lnd which breaks if
+  # the symlink /home/glcoin/.lnd is a real directory from a failed previous install
+  if [ -f /mnt/hdd/app-data/lnd/${netprefix}lnd.conf ] && \
+     ! grep -q "^lnddir=" /mnt/hdd/app-data/lnd/${netprefix}lnd.conf; then
+    echo "# Detected missing lnddir in lnd.conf - regenerating"
+    rm /mnt/hdd/app-data/lnd/${netprefix}lnd.conf
+  fi
 
   # Read RPC credentials from glcoin.conf (set by blesk.passwords.sh before this runs)
   _LNDINSTALL_RPCUSER=$(grep "^rpcuser=" /mnt/hdd/app-data/glcoin/glcoin.conf 2>/dev/null | cut -d= -f2 | tail -1)
@@ -325,6 +332,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
 [Application Options]
 # alias=ALIAS # up to 32 UTF-8 characters
 # color=COLOR # choose from: https://www.color-hex.com/
+lnddir=/mnt/hdd/app-data/lnd
 listen=0.0.0.0:${portprefix}9735
 rpclisten=0.0.0.0:1${rpcportmod}009
 restlisten=0.0.0.0:${portprefix}8080

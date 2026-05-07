@@ -109,6 +109,13 @@ if [ "$1" = "install" ]; then
     echo "# Extras #"
     echo "##########"
     echo
+    # install build dependencies for JoinMarket
+    # libsecp256k1-dev + pkg-config: system secp256k1 is found via pkg-config, so the
+    # bundled C build (which fails on Trixie libtool 2.4.7 with LT_INIT(win32-dll)) is skipped.
+    # autoconf + automake: needed if autoreconf fallback is triggered.
+    apt -y install libsecp256k1-dev libtool pkg-config autoconf automake
+    ldconfig
+
     # install a command-line fuzzy finder (https://github.com/junegunn/fzf)
     apt -y install fzf
     echo 'source /usr/share/doc/fzf/examples/key-bindings.bash' | sudo -u joinmarket tee -a /home/joinmarket/.bashrc
@@ -128,7 +135,7 @@ if [ "$1" = "install" ]; then
       # no qtgui on arm
       qtgui=false
     fi
-    if sudo -u joinmarket env PIP_NO_WARN_SCRIPT_LOCATION=1 /home/joinmarket/install.joinmarket.sh -i install -q $qtgui; then
+    if sudo -u joinmarket env PIP_NO_WARN_SCRIPT_LOCATION=1 USE_SYSTEM_SECP256K1=1 /home/joinmarket/install.joinmarket.sh -i install -q $qtgui; then
       echo "# Installed JoinMarket"
       echo "# Run: 'sudo /home/admin/config.scripts/bonus.joinmarket.sh on' to configure and switch on"
     else

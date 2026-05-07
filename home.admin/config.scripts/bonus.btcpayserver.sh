@@ -445,7 +445,7 @@ if [ "$1" = "write-tls-macaroon" ]; then
   # copy admin macaroon
   echo "# extra symlink to admin.macaroon for btcpay"
   if ! [[ -L "/home/btcpay/admin.macaroon" ]]; then
-    sudo ln -s "/home/btcpay/.lnd/data/chain/bitcoin/${network}/admin.macaroon" "/home/btcpay/admin.macaroon"
+    sudo ln -s "/home/btcpay/.lnd/data/chain/glcoin/${network}/admin.macaroon" "/home/btcpay/admin.macaroon"
   fi
 
   BtcPayConfig

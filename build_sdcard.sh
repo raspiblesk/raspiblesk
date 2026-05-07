@@ -864,6 +864,7 @@ for fixedScript in \
     config.scripts/bonus.mempool.sh \
     config.scripts/lnd.check.sh \
     config.scripts/lnd.credentials.sh \
+    config.scripts/network.chain.sh \
     setup.scripts/eventInfoWait.sh \
     config.scripts/bonus.glcoin-mining.sh \
     config.scripts/bonus.glcoin-miner.sh \
@@ -1002,6 +1003,19 @@ fi
 
 echo -e "\n*** CREDENTIAL GENERATION (OFFLINE PHASE) ***"
 setup_credentials
+
+#  Pause so the operator can copy the SSH private key and admin password
+#  before the script continues with package installation and services.
+if [ "${interaction}" = "true" ] && [ "${credentials_only}" != "true" ]; then
+  echo ""
+  echo "############################################################"
+  echo "#   CREDENTIALS SHOWN ABOVE — SAVE THEM BEFORE CONTINUING  #"
+  echo "############################################################"
+  echo ""
+  echo -n "# Press SPACEBAR (or any key) to continue with installation... "
+  read -r _pause_key
+  echo ""
+fi
 
 echo -e "\n*** SWAP FILE ***"
 # based on https://stadicus.github.io/RaspiBolt/raspibolt_20_pi.html#move-swap-file

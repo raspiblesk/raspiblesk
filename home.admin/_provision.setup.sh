@@ -286,7 +286,7 @@ if [ "${lightning}" == "lnd" ]; then
     echo "# WALLET --> NEW" >> ${logFile}
     /home/admin/_cache.sh set message "LND Wallet (NEW)"
     source <(/home/admin/config.scripts/lnd.initwallet.py new mainnet "${passwordC}")
-    if [ "${err}" != "" ]; then
+    if [ "${err}" != "" ] || [ -z "${seedwords}" ]; then
       /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "lnd-wallet-new" "lnd.initwallet.py new returned error" "/home/admin/config.scripts/lnd.initwallet.py new mainnet ... --> ${err} + ${errMore}" ${logFile}
       /home/admin/_cache.sh set state "error"
       /home/admin/_cache.sh set message "setup: lnd wallet NEW failed"
@@ -308,14 +308,51 @@ if [ "${lightning}" == "lnd" ]; then
   echo "*** Copy LND Macaroons to user admin ***" >> ${logFile}
   /home/admin/_cache.sh set message "LND Credentials"
 
-  # check if macaroon exists now - if not fail
+  # Wait up to 2 minutes for LND to write admin.macaroon after InitWallet.
+  # Use find so we catch the macaroon regardless of exact chain/network subdir name.
   attempt=0
-  while [ $(sudo -u glcoin ls -la /mnt/hdd/app-data/lnd/data/chain/bitcoin/${network}/admin.macaroon 2>/dev/null | grep -c admin.macaroon) -eq 0 ]; do
+  while true; do
+    FOUND_MAC=$(find /mnt/hdd/app-data/lnd/data/chain/ -name "admin.macaroon" 2>/dev/null | head -1)
+    if [ -z "${FOUND_MAC}" ]; then
+      FOUND_MAC=$(find /home/glcoin/.lnd/data/chain/ -name "admin.macaroon" 2>/dev/null | head -1)
+    fi
+    if [ -n "${FOUND_MAC}" ]; then
+      echo "Macaroon found at: ${FOUND_MAC}" >> ${logFile}
+      # LND writes to chain/bitcoin/glcoin/ (chainName=bitcoin, networkDir=GlcoinMainNetParams.Name).
+      # All RaspiBlesk scripts expect chain/glcoin/mainnet/. Create two symlinks so both resolve:
+      #   chain/glcoin        -> chain/bitcoin          (chain name alias)
+      #   chain/bitcoin/mainnet -> chain/bitcoin/glcoin  (network dir alias)
+      LND_CHAIN_DIR=/mnt/hdd/app-data/lnd/data/chain
+      # chain/glcoin symlink
+      rmdir ${LND_CHAIN_DIR}/glcoin/${chain}net 2>/dev/null
+      rmdir ${LND_CHAIN_DIR}/glcoin 2>/dev/null
+      ln -sfn ${LND_CHAIN_DIR}/bitcoin ${LND_CHAIN_DIR}/glcoin
+      chown -h glcoin:glcoin ${LND_CHAIN_DIR}/glcoin
+      # chain/bitcoin/mainnet symlink (maps legacy "mainnet" subdir to actual "glcoin" subdir)
+      ln -sfn ${LND_CHAIN_DIR}/bitcoin/glcoin ${LND_CHAIN_DIR}/bitcoin/${chain}net
+      chown -h glcoin:glcoin ${LND_CHAIN_DIR}/bitcoin/${chain}net
+      # also symlink logs
+      mkdir -p /mnt/hdd/app-data/lnd/logs/bitcoin
+      rm -rf /mnt/hdd/app-data/lnd/logs/glcoin 2>/dev/null
+      ln -sfn /mnt/hdd/app-data/lnd/logs/bitcoin /mnt/hdd/app-data/lnd/logs/glcoin
+      chown -h glcoin:glcoin /mnt/hdd/app-data/lnd/logs/glcoin
+      break
+    fi
     echo "Waiting 2 mins for LND to create macaroons ... (${attempt}0s)" >> ${logFile}
+    if [ $(( attempt % 3 )) -eq 0 ]; then
+      echo "DEBUG chain dirs:" >> ${logFile}
+      ls -la /mnt/hdd/app-data/lnd/data/chain/ 2>/dev/null >> ${logFile}
+      echo "DEBUG lnd status:" >> ${logFile}
+      systemctl status lnd --no-pager -l 2>/dev/null | tail -5 >> ${logFile}
+    fi
     sleep 10
     attempt=$((attempt+1))
-    if [ $attempt -eq 12 ];then
-      /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "lnd-no-macaroons" "lnd did not create macaroons" "/mnt/hdd/app-data/lnd/data/chain/bitcoin/${network}/admin.macaroon --> missing" ${logFile}
+    if [ $attempt -eq 12 ]; then
+      echo "DEBUG final - all macaroons found:" >> ${logFile}
+      find /mnt/hdd/app-data/lnd/ -name "admin.macaroon" 2>/dev/null >> ${logFile}
+      find /home/glcoin/ -name "admin.macaroon" 2>/dev/null >> ${logFile}
+      journalctl -u lnd --no-pager -n 30 2>/dev/null >> ${logFile}
+      /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "lnd-no-macaroons" "lnd did not create macaroons" "find /mnt/hdd/app-data/lnd/data/chain/ -name admin.macaroon --> empty" ${logFile}
       exit 14
     fi
   done

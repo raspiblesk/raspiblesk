@@ -1342,6 +1342,10 @@ if [ "$action" = "link" ]; then
     ln -s /mnt/hdd/app-data/glcoin /home/glcoin/.glcoin
     chown glcoin:glcoin /home/glcoin/.glcoin
     echo "# glcoin user symbol link: /home/glcoin/.lnd"
+    # unlink only removes symlinks; if a failed install left a real empty dir, rmdir it first
+    if [ -d /home/glcoin/.lnd ] && [ ! -L /home/glcoin/.lnd ]; then
+      rmdir /home/glcoin/.lnd 2>/dev/null
+    fi
     unlink /home/glcoin/.lnd 2>/dev/null
     ln -s /mnt/hdd/app-data/lnd /home/glcoin/.lnd
     chown glcoin:glcoin /home/glcoin/.lnd
@@ -1351,9 +1355,38 @@ if [ "$action" = "link" ]; then
     unlink /home/admin/.glcoin 2>/dev/null
     ln -s /mnt/hdd/app-data/glcoin /home/admin/.glcoin
     echo "# admin user symbol link: /home/admin/.lnd"
+    if [ -d /home/admin/.lnd ] && [ ! -L /home/admin/.lnd ]; then
+      rmdir /home/admin/.lnd 2>/dev/null
+    fi
     unlink /home/admin/.lnd 2>/dev/null
     ln -s /mnt/hdd/app-data/lnd /home/admin/.lnd
     chmod -R g+X /home/admin/.lnd
+
+    # LND writes to chain/bitcoin/glcoin/ (chainName=bitcoin, networkDir=GlcoinMainNetParams.Name).
+    # All RaspiBlesk scripts use chain/glcoin/mainnet/. Keep two alias symlinks in sync:
+    #   chain/glcoin          -> chain/bitcoin
+    #   chain/bitcoin/mainnet -> chain/bitcoin/glcoin
+    LND_CHAIN=${mainMountPoint}/app-data/lnd/data/chain
+    if [ -d ${LND_CHAIN}/bitcoin/glcoin ]; then
+      if [ ! -L ${LND_CHAIN}/glcoin ]; then
+        rmdir ${LND_CHAIN}/glcoin/mainnet 2>/dev/null
+        rmdir ${LND_CHAIN}/glcoin 2>/dev/null
+        ln -sfn ${LND_CHAIN}/bitcoin ${LND_CHAIN}/glcoin
+        chown -h glcoin:glcoin ${LND_CHAIN}/glcoin
+      fi
+      if [ ! -L ${LND_CHAIN}/bitcoin/mainnet ]; then
+        ln -sfn ${LND_CHAIN}/bitcoin/glcoin ${LND_CHAIN}/bitcoin/mainnet
+        chown -h glcoin:glcoin ${LND_CHAIN}/bitcoin/mainnet
+      fi
+    fi
+    if [ -d ${mainMountPoint}/app-data/lnd/logs/bitcoin ]; then
+      if [ ! -L ${mainMountPoint}/app-data/lnd/logs/glcoin ]; then
+        rm -rf ${mainMountPoint}/app-data/lnd/logs/glcoin 2>/dev/null
+        ln -sfn ${mainMountPoint}/app-data/lnd/logs/bitcoin \
+                ${mainMountPoint}/app-data/lnd/logs/glcoin
+        chown -h glcoin:glcoin ${mainMountPoint}/app-data/lnd/logs/glcoin
+      fi
+    fi
 
     # set permissions on complete lnd macaroon folder path
     chmod a+rx ${mainMountPoint} 2>/dev/null
@@ -1363,8 +1396,6 @@ if [ "$action" = "link" ]; then
     chmod a+rx ${mainMountPoint}/app-data/lnd/data/chain 2>/dev/null
     chmod a+rx ${mainMountPoint}/app-data/lnd/data/chain/glcoin 2>/dev/null
     chmod a+rx ${mainMountPoint}/app-data/lnd/data/chain/glcoin/mainnet 2>/dev/null
-    chmod a+rx ${mainMountPoint}/app-data/lnd/data/chain/glcoin/testnet 2>/dev/null
-    chmod a+rx ${mainMountPoint}/app-data/lnd/data/chain/glcoin/signet 2>/dev/null
     chmod a+rx ${mainMountPoint}/app-data/lnd/tls.cert 2>/dev/null
 
     exit 0

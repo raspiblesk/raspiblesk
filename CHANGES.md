@@ -1,3 +1,34 @@
+## What's new in Version 0.14.0 of RaspiBlesk?
+
+Root cause confirmed and fixed: LND writes to chain/bitcoin/glcoin/.
+
+LND uses chainName="bitcoin" (bitcoin.active=1) and networkDir="glcoin" (GlcoinMainNetParams.Name).
+The actual macaroon path is chain/bitcoin/glcoin/admin.macaroon. All scripts expected
+chain/glcoin/mainnet/. Two alias symlinks bridge both:
+  chain/glcoin          -> chain/bitcoin
+  chain/bitcoin/mainnet -> chain/bitcoin/glcoin
+
+- Fix: `_provision.setup.sh` — after find() locates admin.macaroon, create both alias symlinks so lnd.credentials.sh sync and lnd.check.sh work with their existing chain/glcoin/mainnet/ paths.
+- Fix: `blesk.data.sh link` — recreate both alias symlinks on every boot (resilient to restarts).
+
+## What's new in Version 0.13.9 of RaspiBlesk?
+
+Revert wrong chain/bitcoin symlink logic; use find-based macaroon detection.
+
+- Fix: `_provision.setup.sh` — replace hardcoded path checks with `find` across the full LND data dir. The wait loop now finds admin.macaroon wherever LND writes it, regardless of exact chain/network subdir name. Timeout stays 2 min.
+- Revert: `blesk.data.sh` — remove chain/glcoin→chain/bitcoin symlink code added in v0136. LND writes directly to chain/glcoin/ (confirmed correct in v0130); the bitcoin-chain detour was a misdiagnosis. Removing it eliminates the risk of the symlink breaking the directory structure before InitWallet completes.
+
+## What's new in Version 0.13.8 of RaspiBlesk?
+
+LND setup fix, JoinMarket secp256k1 fix, JAM clean build output.
+
+- Fix: `lnd.install.sh` — add `lnddir=/mnt/hdd/app-data/lnd` to generated lnd.conf. Without this, LND defaulted to `~/.lnd` which broke if a previous failed install had left `/home/glcoin/.lnd` as a real directory instead of a symlink — macaroons were then written to the wrong path and the wait loop timed out with `lnd-no-macaroons`.
+- Fix: `lnd.install.sh` — regenerate lnd.conf if `lnddir=` line is missing (upgrades from v0135–v0137 automatically get the corrected config).
+- Fix: `blesk.data.sh link` — before creating `/home/glcoin/.lnd` and `/home/admin/.lnd` symlinks, attempt `rmdir` on the target if it is a real empty directory (happens after failed installs). `unlink` only removes symlinks; without this step the symlink was silently skipped.
+- Fix: `bonus.joinmarket.sh` — add `pkg-config autoconf automake` to build-deps and `ldconfig` after install; set `USE_SYSTEM_SECP256K1=1` env var when running `install.joinmarket.sh`. On Debian Trixie, libtool 2.4.7 dropped `LT_INIT(win32-dll)` support — with `libsecp256k1-dev` + `pkg-config` the bundled secp256k1 C build is bypassed in favour of the system library.
+- Fix: `bonus.jam.sh` — after cloning JAM v0.4.1, patch `.eslintrc.json` to turn `react-hooks/exhaustive-deps` off. Three components (BarChart, HorizontalBarChart, DebouncedInput) have intentional stable-ref patterns that trigger the rule; the noisy warnings cluttered the install log without indicating real errors.
+- Fix: `_provision.setup.sh` — LND macaroon wait loop reduced from 4 min (24×10s) to 2 min (12×10s); added `find`/`journalctl` debug dumps every 30s and at timeout so the next failure produces a precise diagnosis of which path LND actually writes to.
+
 ## What's new in Version 0.13.0 of RaspiBlesk?
 
 Glcoin Core v0.1.9 with on-chain miner authorization.

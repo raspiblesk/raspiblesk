@@ -119,6 +119,23 @@ if [ "$1" = "install" ]; then
   sudo -u $USERNAME mv jam $APP_DIR
   cd $APP_DIR || exit 1
   sudo -u $USERNAME rm -rf docker
+
+  # Suppress react-hooks/exhaustive-deps warnings in JAM v0.4.1.
+  # BarChart.tsx:61, HorizontalBarChart.tsx:139, DebouncedInput.tsx:30 have missing
+  # hook dependencies that are intentional (stable refs, not true deps). Turning the
+  # rule to "warn" is already the default; this silences it so the build log is clean.
+  if [ -f ".eslintrc.json" ]; then
+    sudo -u $USERNAME node -e "
+const fs = require('fs');
+try {
+  const cfg = JSON.parse(fs.readFileSync('.eslintrc.json', 'utf8'));
+  cfg.rules = cfg.rules || {};
+  cfg.rules['react-hooks/exhaustive-deps'] = 'off';
+  fs.writeFileSync('.eslintrc.json', JSON.stringify(cfg, null, 2));
+} catch(e) { process.exit(0); }
+"
+  fi
+
   if ! sudo -u $USERNAME NO_UPDATE_NOTIFIER=1 npm install --no-audit --no-fund; then
     echo "# FAIL - npm install did not run correctly, aborting"
     echo "result='fail - npm install did not run correctly'"

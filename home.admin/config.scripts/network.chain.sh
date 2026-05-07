@@ -80,7 +80,7 @@ fi
 # edit RTL.conf (if active)
 if [ "${rtlWebinterface}" = "on" ]; then
   echo "editing /home/admin/RTL/RTL.conf"
-  sudo sed -i "s/^macroonPath=.*/macroonPath=\/mnt\/hdd\/lnd\/data\/chain\/${network}\/$1/g" /home/admin/RTL/RTL.conf
+  sudo sed -i "s/^macaroonPath=.*/macaroonPath=\/mnt\/hdd\/app-data\/lnd\/data\/chain\/glcoin\/$1/g" /home/admin/RTL/RTL.conf
 fi
 
 # now a reboot is needed to load all services fresh
