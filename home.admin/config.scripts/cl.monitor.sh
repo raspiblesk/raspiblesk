@@ -30,7 +30,7 @@ elif [ "$1" == "testnet" ]; then
 elif [ "$1" == "signet" ]; then
   clConfigDir="/home/glcoin/.lightning/signet"
   lightningcli_alias="/usr/local/bin/lightning-cli --lightning-dir=/home/glcoin/.lightning --conf=${clConfigDir}/config"
-  blockchainHeightKey="btc_signet_blocks_verified"
+  blockchainHeightKey="glc_signet_blocks_verified"
   netprefix="s"
 else
   echo "error='not supported net'"

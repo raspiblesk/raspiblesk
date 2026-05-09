@@ -85,10 +85,10 @@ usermod -G glcoin root
 /home/admin/_cache.sh init system_count_start_blockchain "0"
 /home/admin/_cache.sh init system_count_start_lightning "0"
 /home/admin/_cache.sh init system_count_start_tui "0"
-/home/admin/_cache.sh init btc_default_peers "0"
-/home/admin/_cache.sh init btc_default_sync_percentage "0"
-/home/admin/_cache.sh init btc_default_address ""
-/home/admin/_cache.sh init btc_default_port ""
+/home/admin/_cache.sh init glc_default_peers "0"
+/home/admin/_cache.sh init glc_default_sync_percentage "0"
+/home/admin/_cache.sh init glc_default_address ""
+/home/admin/_cache.sh init glc_default_port ""
 
 # import all base values from raspiblesk.info
 echo "importing: ${infoFile}"
@@ -344,69 +344,69 @@ do
 
       # update basic status values always
       source <(/home/admin/_cache.sh valid \
-        btc_${CHAIN}net_version \
-        btc_${CHAIN}net_running \
-        btc_${CHAIN}net_ready \
-        btc_${CHAIN}net_online  \
-        btc_${CHAIN}net_error_short \
-        btc_${CHAIN}net_error_full \
+        glc_${CHAIN}net_version \
+        glc_${CHAIN}net_running \
+        glc_${CHAIN}net_ready \
+        glc_${CHAIN}net_online  \
+        glc_${CHAIN}net_error_short \
+        glc_${CHAIN}net_error_full \
       )
       if [ "${isDefaultChain}" == "1" ] && [ "${stillvalid}" == "1" ]; then
         source <(/home/admin/_cache.sh valid \
-        btc_default_version \
-        btc_default_running \
-        btc_default_ready \
-        btc_default_online  \
-        btc_default_error_short \
-        btc_default_error_full \
+        glc_default_version \
+        glc_default_running \
+        glc_default_ready \
+        glc_default_online  \
+        glc_default_error_short \
+        glc_default_error_full \
         )
       fi
       if [ "${stillvalid}" == "0" ] || [ ${age} -gt ${CYCLE_QUICK} ]; then
         echo "updating: /home/admin/config.scripts/glcoin.monitor.sh ${CHAIN}net status"
         source <(/home/admin/config.scripts/glcoin.monitor.sh ${CHAIN}net status)
-        /home/admin/_cache.sh set btc_${CHAIN}net_activated "1"
-        /home/admin/_cache.sh set btc_${CHAIN}net_version "${btc_version}"
-        /home/admin/_cache.sh set btc_${CHAIN}net_running "${btc_running}"
-        /home/admin/_cache.sh set btc_${CHAIN}net_ready "${btc_ready}"
-        /home/admin/_cache.sh set btc_${CHAIN}net_online "${btc_online}"
-        /home/admin/_cache.sh set btc_${CHAIN}net_error_short "${btc_error_short}"
-        /home/admin/_cache.sh set btc_${CHAIN}net_error_full "${btc_error_full}"
+        /home/admin/_cache.sh set glc_${CHAIN}net_activated "1"
+        /home/admin/_cache.sh set glc_${CHAIN}net_version "${glc_version}"
+        /home/admin/_cache.sh set glc_${CHAIN}net_running "${glc_running}"
+        /home/admin/_cache.sh set glc_${CHAIN}net_ready "${glc_ready}"
+        /home/admin/_cache.sh set glc_${CHAIN}net_online "${glc_online}"
+        /home/admin/_cache.sh set glc_${CHAIN}net_error_short "${glc_error_short}"
+        /home/admin/_cache.sh set glc_${CHAIN}net_error_full "${glc_error_full}"
 
         # when default chain transfere values
         if [ "${isDefaultChain}" == "1" ]; then
-          /home/admin/_cache.sh set btc_default_activated "1"
-          /home/admin/_cache.sh set btc_default_version "${btc_version}"
-          /home/admin/_cache.sh set btc_default_running "${btc_running}"
-          /home/admin/_cache.sh set btc_default_ready "${btc_ready}"
-          /home/admin/_cache.sh set btc_default_online "${btc_online}"
-          /home/admin/_cache.sh set btc_default_error_short "${btc_error_short}"
-          /home/admin/_cache.sh set btc_default_error_full "${btc_error_full}"
+          /home/admin/_cache.sh set glc_default_activated "1"
+          /home/admin/_cache.sh set glc_default_version "${glc_version}"
+          /home/admin/_cache.sh set glc_default_running "${glc_running}"
+          /home/admin/_cache.sh set glc_default_ready "${glc_ready}"
+          /home/admin/_cache.sh set glc_default_online "${glc_online}"
+          /home/admin/_cache.sh set glc_default_error_short "${glc_error_short}"
+          /home/admin/_cache.sh set glc_default_error_full "${glc_error_full}"
         fi
       fi
 
       # update detail infos only when ready (get as value from cache)
-      source <(/home/admin/_cache.sh meta btc_${CHAIN}net_ready)
+      source <(/home/admin/_cache.sh meta glc_${CHAIN}net_ready)
       if [ "${value}" == "1" ]; then
 
         # check if network needs update
         source <(/home/admin/_cache.sh valid \
-          btc_${CHAIN}net_synced \
-          btc_${CHAIN}net_blocks_headers \
-          btc_${CHAIN}net_blocks_verified \
-          btc_${CHAIN}net_blocks_behind \
-          btc_${CHAIN}net_sync_progress \
-          btc_${CHAIN}net_sync_percentage \
-          btc_${CHAIN}net_sync_initialblockdownload \
+          glc_${CHAIN}net_synced \
+          glc_${CHAIN}net_blocks_headers \
+          glc_${CHAIN}net_blocks_verified \
+          glc_${CHAIN}net_blocks_behind \
+          glc_${CHAIN}net_sync_progress \
+          glc_${CHAIN}net_sync_percentage \
+          glc_${CHAIN}net_sync_initialblockdownload \
         )
         if [ "${isDefaultChain}" == "1" ] && [ "${stillvalid}" == "1" ]; then
           source <(/home/admin/_cache.sh valid \
-          btc_default_synced \
-          btc_default_blocks_headers \
-          btc_default_blocks_verified \
-          btc_default_blocks_behind \
-          btc_default_sync_progress \
-          btc_default_sync_percentage \
-          btc_default_sync_initialblockdownload \
+          glc_default_synced \
+          glc_default_blocks_headers \
+          glc_default_blocks_verified \
+          glc_default_blocks_behind \
+          glc_default_sync_progress \
+          glc_default_sync_percentage \
+          glc_default_sync_initialblockdownload \
           )
         fi
         if [ "${stillvalid}" == "0" ] || [ ${age} -gt ${CYCLE_MID} ]; then
@@ -414,24 +414,24 @@ do
           echo "updating: /home/admin/config.scripts/glcoin.monitor.sh ${CHAIN}net info"
           source <(/home/admin/config.scripts/glcoin.monitor.sh ${CHAIN}net info)
           if [ "${error}" == "" ]; then
-            /home/admin/_cache.sh set btc_${CHAIN}net_synced "${btc_synced}"
-            /home/admin/_cache.sh set btc_${CHAIN}net_blocks_headers "${btc_blocks_headers}"
-            /home/admin/_cache.sh set btc_${CHAIN}net_blocks_verified "${btc_blocks_verified}"
-            /home/admin/_cache.sh set btc_${CHAIN}net_blocks_behind "${btc_blocks_behind}"
-            /home/admin/_cache.sh set btc_${CHAIN}net_blocks_data_kb "${btc_blocks_data_kb}"
-            /home/admin/_cache.sh set btc_${CHAIN}net_sync_progress "${btc_sync_progress}"
-            /home/admin/_cache.sh set btc_${CHAIN}net_sync_percentage "${btc_sync_percentage}"
-            /home/admin/_cache.sh set btc_${CHAIN}net_sync_initialblockdownload "${btc_sync_initialblockdownload}"
+            /home/admin/_cache.sh set glc_${CHAIN}net_synced "${glc_synced}"
+            /home/admin/_cache.sh set glc_${CHAIN}net_blocks_headers "${glc_blocks_headers}"
+            /home/admin/_cache.sh set glc_${CHAIN}net_blocks_verified "${glc_blocks_verified}"
+            /home/admin/_cache.sh set glc_${CHAIN}net_blocks_behind "${glc_blocks_behind}"
+            /home/admin/_cache.sh set glc_${CHAIN}net_blocks_data_kb "${glc_blocks_data_kb}"
+            /home/admin/_cache.sh set glc_${CHAIN}net_sync_progress "${glc_sync_progress}"
+            /home/admin/_cache.sh set glc_${CHAIN}net_sync_percentage "${glc_sync_percentage}"
+            /home/admin/_cache.sh set glc_${CHAIN}net_sync_initialblockdownload "${glc_sync_initialblockdownload}"
 
             if [ "${isDefaultChain}" == "1" ]; then
-              /home/admin/_cache.sh set btc_default_synced "${btc_synced}"
-              /home/admin/_cache.sh set btc_default_blocks_headers "${btc_blocks_headers}"
-              /home/admin/_cache.sh set btc_default_blocks_verified "${btc_blocks_verified}"
-              /home/admin/_cache.sh set btc_default_blocks_behind "${btc_blocks_behind}"
-              /home/admin/_cache.sh set btc_default_blocks_data_kb "${btc_blocks_data_kb}"
-              /home/admin/_cache.sh set btc_default_sync_progress "${btc_sync_progress}"
-              /home/admin/_cache.sh set btc_default_sync_percentage "${btc_sync_percentage}"
-              /home/admin/_cache.sh set btc_default_sync_initialblockdownload "${btc_sync_initialblockdownload}"
+              /home/admin/_cache.sh set glc_default_synced "${glc_synced}"
+              /home/admin/_cache.sh set glc_default_blocks_headers "${glc_blocks_headers}"
+              /home/admin/_cache.sh set glc_default_blocks_verified "${glc_blocks_verified}"
+              /home/admin/_cache.sh set glc_default_blocks_behind "${glc_blocks_behind}"
+              /home/admin/_cache.sh set glc_default_blocks_data_kb "${glc_blocks_data_kb}"
+              /home/admin/_cache.sh set glc_default_sync_progress "${glc_sync_progress}"
+              /home/admin/_cache.sh set glc_default_sync_percentage "${glc_sync_percentage}"
+              /home/admin/_cache.sh set glc_default_sync_initialblockdownload "${glc_sync_initialblockdownload}"
             fi
 
           else
@@ -441,15 +441,15 @@ do
 
         # check if network needs update
         source <(/home/admin/_cache.sh valid \
-          btc_${CHAIN}net_peers \
-          btc_${CHAIN}net_address \
-          btc_${CHAIN}net_port \
+          glc_${CHAIN}net_peers \
+          glc_${CHAIN}net_address \
+          glc_${CHAIN}net_port \
         )
         if [ "${isDefaultChain}" == "1" ] && [ "${stillvalid}" == "1" ]; then
           source <(/home/admin/_cache.sh valid \
-          btc_default_peers \
-          btc_default_address \
-          btc_default_port \
+          glc_default_peers \
+          glc_default_address \
+          glc_default_port \
           )
         fi
         if [ "${stillvalid}" == "0" ] || [ ${age} -gt ${CYCLE_MID} ]; then
@@ -457,13 +457,13 @@ do
           echo "updating: /home/admin/config.scripts/glcoin.monitor.sh ${CHAIN}net network"
           source <(/home/admin/config.scripts/glcoin.monitor.sh ${CHAIN}net network)
           if [ "${error}" == "" ]; then
-            /home/admin/_cache.sh set btc_${CHAIN}net_peers "${btc_peers}"
-            /home/admin/_cache.sh set btc_${CHAIN}net_address "${btc_address}"
-            /home/admin/_cache.sh set btc_${CHAIN}net_port "${btc_port}"
+            /home/admin/_cache.sh set glc_${CHAIN}net_peers "${glc_peers}"
+            /home/admin/_cache.sh set glc_${CHAIN}net_address "${glc_address}"
+            /home/admin/_cache.sh set glc_${CHAIN}net_port "${glc_port}"
             if [ "${isDefaultChain}" == "1" ]; then
-              /home/admin/_cache.sh set btc_default_peers "${btc_peers}"
-              /home/admin/_cache.sh set btc_default_address "${btc_address}"
-              /home/admin/_cache.sh set btc_default_port "${btc_port}"
+              /home/admin/_cache.sh set glc_default_peers "${glc_peers}"
+              /home/admin/_cache.sh set glc_default_address "${glc_address}"
+              /home/admin/_cache.sh set glc_default_port "${glc_port}"
             fi
           else
             echo "# ERROR --> ${error}"
@@ -472,11 +472,11 @@ do
 
         # check if mempool needs update
         source <(/home/admin/_cache.sh valid \
-          btc_${CHAIN}net_mempool_transactions \
+          glc_${CHAIN}net_mempool_transactions \
         )
         if [ "${isDefaultChain}" == "1" ] && [ "${stillvalid}" == "1" ]; then
           source <(/home/admin/_cache.sh valid \
-          btc_default_mempool_transactions \
+          glc_default_mempool_transactions \
           )
         fi
         if [ "${stillvalid}" == "0" ] || [ ${age} -gt ${CYCLE_LONG} ]; then
@@ -484,9 +484,9 @@ do
           echo "updating: /home/admin/config.scripts/glcoin.monitor.sh ${CHAIN}net mempool"
           source <(/home/admin/config.scripts/glcoin.monitor.sh ${CHAIN}net mempool)
           if [ "${error}" == "" ]; then
-            /home/admin/_cache.sh set btc_${CHAIN}net_mempool_transactions "${btc_mempool_transactions}"
+            /home/admin/_cache.sh set glc_${CHAIN}net_mempool_transactions "${glc_mempool_transactions}"
             if [ "${isDefaultChain}" == "1" ]; then
-              /home/admin/_cache.sh set btc_default_mempool_transactions "${btc_mempool_transactions}"
+              /home/admin/_cache.sh set glc_default_mempool_transactions "${glc_mempool_transactions}"
             fi
           else
             echo "# ERROR --> ${error}"
@@ -916,8 +916,8 @@ do
   ##################################
   # DEFAULT & SUMMARIZED SYNC STATUS
 
-  btc_default_sync_initial_done=0
-  btc_all_sync_initial_done=1
+  glc_default_sync_initial_done=0
+  glc_all_sync_initial_done=1
   ln_default_sync_initial_done=0
   ln_all_sync_initial_done=1
   blitz_sync_initial_done=0
@@ -934,24 +934,24 @@ do
   do
 
     # skip if this network is not switched on
-    btc_service_name="${CHAIN}net"
-    if [ "${!btc_service_name}" != "on" ]; then
-      echo "skipping because ${btc_service_name}=${!btc_service_name}"
+    glc_service_name="${CHAIN}net"
+    if [ "${!glc_service_name}" != "on" ]; then
+      echo "skipping because ${glc_service_name}=${!glc_service_name}"
       continue
     fi
 
     # get values from cache
-    source <(/home/admin/_cache.sh meta btc_${CHAIN}net_sync_initial_done)
+    source <(/home/admin/_cache.sh meta glc_${CHAIN}net_sync_initial_done)
     flagBtcDone="${value}"
 
     # check if default
     if [ "${CHAIN}" == "${chain}" ]; then
-      btc_default_sync_initial_done="${flagBtcDone}"
+      glc_default_sync_initial_done="${flagBtcDone}"
     fi
 
     # check for all glc sync
     if [ "${flagBtcDone}" != "1" ]; then
-      btc_all_sync_initial_done=0
+      glc_all_sync_initial_done=0
     fi
 
     # sub loop over all layer 2 on that chain
@@ -992,22 +992,22 @@ do
   if [ "${lightning}" == "" ] || [ "${lightning}" == "none" ]; then
     ln_all_sync_initial_done=""
     ln_default_sync_initial_done=""
-    blitz_sync_initial_done="${btc_all_sync_initial_done}"
-    blitz_default_sync_initial_done="${btc_default_sync_initial_done}"
+    blitz_sync_initial_done="${glc_all_sync_initial_done}"
+    blitz_default_sync_initial_done="${glc_default_sync_initial_done}"
   else
     # only if ALL glc & ln sync done (multiple can be active) - the complete blitz has done syncing
-    if [ "${btc_all_sync_initial_done}" == "1" ] && [ "${ln_all_sync_initial_done}" == "1" ]; then
+    if [ "${glc_all_sync_initial_done}" == "1" ] && [ "${ln_all_sync_initial_done}" == "1" ]; then
       blitz_sync_initial_done="1"
     fi
     # only if DEFAULT glc & ln sync done - the complete blitz has done syncing
-    if [ "${btc_default_sync_initial_done}" == "1" ] && [ "${ln_default_sync_initial_done}" == "1" ]; then
+    if [ "${glc_default_sync_initial_done}" == "1" ] && [ "${ln_default_sync_initial_done}" == "1" ]; then
       blitz_default_sync_initial_done="1"
     fi
   fi
   /home/admin/_cache.sh set blitz_sync_initial_done "${blitz_sync_initial_done}"
   /home/admin/_cache.sh set blitz_default_sync_initial_done "${blitz_default_sync_initial_done}"
-  /home/admin/_cache.sh set btc_default_sync_initial_done "${btc_default_sync_initial_done}"
-  /home/admin/_cache.sh set btc_all_sync_initial_done "${btc_all_sync_initial_done}"
+  /home/admin/_cache.sh set glc_default_sync_initial_done "${glc_default_sync_initial_done}"
+  /home/admin/_cache.sh set glc_all_sync_initial_done "${glc_all_sync_initial_done}"
   /home/admin/_cache.sh set ln_default_sync_initial_done "${ln_default_sync_initial_done}"
   /home/admin/_cache.sh set ln_all_sync_initial_done "${ln_all_sync_initial_done}"
 

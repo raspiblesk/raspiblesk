@@ -17,7 +17,7 @@ if [ "$1" == "prestart" ]; then
   echo "### RUNNING glcoin.check.sh prestart"
 
   # check correct user
-  if [ "$USER" != "glcoin" ]; then
+  if [ "$(id -un 2>/dev/null)" != "glcoin" ]; then
     echo "# FAIL: run as user 'glcoin'"
     exit 1
   fi
@@ -46,14 +46,23 @@ if [ "$1" == "prestart" ]; then
     mainnet)
       glcoinlog_entry="main.debuglogfile"
       glcoinlog_path="/mnt/hdd/app-data/glcoin/debug.log"
+      glcoin_zmq_prefix="main"
+      glcoin_zmq_block="21617"
+      glcoin_zmq_tx="21618"
       ;;
     testnet)
       glcoinlog_entry="test.debuglogfile"
       glcoinlog_path="/mnt/hdd/app-data/glcoin/testnet3/debug.log"
+      glcoin_zmq_prefix="test"
+      glcoin_zmq_block="31617"
+      glcoin_zmq_tx="31618"
       ;;
     signet)
       glcoinlog_entry="signet.debuglogfile"
       glcoinlog_path="/mnt/hdd/app-data/glcoin/signet/debug.log"
+      glcoin_zmq_prefix="signet"
+      glcoin_zmq_block="41617"
+      glcoin_zmq_tx="41618"
       ;;
   esac
 
@@ -70,6 +79,15 @@ if [ "$1" == "prestart" ]; then
   # make sure entry has the correct value
   echo "# make sure entry(${glcoinlog_entry}) has the correct value(${glcoinlog_path})"
   sed -i "s|^${glcoinlog_entry}=.*|${glcoinlog_entry}=${glcoinlog_path}|g" /mnt/hdd/app-data/glcoin/glcoin.conf
+
+  # make sure ZMQ entries exist (required for LND block/tx notifications)
+  echo "# make sure ZMQ entries exist for ${CHAIN}"
+  if ! grep -q "^${glcoin_zmq_prefix}\.zmqpubrawblock=" /mnt/hdd/app-data/glcoin/glcoin.conf; then
+    echo "${glcoin_zmq_prefix}.zmqpubrawblock=tcp://127.0.0.1:${glcoin_zmq_block}" >> /mnt/hdd/app-data/glcoin/glcoin.conf
+  fi
+  if ! grep -q "^${glcoin_zmq_prefix}\.zmqpubrawtx=" /mnt/hdd/app-data/glcoin/glcoin.conf; then
+    echo "${glcoin_zmq_prefix}.zmqpubrawtx=tcp://127.0.0.1:${glcoin_zmq_tx}" >> /mnt/hdd/app-data/glcoin/glcoin.conf
+  fi
 
   # make sure wallet directory entry exists and points to app-data
   echo "# make sure entry(walletdir) is set"

@@ -80,9 +80,6 @@ fi
 if [ "${crtlWebinterface}" == "on" ]; then
   OPTIONS+=(CRTL "Core Lightning RTL Webinterface")
 fi
-if [ "${GLCPayServer}" == "on" ]; then
-  OPTIONS+=(BTCPAY "GLCPay Server Info")
-fi
 if [ "${lit}" == "on" ]; then
   OPTIONS+=(LIT "LIT (loop, pool, faraday)")
 fi
@@ -95,7 +92,7 @@ fi
 if [ "${fulcrum}" == "on" ]; then
   OPTIONS+=(FULCRUM "Fulcrum Electrum Server")
 fi
-if [ "${GlcoinRPCexplorer}" == "on" ]; then
+if [ "${GLCRPCexplorer}" == "on" ]; then
   OPTIONS+=(EXPLORE "GLC RPC Explorer")
 fi
 if [ "${LNBits}" == "on" ]; then
@@ -270,9 +267,6 @@ case $CHOICE in
             ;;
         CRTL)
             /home/admin/config.scripts/bonus.rtl.sh menu cl mainnet
-            ;;
-        BTCPAY)
-            /home/admin/config.scripts/bonus.btcpayserver.sh menu
             ;;
         EXPLORE)
             /home/admin/config.scripts/bonus.glc-rpc-explorer.sh menu

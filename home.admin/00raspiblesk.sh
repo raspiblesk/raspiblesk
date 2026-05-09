@@ -68,7 +68,7 @@ trap quit INT TERM
 
 echo "# start ssh menu loop"
 # put some values on higher scan rate for 10 minute
-for key in ln_default_ready ln_default_locked btc_default_synced; do
+for key in ln_default_ready ln_default_locked glc_default_synced; do
   /home/admin/_cache.sh focus $key 2 600 >/dev/null
 done
 
@@ -81,7 +81,7 @@ while [ ${exitMenuLoop} -eq 0 ]; do
 
   # refresh system state information
   source <(/home/admin/_cache.sh get \
-    systemscan_runtime state setupPhase btc_default_synced \
+    systemscan_runtime state setupPhase glc_default_synced \
     ln_default_sync_chain ln_default_locked ln_default_ready \
     ln_default_sync_initial_done message network chain \
     lightning internet_localip)
@@ -175,7 +175,7 @@ while [ ${exitMenuLoop} -eq 0 ]; do
   # MAKE SURE BLOCKCHAIN/LN IS SYNC
   #####################################
   if [ "${setupPhase}" == "done" ] && [ "${state}" == "ready" ]; then
-    if [ "${btc_default_synced}" != "1" ] || [ "${ln_default_ready}" == "0" ] || [ "${ln_default_sync_chain}" == "0" ] || [ "${ln_default_sync_initial_done}" == "0" ]; then
+    if [ "${glc_default_synced}" != "1" ] || [ "${ln_default_ready}" == "0" ] || [ "${ln_default_sync_chain}" == "0" ] || [ "${ln_default_sync_initial_done}" == "0" ]; then
       /home/admin/setup.scripts/eventBlockchainSync.sh ssh
       sleep 3
       continue
@@ -248,7 +248,7 @@ MAINMENU > REPAIR > REPAIR-LND > RETRYSCB
   if [ "${setupPhase}" == "done" ] && [ "${state}" == "ready" ]; then
     # MAIN MENU
     # remove higher scan rate on values
-    for key in ln_default_locked btc_default_synced; do
+    for key in ln_default_locked glc_default_synced; do
       /home/admin/_cache.sh focus $key -1
     done
     echo "# 00mainMenu.sh"
@@ -345,7 +345,7 @@ else
   echo "For setup logs: cat raspiblesk.log"
   echo "or call the command 'debug' to see bigger report."
 fi
-echo "Blitz command line options: bleskhelp"
+echo "Blesk command line options: bleskhelp"
 echo "Back to menus use command: raspiblesk"
 echo
 exit 0

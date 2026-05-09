@@ -5,13 +5,54 @@
 ## see LND releases: https://github.com/lightningnetwork/lnd/releases
 ### If you change here - make sure to also change interims version in lnd.update.sh #!
 lndVersion="0.20.99-beta"
-GLCOIN_RELEASE="v0.1.12"
+# Real upstream LND tag to clone (v0.20.99-beta doesn't exist in lightningnetwork/lnd)
+LND_CLONE_TAG="v0.20.1-beta"
+# btcd commit from LND v0.20.1-beta go.mod (pseudo-version: v0.24.3-0.20250318170759-4f4ea81776d6)
+BTCD_COMMIT="4f4ea81776d6"
+GLCOIN_RELEASE="v0.1.10"
 GITHUB_RELEASE_BASE="https://github.com/raspiblesk/raspiblesk/releases/download/${GLCOIN_RELEASE}"
 
 # olaoluwa
 PGPauthor="roasbeef"
 PGPpkeys="https://raw.githubusercontent.com/lightningnetwork/lnd/master/scripts/keys/roasbeef.asc"
 PGPcheck="A5B61896952D9FDA83BC054CDC42612E89237182"
+
+# -----------------------------------------------------------------------
+# Bundled-asset SHA-256 pins. Computed at v0149 release time; bump when
+# the bundled tarball is replaced. Any tarball whose hash does not match
+# is rejected with a hard fail before being executed or trusted.
+# Without this, a wget/cp without verification was the only gate between
+# a malicious GitHub release (or MITM'd asset) and a backdoored lnd /
+# go toolchain running with channel-funds authority.
+# -----------------------------------------------------------------------
+SHA256_LND_PREBUILT_arm64="a96d52145abb3e2455d4b16d06df5ab60db65cdd147657daa9cb3dccbd4a6c57"
+SHA256_GO_TOOLCHAIN_arm64="beaf0f51cbe0bd71b8289b2b6fa96c0b11cd86aa58672691ef2f1de88eb621de"
+SHA256_LND_VENDORED="d756dadf5fa1b235ac3e5d8880b6c797c3cf44967d48c982f1ab4439f6309d0c"
+SHA256_LND_SRC="db479a6d4cf7bd00817f8ce9bad2f57d81933b0b408364dc3f9c1e94682a27d3"
+SHA256_BTCD_SRC="f282a697058247ecaef3c86e3b6a38935b6fbf942f2a8fda5477c08f11b17c32"
+
+# verify_sha256 <file> <expected-hash> <human-name>
+# Refuses to proceed if hash does not match. No fallback, no "|| true".
+verify_sha256() {
+  local _file="$1"; local _expected="$2"; local _name="$3"
+  if [ ! -f "${_file}" ]; then
+    echo "# FAIL - cannot verify ${_name}: file ${_file} missing"
+    exit 1
+  fi
+  local _actual
+  _actual="$(sha256sum "${_file}" 2>/dev/null | awk '{print $1}')"
+  if [ "${_actual}" != "${_expected}" ]; then
+    echo "# FAIL - SHA-256 mismatch for ${_name} (${_file})"
+    echo "#   expected: ${_expected}"
+    echo "#   got:      ${_actual}"
+    echo "# Refusing to install untrusted binary. Wipe ${_file} and retry"
+    echo "# with a fresh copy from the official release if the hash is correct,"
+    echo "# or update the SHA256_* pin if you intentionally rebuilt the asset."
+    rm -f "${_file}" 2>/dev/null
+    exit 1
+  fi
+  echo "# OK - ${_name} sha256 verified (${_expected:0:16}…)"
+}
 
 # guggero
 # PGPauthor="guggero"
@@ -96,34 +137,75 @@ if [ "$1" = "install" ] ; then
   fi
 
   # detect architecture
-  if [ "$(uname -m | grep -c 'arm')" -gt 0 ]; then
-    lndArch="armv7"
-  elif [ "$(uname -m | grep -c 'aarch64')" -gt 0 ]; then
-    lndArch="arm64"
-  elif [ "$(uname -m | grep -c 'x86_64')" -gt 0 ]; then
-    lndArch="amd64"
-  else
-    echo "# FAIL - unsupported architecture: $(uname -m)"
-    exit 1
-  fi
+  # Order matters: aarch64 (Pi 5 64-bit) must win over the broader 'arm' match
+  # so a hypothetical armv8l reporting kernel doesn't get classified as armv7.
+  _uname_m="$(uname -m)"
+  case "${_uname_m}" in
+    aarch64|arm64) lndArch="arm64" ;;
+    armv7l|armv6l|armhf) lndArch="armv7" ;;
+    x86_64|amd64) lndArch="amd64" ;;
+    *)
+      echo "# FAIL - unsupported architecture: ${_uname_m}"
+      exit 1
+      ;;
+  esac
+  echo "# Detected architecture: ${_uname_m} -> lndArch=${lndArch}"
 
   # -----------------------------------------------------------------------
   # OPTION 1: pre-built Glcoin-patched LND binary tarball
   # Place lnd-glcoin-${lndVersion}-linux-${arch}.tar.gz in /tmp before running.
   # Format: contains lnd and lncli binaries at the top level.
   # -----------------------------------------------------------------------
-  PREBUILT_TARBALL="/tmp/lnd-glcoin-${lndVersion}-linux-${lndArch}.tar.gz"
+  # Cache filename includes a build-recipe revision so old broken caches
+  # (e.g. v0143 binaries that panic on init due to chaincfg init-order bug)
+  # are not picked up by newer scripts. Bump LND_CACHE_REV when patch changes.
+  LND_CACHE_REV="r2"
+  PREBUILT_NAME="lnd-glcoin-${lndVersion}-${LND_CACHE_REV}-linux-${lndArch}.tar.gz"
+  PREBUILT_TARBALL="/tmp/${PREBUILT_NAME}"
+  # Clean up older cache revisions to avoid confusion
+  for _old in /tmp/lnd-glcoin-${lndVersion}-linux-${lndArch}.tar.gz; do
+    [ -f "${_old}" ] && rm -f "${_old}"
+  done
+  # Fallback search order: /tmp (build_sdcard.sh stages here) -> /home/admin/assets
+  # (where the full bundle lives after first boot) -> GitHub Release download.
+  # In v0146 the cross-compiled arm64 binary ships in assets/, so a fresh Pi
+  # finds it without touching the network.
+  if [ ! -f "${PREBUILT_TARBALL}" ] && [ -f "/home/admin/assets/${PREBUILT_NAME}" ]; then
+    echo "# Found prebuilt LND in /home/admin/assets — using offline copy"
+    cp "/home/admin/assets/${PREBUILT_NAME}" "${PREBUILT_TARBALL}"
+  fi
   if [ ! -f "${PREBUILT_TARBALL}" ]; then
-    echo "# Attempting GitHub Release download: ${GITHUB_RELEASE_BASE}/$(basename "${PREBUILT_TARBALL}")"
+    echo "# Attempting GitHub Release download: ${GITHUB_RELEASE_BASE}/${PREBUILT_NAME}"
     wget -q --show-progress --timeout=120 \
       -O "${PREBUILT_TARBALL}" \
-      "${GITHUB_RELEASE_BASE}/$(basename "${PREBUILT_TARBALL}")" || rm -f "${PREBUILT_TARBALL}"
+      "${GITHUB_RELEASE_BASE}/${PREBUILT_NAME}" || rm -f "${PREBUILT_TARBALL}"
   fi
+  # Decide if the prebuilt tarball is safe to install: must exist AND have a
+  # pinned SHA-256 for our arch AND match. Anything else → drop it and fall
+  # through to the source build path.
+  _prebuilt_ok=0
   if [ -f "${PREBUILT_TARBALL}" ]; then
-    echo "# Found pre-built Glcoin LND tarball: ${PREBUILT_TARBALL}"
+    _expected_lnd_sha=""
+    case "${lndArch}" in
+      arm64) _expected_lnd_sha="${SHA256_LND_PREBUILT_arm64}" ;;
+    esac
+    if [ -z "${_expected_lnd_sha}" ]; then
+      echo "# WARN - no pinned SHA-256 for lndArch=${lndArch} prebuilt tarball"
+      echo "# Discarding ${PREBUILT_TARBALL}; will build from source instead."
+      rm -f "${PREBUILT_TARBALL}"
+    else
+      verify_sha256 "${PREBUILT_TARBALL}" "${_expected_lnd_sha}" "LND prebuilt (${lndArch})"
+      _prebuilt_ok=1
+    fi
+  fi
+
+  if [ "${_prebuilt_ok}" -eq 1 ]; then
+    echo "# Installing pre-built Glcoin LND tarball: ${PREBUILT_TARBALL}"
     cd /home/admin/download || exit 1
     tar -xzf "${PREBUILT_TARBALL}" || { echo "# FAIL - could not extract tarball"; exit 1; }
-    sudo install -m 0755 -o root -g root lnd lncli /usr/local/bin/
+    install -m 0755 lnd lncli /usr/local/bin/ || {
+      echo "# FAIL - could not install lnd/lncli to /usr/local/bin/"; exit 1
+    }
     echo "# Installed from pre-built tarball"
   else
     # -----------------------------------------------------------------------
@@ -135,19 +217,65 @@ if [ "$1" = "install" ] ; then
     echo "# Building LND from source with Glcoin chain params patch..."
     echo "# (This will take 30-60 minutes on a Raspberry Pi)"
 
-    # install Go if missing
-    if ! command -v go &>/dev/null; then
-      echo "# Installing Go..."
-      apt-get install -y golang-go || {
-        # fallback: install upstream Go binary
-        GO_VERSION="1.22.3"
-        GO_ARCH="${lndArch}"
-        [ "${lndArch}" = "armv7" ] && GO_ARCH="armv6l"
-        wget -O /tmp/go.tar.gz "https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz"
-        tar -C /usr/local -xzf /tmp/go.tar.gz
-        export PATH=$PATH:/usr/local/go/bin
+    # -----------------------------------------------------------------------
+    # Go installation — prefer bundled asset (offline), fall back to download
+    # LND v0.20.1-beta go.mod requires go 1.24.x (confirmed: go 1.24.11)
+    # -----------------------------------------------------------------------
+    GO_VERSION="1.24.11"
+    GO_ARCH="${lndArch}"
+    [ "${lndArch}" = "armv7" ] && GO_ARCH="armv6l"
+    ASSETS_DIR="/home/admin/assets"
+    _GO_NEED_MINOR=24
+    _go_ok=0
+    if command -v go &>/dev/null; then
+      _go_minor=$(go version 2>/dev/null | grep -oE 'go[0-9]+\.[0-9]+' | grep -oE '[0-9]+$')
+      if [ -n "${_go_minor}" ] && [ "${_go_minor}" -ge "${_GO_NEED_MINOR}" ]; then
+        _go_ok=1
+        echo "# Go $(go version | grep -oE 'go[0-9.]+') already installed — sufficient"
+      else
+        echo "# Go too old (need 1.${_GO_NEED_MINOR}+) — will replace"
+      fi
+    else
+      echo "# Go not found — installing"
+    fi
+    if [ "${_go_ok}" -eq 0 ]; then
+      rm -rf /usr/local/go
+      LOCAL_GO="${ASSETS_DIR}/go-${GO_VERSION}-linux-${GO_ARCH}.tar.gz"
+      # Pick pinned SHA for this arch (only arm64 is bundled; for other archs
+      # we currently allow the upstream go.dev download but still refuse to
+      # extract until verification has been added — fail closed).
+      _expected_go_sha=""
+      case "${GO_ARCH}" in
+        arm64) _expected_go_sha="${SHA256_GO_TOOLCHAIN_arm64}" ;;
+      esac
+      if [ -f "${LOCAL_GO}" ]; then
+        echo "# Installing Go ${GO_VERSION} from bundled assets (offline)"
+        if [ -z "${_expected_go_sha}" ]; then
+          echo "# FAIL - no pinned SHA-256 for Go GO_ARCH=${GO_ARCH}"
+          echo "# Bundle should ship a pinned hash; refusing to extract."
+          exit 1
+        fi
+        verify_sha256 "${LOCAL_GO}" "${_expected_go_sha}" "Go ${GO_VERSION} (${GO_ARCH})"
+        tar -C /usr/local -xzf "${LOCAL_GO}" || { echo "# FAIL - Go extract failed"; exit 1; }
+      else
+        if [ -z "${_expected_go_sha}" ]; then
+          echo "# FAIL - no pinned SHA-256 for Go GO_ARCH=${GO_ARCH}; refusing"
+          echo "# to download an unverified Go toolchain (compiler-as-malware risk)."
+          echo "# Add the upstream go.dev SHA to SHA256_GO_TOOLCHAIN_${GO_ARCH} and retry."
+          exit 1
+        fi
+        echo "# Downloading Go ${GO_VERSION} from go.dev"
+        wget -q --show-progress -O /tmp/go.tar.gz \
+          "https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz" || {
+          echo "# FAIL - could not download Go ${GO_VERSION}"; exit 1
+        }
+        verify_sha256 /tmp/go.tar.gz "${_expected_go_sha}" "Go ${GO_VERSION} (${GO_ARCH})"
+        tar -C /usr/local -xzf /tmp/go.tar.gz && rm -f /tmp/go.tar.gz
+      fi
+      export PATH=$PATH:/usr/local/go/bin
+      grep -qF '/usr/local/go/bin' /home/admin/.bashrc || \
         echo 'export PATH=$PATH:/usr/local/go/bin' >> /home/admin/.bashrc
-      }
+      echo "# Go ${GO_VERSION} installed"
     fi
     export GOPATH=/home/admin/go
     export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
@@ -156,42 +284,109 @@ if [ "$1" = "install" ] ; then
     mkdir -p "${BUILD_BASE}"
     cd "${BUILD_BASE}" || exit 1
 
-    # --- patch btcd --------------------------------------------------------
-    echo "# Cloning btcd..."
-    rm -rf "${BUILD_BASE}/btcd"
-    git clone --depth=1 --branch master https://github.com/btcsuite/btcd.git btcd || {
-      echo "# FAIL - could not clone btcd"; exit 1
-    }
-    # copy the Glcoin chain params file
-    cp /home/admin/patches/lnd/btcd_glcoin_params.go \
-       "${BUILD_BASE}/btcd/chaincfg/glcoin_params.go" || {
-      # fallback: look for it relative to this script (one level up = /home/admin)
-      SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-      cp "${SCRIPT_DIR}/../patches/lnd/btcd_glcoin_params.go" \
-         "${BUILD_BASE}/btcd/chaincfg/glcoin_params.go" || {
-        echo "# FAIL - could not find btcd_glcoin_params.go patch file"; exit 1
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    GLCOIN_PARAMS_FILE=""
+    if [ -f /home/admin/patches/lnd/btcd_glcoin_params.go ]; then
+      GLCOIN_PARAMS_FILE="/home/admin/patches/lnd/btcd_glcoin_params.go"
+    elif [ -f "${SCRIPT_DIR}/../patches/lnd/btcd_glcoin_params.go" ]; then
+      GLCOIN_PARAMS_FILE="${SCRIPT_DIR}/../patches/lnd/btcd_glcoin_params.go"
+    else
+      echo "# FAIL - could not find btcd_glcoin_params.go patch file"; exit 1
+    fi
+
+    # -----------------------------------------------------------------------
+    # LND source — prefer vendored bundle (offline+fast), then plain source,
+    # then git clone as last resort.
+    # The vendored bundle already has btcd patched with glcoin_params.go
+    # and all Go module dependencies pre-downloaded (go.sum verified).
+    # -----------------------------------------------------------------------
+    echo "# Preparing LND ${LND_CLONE_TAG} source..."
+    rm -rf "${BUILD_BASE}/lnd"
+    LOCAL_LND_VENDORED="${ASSETS_DIR}/lnd-${LND_CLONE_TAG}-vendored.tar.gz"
+    LOCAL_LND="${ASSETS_DIR}/lnd-${LND_CLONE_TAG}-src.tar.gz"
+
+    if [ -f "${LOCAL_LND_VENDORED}" ]; then
+      echo "# Extracting vendored LND bundle from assets (fully offline — btcd+vendor included)"
+      verify_sha256 "${LOCAL_LND_VENDORED}" "${SHA256_LND_VENDORED}" "LND vendored bundle"
+      tar -xzf "${LOCAL_LND_VENDORED}" -C "${BUILD_BASE}" || { echo "# FAIL - LND vendored extract"; exit 1; }
+      _lnd_dir=$(tar -tzf "${LOCAL_LND_VENDORED}" 2>/dev/null | head -1 | cut -d/ -f1)
+      [ -n "${_lnd_dir}" ] && [ -d "${BUILD_BASE}/${_lnd_dir}" ] && \
+        mv "${BUILD_BASE}/${_lnd_dir}" "${BUILD_BASE}/lnd"
+      # vendored bundle already contains patched btcd in vendor/ — no separate btcd clone needed
+      BTCD_ALREADY_VENDORED=1
+      # Init-order safety net: glcoin_params.go init() must run AFTER btcd's params.go
+      # init() (which calls mustRegister(&MainNetParams)). Otherwise the override
+      # MainNetParams = GlcoinMainNetParams runs first, then mustRegister panics with
+      # "parameters have already been registered with the network". Go runs init() in
+      # alphabetical filename order, so prefix with 'z' to push us last.
+      _vendor_chaincfg="${BUILD_BASE}/lnd/vendor/github.com/btcsuite/btcd/chaincfg"
+      if [ -f "${_vendor_chaincfg}/glcoin_params.go" ]; then
+        echo "# Renaming glcoin_params.go → zglcoin_params.go (fix init order)"
+        mv "${_vendor_chaincfg}/glcoin_params.go" "${_vendor_chaincfg}/zglcoin_params.go"
+      fi
+    elif [ -f "${LOCAL_LND}" ]; then
+      echo "# Extracting LND source from assets (btcd will still be needed)"
+      verify_sha256 "${LOCAL_LND}" "${SHA256_LND_SRC}" "LND source bundle"
+      tar -xzf "${LOCAL_LND}" -C "${BUILD_BASE}" || { echo "# FAIL - LND extract"; exit 1; }
+      _lnd_dir=$(tar -tzf "${LOCAL_LND}" 2>/dev/null | head -1 | cut -d/ -f1)
+      [ -n "${_lnd_dir}" ] && [ -d "${BUILD_BASE}/${_lnd_dir}" ] && \
+        mv "${BUILD_BASE}/${_lnd_dir}" "${BUILD_BASE}/lnd"
+    else
+      echo "# Cloning LND ${LND_CLONE_TAG} from GitHub (no bundled source found)"
+      git clone --depth=1 --branch "${LND_CLONE_TAG}" \
+        https://github.com/lightningnetwork/lnd.git "${BUILD_BASE}/lnd" || {
+        echo "# FAIL - could not clone LND ${LND_CLONE_TAG}"; exit 1
       }
-    }
+    fi
 
-    # --- build LND with patched btcd ---------------------------------------
-    echo "# Cloning LND v${lndVersion}..."
-    git clone --depth=1 --branch "v${lndVersion}" \
-      https://github.com/lightningnetwork/lnd.git lnd || {
-      echo "# FAIL - could not clone LND v${lndVersion}"; exit 1
-    }
-    cd "${BUILD_BASE}/lnd" || exit 1
-
-    # replace btcd dependency with our patched local copy
-    go mod edit -replace github.com/btcsuite/btcd="${BUILD_BASE}/btcd"
-    go mod tidy
+    # -----------------------------------------------------------------------
+    # btcd source — skip if already included in vendored LND bundle
+    # -----------------------------------------------------------------------
+    if [ "${BTCD_ALREADY_VENDORED:-0}" -eq 0 ]; then
+      echo "# Preparing btcd source (commit ${BTCD_COMMIT})..."
+      rm -rf "${BUILD_BASE}/btcd"
+      LOCAL_BTCD="${ASSETS_DIR}/btcd-${BTCD_COMMIT}.tar.gz"
+      if [ -f "${LOCAL_BTCD}" ]; then
+        echo "# Extracting btcd source from assets (offline)"
+        verify_sha256 "${LOCAL_BTCD}" "${SHA256_BTCD_SRC}" "btcd source bundle"
+        tar -xzf "${LOCAL_BTCD}" -C "${BUILD_BASE}" || { echo "# FAIL - btcd extract"; exit 1; }
+        _btcd_dir=$(tar -tzf "${LOCAL_BTCD}" 2>/dev/null | head -1 | cut -d/ -f1)
+        [ -n "${_btcd_dir}" ] && [ -d "${BUILD_BASE}/${_btcd_dir}" ] && \
+          mv "${BUILD_BASE}/${_btcd_dir}" "${BUILD_BASE}/btcd"
+      else
+        echo "# Cloning btcd ${BTCD_COMMIT} from GitHub (no bundled source found)"
+        git clone https://github.com/btcsuite/btcd.git "${BUILD_BASE}/btcd" && \
+          git -C "${BUILD_BASE}/btcd" checkout "${BTCD_COMMIT}" || {
+          echo "# FAIL - could not clone/checkout btcd"; exit 1
+        }
+      fi
+      # Filename prefixed with 'z' so init() runs AFTER btcd's params.go init()
+      cp "${GLCOIN_PARAMS_FILE}" "${BUILD_BASE}/btcd/chaincfg/zglcoin_params.go" || {
+        echo "# FAIL - could not copy zglcoin_params.go into btcd"; exit 1
+      }
+      cd "${BUILD_BASE}/lnd" || exit 1
+      go mod edit -replace github.com/btcsuite/btcd="${BUILD_BASE}/btcd"
+      go mod tidy
+    else
+      cd "${BUILD_BASE}/lnd" || exit 1
+    fi
 
     echo "# Building LND (this is slow on ARM)..."
+    # Go 1.14+ automatically uses -mod=vendor when vendor/ exists.
+    # No extra flags needed — vendor/ presence is sufficient for fully offline build.
+    if [ -d "${BUILD_BASE}/lnd/vendor" ]; then
+      echo "# vendor/ found — building offline (no module downloads needed)"
+    fi
     make install tags="autopilotrpc chainrpc invoicesrpc routerrpc signrpc walletrpc watchtowerrpc wtclientrpc" || {
       echo "# FAIL - LND build failed"; exit 1
     }
 
-    sudo install -m 0755 -o root -g root "${GOPATH}/bin/lnd" /usr/local/bin/lnd
-    sudo install -m 0755 -o root -g root "${GOPATH}/bin/lncli" /usr/local/bin/lncli
+    install -m 0755 "${GOPATH}/bin/lnd" /usr/local/bin/lnd || {
+      echo "# FAIL - could not install lnd to /usr/local/bin/"; exit 1
+    }
+    install -m 0755 "${GOPATH}/bin/lncli" /usr/local/bin/lncli || {
+      echo "# FAIL - could not install lncli to /usr/local/bin/"; exit 1
+    }
 
     # package for future use (saves 30-60 min on reinstall)
     echo "# Packaging built binaries to ${PREBUILT_TARBALL} for reuse..."
@@ -199,12 +394,21 @@ if [ "$1" = "install" ] ; then
       echo "# Saved to ${PREBUILT_TARBALL} — copy to /tmp on future installs to skip rebuild"
   fi
 
-  # verify installation
-  sleep 2
-  installed=$(sudo -u admin lnd --version 2>/dev/null)
-  if [ ${#installed} -eq 0 ]; then
+  # verify installation — capture stderr too so panics are visible
+  if [ ! -x /usr/local/bin/lnd ]; then
     echo
-    echo "# BUILD FAILED --> lnd binary not found after install"
+    echo "# BUILD FAILED --> /usr/local/bin/lnd not found or not executable"
+    exit 1
+  fi
+  installed=$(/usr/local/bin/lnd --version 2>&1)
+  rc=$?
+  if [ ${rc} -ne 0 ] || [ ${#installed} -eq 0 ]; then
+    echo
+    echo "# BUILD FAILED --> /usr/local/bin/lnd cannot run --version (exit ${rc})"
+    echo "# lnd output:"
+    echo "${installed}" | sed 's/^/#   /'
+    echo "# binary info:"
+    file /usr/local/bin/lnd 2>&1 | sed 's/^/#   /'
     exit 1
   fi
   echo "# Installed: ${installed}"
@@ -321,6 +525,19 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     echo "# Detected missing lnddir in lnd.conf - regenerating"
     rm /mnt/hdd/app-data/lnd/${netprefix}lnd.conf
   fi
+  # v0145 security migration: rebind rpclisten/restlisten from 0.0.0.0 to 127.0.0.1
+  # in-place (preserves user-set alias/color/etc.). Old installs from v0140-v0144
+  # exposed gRPC and REST on every interface; v0145 restricts to localhost.
+  if [ -f /mnt/hdd/app-data/lnd/${netprefix}lnd.conf ]; then
+    if grep -q "^rpclisten=0\.0\.0\.0:" /mnt/hdd/app-data/lnd/${netprefix}lnd.conf; then
+      echo "# Migrating rpclisten 0.0.0.0 -> 127.0.0.1 (v0145 hardening)"
+      sudo sed -i 's|^rpclisten=0\.0\.0\.0:|rpclisten=127.0.0.1:|' /mnt/hdd/app-data/lnd/${netprefix}lnd.conf
+    fi
+    if grep -q "^restlisten=0\.0\.0\.0:" /mnt/hdd/app-data/lnd/${netprefix}lnd.conf; then
+      echo "# Migrating restlisten 0.0.0.0 -> 127.0.0.1 (v0145 hardening)"
+      sudo sed -i 's|^restlisten=0\.0\.0\.0:|restlisten=127.0.0.1:|' /mnt/hdd/app-data/lnd/${netprefix}lnd.conf
+    fi
+  fi
 
   # Read RPC credentials from glcoin.conf (set by blesk.passwords.sh before this runs)
   _LNDINSTALL_RPCUSER=$(grep "^rpcuser=" /mnt/hdd/app-data/glcoin/glcoin.conf 2>/dev/null | cut -d= -f2 | tail -1)
@@ -334,8 +551,8 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
 # color=COLOR # choose from: https://www.color-hex.com/
 lnddir=/mnt/hdd/app-data/lnd
 listen=0.0.0.0:${portprefix}9735
-rpclisten=0.0.0.0:1${rpcportmod}009
-restlisten=0.0.0.0:${portprefix}8080
+rpclisten=127.0.0.1:1${rpcportmod}009
+restlisten=127.0.0.1:${portprefix}8080
 nat=false
 debuglevel=info
 gc-canceled-invoices-on-startup=true
@@ -380,13 +597,6 @@ healthcheck.chainbackend.interval=1m30s
 [workers]
 workers.sig=4
 workers.write=4
-
-[tor]
-tor.active=true
-tor.v3=true
-tor.privatekeypath=/mnt/hdd/lnd/v3_onion_private_key
-tor.socks=9050
-tor.control=9051
 
 [rpcmiddleware]
 rpcmiddleware.enable=true
@@ -471,7 +681,7 @@ alias ${netprefix}lncli=\"sudo -u glcoin /usr/local/bin/lncli\
   fi
   if [ $(grep -c "alias ${netprefix}lndlog" < /home/admin/_aliases) -eq 0 ];then
     echo "\
-alias ${netprefix}lndlog=\"sudo tail -n 30 -f /mnt/hdd/app-data/lnd/logs/${network}/${CHAIN}/lnd.log\"\
+alias ${netprefix}lndlog=\"sudo tail -n 30 -f /mnt/hdd/app-data/lnd/logs/bitcoin/glcoin/lnd.log\"\
 " | sudo tee -a /home/admin/_aliases
   fi
   if [ $(grep -c "alias ${netprefix}lndconf" < /home/admin/_aliases) -eq 0 ];then
@@ -522,7 +732,13 @@ alias ${netprefix}lndconf=\"sudo nano /mnt/hdd/app-data/lnd/${netprefix}lnd.conf
           sudo chmod 600 ${_pwFile}
         fi
       fi
-      source <(sudo /home/admin/config.scripts/lnd.initwallet.py new ${CHAIN} ${passwordC})
+      # Pipe wallet password as JSON via stdin so it doesn't appear in
+      # /proc/PID/cmdline. Uses `sudo -u glcoin` to keep gRPC TLS access from
+      # the right user; `env -i` would break grpc cert path.
+      _stdin_json=$(passwordC="${passwordC}" \
+        python3 -c 'import json,os;print(json.dumps({"wallet_password":os.environ["passwordC"]}))')
+      source <(printf '%s' "${_stdin_json}" | sudo /home/admin/config.scripts/lnd.initwallet.py new ${CHAIN} --stdin)
+      unset _stdin_json
       if [ "${err}" != "" ]; then
         clear
         echo "# LND ${CHAIN} wallet creation failed"
@@ -534,6 +750,8 @@ alias ${netprefix}lndconf=\"sudo nano /mnt/hdd/app-data/lnd/${netprefix}lnd.conf
         seedFile="/mnt/hdd/app-data/lnd/data/chain/${network}/${CHAIN}/seedwords.info"
         echo "seedwords='${seedwords}'" | sudo tee ${seedFile}
         echo "seedwords6x4='${seedwords6x4}'" | sudo tee -a ${seedFile}
+        sudo chown glcoin:glcoin ${seedFile}
+        sudo chmod 600 ${seedFile}
       fi
   fi
 

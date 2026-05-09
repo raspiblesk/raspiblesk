@@ -140,15 +140,15 @@ patch()
     PATCH)
       echo
       echo "#######################################################"
-      echo "### UPDATE BLITZ --> SCRIPTS (code)"
+      echo "### UPDATE BLESK --> SCRIPTS (code)"
       /home/admin/config.scripts/blesk.github.sh -run
       echo
       echo "#######################################################"
-      echo "### UPDATE BLITZ --> API"
+      echo "### UPDATE BLESK --> API"
       sudo /home/admin/config.scripts/blesk.web.api.sh update-code
       echo
       echo "#######################################################"
-      echo "### UPDATE BLITZ --> WEBUI"
+      echo "### UPDATE BLESK --> WEBUI"
       sudo /home/admin/config.scripts/blesk.web.ui.sh update
       sleep 5
       whiptail --title " Patching/Syncing " --yes-button "Reboot" --no-button "Skip Reboot" --yesno "  OK patching/syncing done.
@@ -604,10 +604,6 @@ if [ "${specter}" == "on" ]; then
   OPTIONS+=(SPECTER "Update Specter Desktop")
 fi
 
-if [ "${GLCPayServer}" == "on" ]; then
-  OPTIONS+=(BTCPAY "Update GLCPay Server")
-fi
-
 if [ "${sphinxrelay}" == "on" ]; then
   OPTIONS+=(SPHINX "Update Sphinx Server Relay")
 fi
@@ -672,9 +668,6 @@ case $CHOICE in
     ;;
   SPECTER)
     /home/admin/config.scripts/bonus.specter.sh update
-    ;;
-  BTCPAY)
-    /home/admin/config.scripts/bonus.btcpayserver.sh update
     ;;
   SPHINX)
     /home/admin/config.scripts/bonus.sphinxrelay.sh update

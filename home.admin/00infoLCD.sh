@@ -109,10 +109,10 @@ while :
     source <(/home/admin/_cache.sh get \
       lightning \
       ln_default_locked \
-      btc_default_synced \
-      btc_default_online \
-      btc_default_sync_initialblockdownload \
-      btc_default_blocks_behind \
+      glc_default_synced \
+      glc_default_online \
+      glc_default_sync_initialblockdownload \
+      glc_default_blocks_behind \
     )
 
     if [ "${lightning}" != "" ] && [ "${lightning}" != "none" ] && [ "${ln_default_locked}" == "1" ]; then
@@ -129,7 +129,7 @@ while :
     fi
 
     # when glc not online or not synced - show sync screen
-    if [ "${btc_default_synced}" != "1" ] || [ "${btc_default_online}" != "1" ]; then
+    if [ "${glc_default_synced}" != "1" ] || [ "${glc_default_online}" != "1" ]; then
       /home/admin/setup.scripts/eventBlockchainSync.sh lcd
       sleep 3
       continue

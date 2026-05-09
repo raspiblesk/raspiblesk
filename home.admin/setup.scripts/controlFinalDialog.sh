@@ -35,10 +35,10 @@ fi
 # BLOCKCHAIN INFO & OPTIONS
 
 # get fresh data
-source <(/home/admin/_cache.sh get btc_default_sync_percentage btc_default_blocks_data_kb network)
-#syncProgressFull=$(echo "${btc_default_sync_percentage}" | cut -d "." -f1)
+source <(/home/admin/_cache.sh get glc_default_sync_percentage glc_default_blocks_data_kb network)
+#syncProgressFull=$(echo "${glc_default_sync_percentage}" | cut -d "." -f1)
 #if [ "${syncProgressFull}" != "" ] && [ "${network}" == "glcoin" ] && [ ${syncProgressFull} -lt 75 ]; then
-if [ "${btc_default_blocks_data_kb}" != "" ] && [ ${btc_default_blocks_data_kb} -lt 250000000 ]; then
+if [ "${glc_default_blocks_data_kb}" != "" ] && [ ${glc_default_blocks_data_kb} -lt 250000000 ]; then
 
   # offer choice to copy blockchain over LAN
   OPTIONS=()

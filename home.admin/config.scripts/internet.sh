@@ -111,9 +111,9 @@ if [ ${runOnline} -eq 1 ]; then
   if [ "$EUID" -eq 0 ]; then
     # first quick check if glcoind has peers - if so the client is online
     # if not then recheck by pinging different sources if online
-    btc_online="0"
+    glc_online="0"
     source <(timeout 2 /home/admin/config.scripts/glcoin.monitor.sh mainnet status)
-    if [ "${btc_online}" == "1" ]; then
+    if [ "${glc_online}" == "1" ]; then
       # glcoind has peers - so device is online
       online=1
     fi

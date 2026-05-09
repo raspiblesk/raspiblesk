@@ -99,7 +99,7 @@ echo "run dialog ..."
 # BASIC MENU INFO
 OPTIONS=()
 
-OPTIONS+=(A 'Blitz API + WebUI' ${bleskapi})
+OPTIONS+=(A 'Blesk API + WebUI' ${bleskapi})
 
 # LCD options (only when running with LCD screen)
 if [ "${displayClass}" == "lcd" ]; then
@@ -164,23 +164,23 @@ fi
 needsReboot=0
 anychange=0
 
-# Blitz API + webUI process choice
+# Blesk API + webUI process choice
 choice="off"; check=$(echo "${CHOICES}" | grep -c "A")
 if [ ${check} -eq 1 ]; then choice="on"; fi
 if [ "${bleskapi}" != "${choice}" ]; then
-  echo "Blitz API + webUI settings changed .."
+  echo "Blesk API + webUI settings changed .."
   anychange=1
   sudo /home/admin/config.scripts/blesk.web.api.sh ${choice} DEFAULT
   sudo /home/admin/config.scripts/blesk.web.ui.sh ${choice} DEFAULT
   errorOnInstall=$?
   if [ "${choice}" =  "on" ]; then
-    whiptail --title " Installed Blitz API + webUI" --msgbox "\
-The Blitz API + webUI was installed.\n
+    whiptail --title " Installed Blesk API + webUI" --msgbox "\
+The Blesk API + webUI was installed.\n
 See the status screen for more info.\n
 " 10 35
   fi
 else
-  echo "Blitz API + webUI Setting unchanged."
+  echo "Blesk API + webUI Setting unchanged."
 fi
 
 # Dynamic Domain

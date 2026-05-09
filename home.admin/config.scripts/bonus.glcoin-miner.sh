@@ -53,29 +53,29 @@ if [ "$1" = "menu" ]; then
   if [ "${installed}" = "0" ]; then
     # Pre-flight: glcoind must be running
     if ! systemctl is-active glcoind >/dev/null 2>&1; then
-      whiptail --title " Glcoind nicht aktiv " --msgbox \
-"glcoind muss laufen und synchronisiert sein, bevor der Miner gestartet werden kann.
+      whiptail --title " Glcoind not active " --msgbox \
+"glcoind must be running and synced before the miner can start.
 
-Starte zuerst glcoind über das Glcoin-Menü." 10 64
+Start glcoind first via the Glcoin menu." 10 64
       exit 0
     fi
-    # Pre-flight: glcoin.conf mit RPC-Credentials muss vorhanden sein
+    # Pre-flight: glcoin.conf with RPC credentials must exist
     _CONF_CHECK="/mnt/hdd/app-data/glcoin/glcoin.conf"
     if [ ! -f "${_CONF_CHECK}" ]; then
-      whiptail --title " Konfiguration fehlt " --msgbox \
-"Glcoin-Konfiguration nicht gefunden:
+      whiptail --title " Configuration missing " --msgbox \
+"Glcoin configuration not found:
 ${_CONF_CHECK}
 
-Stelle sicher dass glcoind vollständig eingerichtet ist." 10 70
+Make sure glcoind is fully set up." 10 70
       exit 0
     fi
     _RPC_USER_CHECK=$(grep "^rpcuser=" "${_CONF_CHECK}" 2>/dev/null | cut -d= -f2 | tail -1)
     _RPC_PASS_CHECK=$(grep "^rpcpassword=" "${_CONF_CHECK}" 2>/dev/null | cut -d= -f2 | tail -1)
     if [ -z "${_RPC_USER_CHECK}" ] || [ -z "${_RPC_PASS_CHECK}" ]; then
-      whiptail --title " RPC-Credentials fehlen " --msgbox \
-"In ${_CONF_CHECK} fehlen rpcuser oder rpcpassword.
+      whiptail --title " RPC Credentials missing " --msgbox \
+"${_CONF_CHECK} is missing rpcuser or rpcpassword.
 
-Ergänze die RPC-Zugangsdaten und versuche es erneut." 10 70
+Add the RPC credentials and try again." 10 70
       exit 0
     fi
 
@@ -106,20 +106,20 @@ Example: gc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh" \
     INSTALL_OUT=$(sudo /home/admin/config.scripts/bonus.glcoin-miner.sh on 2>&1)
     INSTALL_RC=$?
     if [ ${INSTALL_RC} -ne 0 ]; then
-      whiptail --title " Installation fehlgeschlagen " --msgbox \
-"Der Glcoin Miner konnte nicht installiert werden.
+      whiptail --title " Installation failed " --msgbox \
+"Glcoin Miner could not be installed.
 
-Fehler:
+Error:
 ${INSTALL_OUT}" 16 72
       exit 1
     fi
-    whiptail --title " Miner gestartet " --msgbox \
-"Glcoin Miner wurde installiert und gestartet!
+    whiptail --title " Miner started " --msgbox \
+"Glcoin Miner has been installed and started!
 
-Mining-Adresse:
+Mining address:
 ${NEW_ADDR}
 
-Öffne das Miner-Menü erneut um Status und Einstellungen zu verwalten." 13 64
+Open the miner menu again to manage status and settings." 13 64
   else
     GLC_CLI="sudo -u glcoin /usr/local/bin/glcoin-cli -rpcport=1617"
 

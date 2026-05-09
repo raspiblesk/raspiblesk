@@ -27,21 +27,37 @@ activateGlcoinOverTor()
     # make sure all is turned off and removed and then activate fresh (so that also old settings get removed)
     deactivateGlcoinOverTor
 
-    sudo chmod 777 "${glcoinConf}"
-    sudo sed -i "s/^onlynet=.*//g" "${glcoinConf}"
+    # Edit as the file owner (glcoin) without ever widening permissions.
+    # The previous chmod 777 → edit → chmod 644 sequence opened a multi-second
+    # window during which any local user could read rpcuser/rpcpassword or
+    # append a malicious line (rpcallowip=0.0.0.0/0, walletnotify=…) to the
+    # conf. Keep mode 640 glcoin:glcoin throughout.
     echo "Adding Tor config to glcoin.conf ..."
-    sudo sed -i "s/^torpassword=.*//g" "${glcoinConf}"
-    echo "onlynet=onion" | sudo tee -a "${glcoinConf}"
-    echo "onlynet=i2p" | sudo tee -a "${glcoinConf}"
-    echo "proxy=127.0.0.1:9050" | sudo tee -a "${glcoinConf}"
-    echo "main.bind=127.0.0.1" | sudo tee -a "${glcoinConf}"
-    echo "test.bind=127.0.0.1" | sudo tee -a "${glcoinConf}"
-    echo "dnsseed=0" | sudo tee -a "${glcoinConf}"
-    echo "dns=0" | sudo tee -a "${glcoinConf}"
+    # Wipe ALL prior values for keys we manage so re-runs do not stack.
+    # Use sed -i ... -e to delete entire matching lines (not blank them).
+    sudo -u glcoin sed -i \
+      -e '/^onlynet=/d' \
+      -e '/^torpassword=/d' \
+      -e '/^proxy=/d' \
+      -e '/^main\.bind=/d' \
+      -e '/^test\.bind=/d' \
+      -e '/^dnsseed=/d' \
+      -e '/^dns=/d' \
+      "${glcoinConf}"
+    # Tor activation: onion-only. (i2p was erroneously enabled here before;
+    # i2p is a separate transport and must be opted-in via blesk.i2pd.sh on.)
+    echo "onlynet=onion"        | sudo -u glcoin tee -a "${glcoinConf}" >/dev/null
+    echo "proxy=127.0.0.1:9050" | sudo -u glcoin tee -a "${glcoinConf}" >/dev/null
+    echo "main.bind=127.0.0.1"  | sudo -u glcoin tee -a "${glcoinConf}" >/dev/null
+    echo "test.bind=127.0.0.1"  | sudo -u glcoin tee -a "${glcoinConf}" >/dev/null
+    echo "dnsseed=0"            | sudo -u glcoin tee -a "${glcoinConf}" >/dev/null
+    echo "dns=0"                | sudo -u glcoin tee -a "${glcoinConf}" >/dev/null
 
     # remove empty lines
-    sudo sed -i '/^ *$/d' "${glcoinConf}"
-    sudo chmod 644 "${glcoinConf}"
+    sudo -u glcoin sed -i '/^ *$/d' "${glcoinConf}"
+    # Enforce safe mode in case earlier installs left it world-readable.
+    sudo chown glcoin:glcoin "${glcoinConf}"
+    sudo chmod 640 "${glcoinConf}"
 
   else
     echo "FAIL: glcoin.conf not found at ${glcoinConf} - is HDD mounted?"
@@ -52,21 +68,34 @@ deactivateGlcoinOverTor()
 {
   local glcoinConf="/mnt/hdd/app-data/glcoin/glcoin.conf"
 
-  sudo sed -i "s/^onlynet=.*//g" "${glcoinConf}"
-  sudo sed -i "s/^main.addnode=.*//g" "${glcoinConf}"
-  sudo sed -i "s/^test.addnode=.*//g" "${glcoinConf}"
-  sudo sed -i "s/^proxy=.*//g" "${glcoinConf}"
-  sudo sed -i "s/^main.bind=.*//g" "${glcoinConf}"
-  sudo sed -i "s/^test.bind=.*//g" "${glcoinConf}"
-  sudo sed -i "s/^dnsseed=.*//g" "${glcoinConf}"
-  sudo sed -i "s/^dns=.*//g" "${glcoinConf}"
+  # Edit as the conf owner (glcoin) — no chmod widening; mode stays 640.
+  # Only strip .onion addnode entries — clearnet/signet addnode entries (the
+  # DNS-seeder hostnames or any LAN peers) must survive a tor->clearnet switch.
+  # Old code unconditionally deleted every main.addnode=/test.addnode= which
+  # silently wiped peer config and left the node with zero peers.
+  # Delete entire lines (not blank them) for every key we are about to rewrite,
+  # so flipping tor on/off repeatedly does not stack duplicates.
+  sudo -u glcoin sed -i \
+    -e '/^onlynet=/d' \
+    -e '/^proxy=/d' \
+    -e '/^main\.bind=/d' \
+    -e '/^test\.bind=/d' \
+    -e '/^dnsseed=/d' \
+    -e '/^dns=/d' \
+    -e '/^debug=i2p$/d' \
+    -e '/^i2psam=/d' \
+    -e '/^i2pacceptincoming=/d' \
+    -e '/^main\.addnode=.*\.onion/d' \
+    -e '/^test\.addnode=.*\.onion/d' \
+    -e '/^addnode=.*\.onion/d' \
+    -e '/^ *$/d' \
+    "${glcoinConf}"
 
   # restore clearnet-only mode
-  echo "onlynet=ipv4" | sudo tee -a "${glcoinConf}" >/dev/null
-  echo "onlynet=ipv6" | sudo tee -a "${glcoinConf}" >/dev/null
-
-  # remove empty lines
-  sudo sed -i '/^ *$/d' "${glcoinConf}"
+  echo "onlynet=ipv4" | sudo -u glcoin tee -a "${glcoinConf}" >/dev/null
+  echo "onlynet=ipv6" | sudo -u glcoin tee -a "${glcoinConf}" >/dev/null
+  # enable DNS seed — glcoin chainparams.cpp ships seed.glcoin.org for mainnet
+  echo "dnsseed=1" | sudo -u glcoin tee -a "${glcoinConf}" >/dev/null
 }
 
 # check and load raspiblesk config
@@ -117,9 +146,8 @@ case "$1" in
     . /mnt/hdd/app-data/raspiblesk.conf 2>/dev/null
     /home/admin/config.scripts/tor.onion-service.sh web80 80 80 443 443
     /home/admin/config.scripts/tor.onion-service.sh debuglogs 80 6969
-    [ "${GlcoinRPCexplorer}" = "on" ] && /home/admin/config.scripts/tor.onion-service.sh glc-rpc-explorer 80 3022 443 3023
+    [ "${GLCRPCexplorer}" = "on" ] && /home/admin/config.scripts/tor.onion-service.sh glc-rpc-explorer 80 3022 443 3023
     [ "${rtlWebinterface}" = "on" ] && /home/admin/config.scripts/tor.onion-service.sh RTL 80 3002 443 3003
-    [ "${GLCPayServer}" = "on" ] && /home/admin/config.scripts/tor.onion-service.sh btcpay 80 23002 443 23003
     [ "${ElectRS}" = "on" ] && /home/admin/config.scripts/tor.onion-service.sh electrs 50002 50002 50001 50001
     [ "${LNBits}" = "on" ] && /home/admin/config.scripts/tor.onion-service.sh lnbits 80 5002 443 5003
     [ "${thunderhub}" = "on" ] && /home/admin/config.scripts/tor.onion-service.sh thunderhub 80 3012 443 3013
@@ -180,7 +208,9 @@ EOF
     deactivateGlcoinOverTor
     echo
 
-    # re-open clearnet P2P ports
+    # re-open clearnet P2P ports (remove deny rule first, then allow)
+    sudo ufw delete deny 1618 2>/dev/null
+    sudo ufw delete deny 11618 2>/dev/null
     sudo ufw allow 1618 comment 'glcoin mainnet P2P' 2>/dev/null
     sudo ufw allow 11618 comment 'glcoin testnet P2P' 2>/dev/null
 

@@ -103,6 +103,7 @@ syncAndCheckLND() # from _provision.setup.sh
 
   # copy lnd service - note the same service is created with 'lnd.install.sh on mainnet'
   sudo cp /home/admin/assets/lnd.service /etc/systemd/system/lnd.service
+  sudo systemctl daemon-reload
 
   # start lnd up
   echo "Starting LND Service ..."
@@ -185,9 +186,13 @@ or having a complete LND rescue-backup from your old node.
     if [ "${seedWords}" != "" ]; then
       echo "WALLET --> SEED"
       /home/admin/_cache.sh set message "LND Wallet (SEED)"
-      source <(/home/admin/config.scripts/lnd.initwallet.py seed "${chain}net" "${passwordC}" "${seedWords}" "${seedPassword}")
+      # Pipe secrets via stdin JSON; never on argv (was visible in /proc/PID/cmdline).
+      _stdin_json=$(passwordC="${passwordC}" seedWords="${seedWords}" seedPassword="${seedPassword}" \
+        python3 -c 'import json,os;print(json.dumps({"wallet_password":os.environ["passwordC"],"seed_words":os.environ["seedWords"],"seed_password":os.environ["seedPassword"]}))')
+      source <(printf '%s' "${_stdin_json}" | /home/admin/config.scripts/lnd.initwallet.py seed "${chain}net" --stdin)
+      unset _stdin_json
       if [ "${err}" != "" ]; then
-        echo "lnd-wallet-seed" "lnd.initwallet.py seed returned error" "/home/admin/config.scripts/lnd.initwallet.py seed ${chain}net ... --> ${err} + ${errMore}"
+        echo "lnd-wallet-seed" "lnd.initwallet.py seed returned error" "/home/admin/config.scripts/lnd.initwallet.py seed ${chain}net --stdin --> ${err} + ${errMore}"
         exit 12
       fi
     fi
@@ -287,14 +292,13 @@ function removeLNDwallet
   echo "Reset wallet on ${CHAIN}"
   sudo rm -f /mnt/hdd/app-data/lnd/${netprefix}lnd.conf
   sudo rm -f /mnt/hdd/app-data/lnd/${netprefix}v3_onion_private_key
-  sudo rm -f /mnt/hdd/app-data/lnd/data/chain/${network}/${CHAIN}/wallet.db
-  sudo rm -f /mnt/hdd/app-data/lnd/data/graph/${CHAIN}/channel.db
-  sudo rm -f /mnt/hdd/app-data/lnd/data/graph/${CHAIN}/sphinxreplay.db
-  
-  sudo rm -rf /mnt/hdd/app-data/lnd/data/chain/${network}/${CHAIN}
-  sudo rm -rf /mnt/hdd/app-data/lnd/logs/${network}/${CHAIN}
+  # Use the real chain/bitcoin/glcoin path directly to avoid symlink deletion
+  sudo rm -rf /mnt/hdd/app-data/lnd/data/chain/bitcoin/glcoin
   sudo rm -rf /mnt/hdd/app-data/lnd/data/graph/${CHAIN}
-  sudo rm -rf home/glcoin/.lnd/data/watchtower/${CHAIN}
+  sudo rm -rf /mnt/hdd/app-data/lnd/logs/bitcoin/${CHAIN} 2>/dev/null
+  sudo rm -rf /home/glcoin/.lnd/data/watchtower/${CHAIN} 2>/dev/null
+  # Recreate symlinks since chain dirs were removed
+  sudo /home/admin/config.scripts/blesk.data.sh link
 }
 
 # BASIC MENU INFO

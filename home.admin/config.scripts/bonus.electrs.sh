@@ -20,6 +20,40 @@ PGPsigner="romanz"
 PGPpubkeyLink="https://github.com/${PGPsigner}.gpg"
 PGPpubkeyFingerprint="87CAE5FA46917CBB"
 
+# Pinned SHA-256 of bundled prebuilt electrs tarballs (Glcoin-patched).
+# Recomputed at v0149 release; bump on rebuild.
+SHA256_ELECTRS_PREBUILT_arm64="ae84c3fd66a39b93a805a0f0af0369537d22087d79ca84910b95dfe534a77540"
+SHA256_ELECTRS_PREBUILT_amd64="874b7e587b5b8892c33868b48556853aa163424f107743e840365cb0fc55aa8d"
+
+# Reject any prebuilt tarball whose hash does not match. Prevents a poisoned
+# GitHub release / MITM'd asset from delivering a backdoored electrs that
+# sits between LND and the chain.
+verify_sha256_electrs() {
+  local _file="$1"; local _arch="$2"
+  local _expected=""
+  case "${_arch}" in
+    arm64) _expected="${SHA256_ELECTRS_PREBUILT_arm64}" ;;
+    amd64) _expected="${SHA256_ELECTRS_PREBUILT_amd64}" ;;
+  esac
+  if [ -z "${_expected}" ]; then
+    echo "# WARN - no SHA-256 pinned for electrs ${_arch}; rejecting prebuilt."
+    rm -f "${_file}"
+    return 1
+  fi
+  if [ ! -f "${_file}" ]; then return 1; fi
+  local _actual
+  _actual="$(sha256sum "${_file}" 2>/dev/null | awk '{print $1}')"
+  if [ "${_actual}" != "${_expected}" ]; then
+    echo "# FAIL - SHA-256 mismatch for electrs prebuilt (${_arch})"
+    echo "#   expected: ${_expected}"
+    echo "#   got:      ${_actual}"
+    rm -f "${_file}"
+    return 1
+  fi
+  echo "# OK - electrs prebuilt sha256 verified (${_expected:0:16}…)"
+  return 0
+}
+
 source /mnt/hdd/app-data/raspiblesk.conf 2>/dev/null
 
 # give status (dont call regularly - just on occasions)
@@ -323,8 +357,17 @@ if [ "$1" = "install" ]; then
         -O "${PREBUILT_TARBALL}" \
         "${GITHUB_RELEASE_BASE}/$(basename "${PREBUILT_TARBALL}")" || rm -f "${PREBUILT_TARBALL}"
     fi
+    # Refuse the prebuilt unless its SHA-256 matches a pinned value for our
+    # arch; otherwise fall through to a verified source build (PGP-checked
+    # via blesk.git-verify.sh below).
+    _prebuilt_ok=0
     if [ -f "${PREBUILT_TARBALL}" ]; then
-      echo "# Found pre-built Glcoin electrs tarball: ${PREBUILT_TARBALL}"
+      if verify_sha256_electrs "${PREBUILT_TARBALL}" "${electrsArch}"; then
+        _prebuilt_ok=1
+      fi
+    fi
+    if [ "${_prebuilt_ok}" -eq 1 ]; then
+      echo "# Installing pre-built Glcoin electrs tarball: ${PREBUILT_TARBALL}"
       mkdir -p /home/electrs/electrs/target/release
       tar -xzf "${PREBUILT_TARBALL}" -C /home/electrs/electrs/target/release || { echo "# FAIL - could not extract tarball"; exit 1; }
       sudo chown -R electrs:electrs /home/electrs/electrs
@@ -414,7 +457,7 @@ index-batch-size = 10
 wait_duration_secs = 10
 jsonrpc_timeout_secs = 15
 db_dir = \"/mnt/hdd/app-storage/electrs/db\"
-daemon_p2p_addr = \"127.0.0.1:1619\"
+daemon_p2p_addr = \"127.0.0.1:1618\"
 daemon_rpc_addr = \"127.0.0.1:1617\"
 auth = \"${RPC_USER}:${PASSWORD_B}\"
 network = \"glcoin\"
@@ -549,12 +592,19 @@ WantedBy=multi-user.target
     btcprefix="main"
   fi
 
- # whitelist connection in glcoind
-  # migrate old non-prefixed whitebind to network-prefixed format (always to main.)
-  sudo sed -i "s/^whitebind=download@127.0.0.1:1619/main.whitebind=download@127.0.0.1:1619/g" /mnt/hdd/app-data/glcoin/glcoin.conf
-  # ensure network-prefixed whitebind exists for the current chain
-  if ! sudo grep -Eq "^${btcprefix}.whitebind=download@127.0.0.1:1619" /mnt/hdd/app-data/glcoin/glcoin.conf; then
-    echo "${btcprefix}.whitebind=download@127.0.0.1:1619" | sudo tee -a /mnt/hdd/app-data/glcoin/glcoin.conf
+ # whitelist electrs's local connection in glcoind
+  # IMPORTANT: do NOT use whitebind=...:1619 — Bitcoin Core auto-binds an onion
+  # service target on nDefaultPort+1 (= 1619 for glcoin mainnet, since
+  # nDefaultPort=1618), which produces:
+  #   [error] Duplicate binding configuration for address 127.0.0.1:1619
+  # whether or not Tor is on. Use whitelist= instead — that grants the
+  # download permission to any peer connecting from 127.0.0.1 over the regular
+  # p2p port (1618) without requiring a separate bind port.
+  # Clean up any stale whitebind entries from older installs (any prefix, any port)
+  sudo sed -i '/^\(main\.\|test\.\|signet\.\|\)whitebind=.*download@127\.0\.0\.1:/d' /mnt/hdd/app-data/glcoin/glcoin.conf
+  # add whitelist (network-prefixed for the current chain)
+  if ! sudo grep -Eq "^${btcprefix}\.whitelist=download@127\.0\.0\.1\$" /mnt/hdd/app-data/glcoin/glcoin.conf; then
+    echo "${btcprefix}.whitelist=download@127.0.0.1" | sudo tee -a /mnt/hdd/app-data/glcoin/glcoin.conf
     glcoindRestart=yes
   fi
 
@@ -570,7 +620,7 @@ WantedBy=multi-user.target
     sudo systemctl restart nginx
     sudo systemctl start electrs
     # restart GLC-RPC-Explorer to reconfigure itself to use electrs for address API
-    if [ "${GlcoinRPCexplorer}" == "on" ]; then
+    if [ "${GLCRPCexplorer}" == "on" ]; then
       sudo systemctl restart glc-rpc-explorer
       echo "# GLC-RPC-Explorer restarted"
     fi
@@ -614,13 +664,21 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
     sudo rm /etc/systemd/system/electrs.service
 
     # restart GLC-RPC-Explorer to reconfigure itself to use electrs for address API
-    if [ "${GlcoinRPCexplorer}" == "on" ]; then
+    if [ "${GLCRPCexplorer}" == "on" ]; then
       sudo systemctl restart glc-rpc-explorer
       echo "# GLC-RPC-Explorer restarted"
     fi
 
   else
     echo "# electrs.service is not installed."
+  fi
+
+  # remove whitelist + any legacy whitebind entries from glcoin.conf so glcoind
+  # restarts cleanly after the next config change
+  if [ -f /mnt/hdd/app-data/glcoin/glcoin.conf ]; then
+    sudo sed -i '/^\(main\.\|test\.\|signet\.\|\)whitelist=download@127\.0\.0\.1/d' /mnt/hdd/app-data/glcoin/glcoin.conf
+    sudo sed -i '/^\(main\.\|test\.\|signet\.\|\)whitebind=.*download@127\.0\.0\.1:/d' /mnt/hdd/app-data/glcoin/glcoin.conf
+    sudo systemctl restart glcoind 2>/dev/null
   fi
 
   # Hidden Service if Tor is active

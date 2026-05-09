@@ -97,17 +97,8 @@ echo "" >> ${logFile}
 # finish setup (SWAP, Benus, Firewall, Update, ..)
 /home/admin/_cache.sh set message "Setup System .."
 
-# add bonus scripts (auto install deactivated to reduce third party repos)
-mkdir /home/admin/tmpScriptDL
-cd /home/admin/tmpScriptDL
-echo "installing bash completion for glcoin-cli and lncli"
-wget https://raw.githubusercontent.com/glcoin/glcoin/master/contrib/glcoin-cli.bash-completion
-wget https://raw.githubusercontent.com/lightningnetwork/lnd/master/contrib/lncli.bash-completion
-cp *.bash-completion /etc/bash_completion.d/
-echo "OK - bash completion available after next login"
-echo "type \"glcoin-cli getblockch\", press [Tab] → glcoin-cli getblockchaininfo"
-rm -r /home/admin/tmpScriptDL
-cd
+# bash completion for glcoin-cli and lncli is shipped with the source tarballs
+# installed during build_sdcard.sh phase — skip external downloads
 
 ###### SWAP File
 source <(/home/admin/config.scripts/blesk.data.sh status)
@@ -140,10 +131,16 @@ echo 'allow: lightning testnet'
 ufw allow 19735 comment 'lightning testnet'
 echo "allow: lightning mainnet"
 ufw allow 9735 comment 'lightning mainnet'
-echo "allow: lightning gRPC"
-ufw allow 10009 comment 'lightning gRPC'
-echo "allow: lightning REST API"
-ufw allow 8080 comment 'lightning REST API'
+echo "allow: lightning gRPC (localhost + LAN only)"
+ufw allow from 127.0.0.1 to any port 10009 comment 'lightning gRPC localhost'
+ufw allow from 10.0.0.0/8 to any port 10009 comment 'lightning gRPC LAN'
+ufw allow from 172.16.0.0/12 to any port 10009 comment 'lightning gRPC LAN'
+ufw allow from 192.168.0.0/16 to any port 10009 comment 'lightning gRPC LAN'
+echo "allow: lightning REST API (localhost + LAN only)"
+ufw allow from 127.0.0.1 to any port 8080 comment 'lightning REST localhost'
+ufw allow from 10.0.0.0/8 to any port 8080 comment 'lightning REST LAN'
+ufw allow from 172.16.0.0/12 to any port 8080 comment 'lightning REST LAN'
+ufw allow from 192.168.0.0/16 to any port 8080 comment 'lightning REST LAN'
 echo "allow: public web HTTP"
 ufw allow from any to any port 80 comment 'allow public web HTTP'
 echo "allow: local web admin HTTPS"
@@ -167,7 +164,7 @@ echo ""
 echo ""
 echo "*** Update System ***"
 apt-mark hold raspberrypi-bootloader
-apt-get update -y
+apt-get update -y -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 -o Acquire::ftp::Timeout=30
 echo "OK - System is now up to date"
 
 # mark setup is done
@@ -177,7 +174,7 @@ sed -i "s/^setupStep=.*/setupStep=100/g" /home/admin/raspiblesk.info
 # PROVISIONING SERVICES
 ##########################
 
-echo "### CHECKING BLITZ-API/FRONT STATUS ###" >> ${logFile}
+echo "### CHECKING BLESK-API/FRONT STATUS ###" >> ${logFile}
 blitzApiInstalled=$(systemctl status bleskapi | grep -c "loaded")
 echo "# bleskapi(${bleskapi}) blitzApiInstalled(${blitzApiInstalled})"
 if [ "${bleskapi}" != "on" ] && [ ${blitzApiInstalled} -gt 0 ]; then
@@ -187,28 +184,53 @@ else
   /home/admin/_cache.sh set message "Installing Services"
 fi
 
-# BLITZ WEB SERVICE
-echo "Provisioning BLITZ WEB SERVICE - run config script" >> ${logFile}
+# BLESK WEB SERVICE
+echo "Provisioning BLESK WEB SERVICE - run config script" >> ${logFile}
 /home/admin/config.scripts/blesk.web.sh https-on >> ${logFile} 2>&1
 
 # deinstall when not explizit 'on' when bleskapi is installed by fatpack
 # https://github.com/raspiblesk/raspiblesk/issues/4171#issuecomment-1728302628
 if [ "${bleskapi}" != "on" ] && [ ${blitzApiInstalled} -gt 0 ]; then
-  echo "blitz_api directory exists & bleskapi is not 'on' - deactivating blitz-api" >> ${logFile}
+  echo "blesk_api directory exists & bleskapi is not 'on' - deactivating blesk-api" >> ${logFile}
   /home/admin/config.scripts/blesk.web.api.sh off >> ${logFile} 2>&1
   /home/admin/config.scripts/blesk.web.ui.sh off >> ${logFile} 2>&1
 fi
 # WebAPI & UI (in case image was not fatpack - but webapi was switched on)
 if [ "${bleskapi}" == "on" ] && [ $blitzApiInstalled -eq 0 ]; then
-    echo "Provisioning BlitzAPI - run config script" >> ${logFile}
-    /home/admin/_cache.sh set message "Setup BlitzAPI (takes time)"
+    echo "Provisioning BleskAPI - run config script" >> ${logFile}
+    /home/admin/_cache.sh set message "Setup BleskAPI (takes time)"
     /home/admin/config.scripts/blesk.web.api.sh on DEFAULT >> ${logFile} 2>&1
     /home/admin/config.scripts/blesk.web.ui.sh on DEFAULT >> ${logFile} 2>&1
 else
-    echo "Provisioning BlitzAPI - keep default" >> ${logFile}
+    echo "Provisioning BleskAPI - keep default" >> ${logFile}
 fi
 
 echo "### RUNNING PROVISIONING SERVICES ###" >> ${logFile}
+
+# Reset Glcoin conf to a clean known-good state BEFORE any module that
+# may add entries (tor.network.sh, bonus.electrs.sh, bonus.fulcrum.sh,
+# blesk.i2pd.sh). Reinstalls on top of an existing HDD inherit junk left
+# in the live conf (duplicate dnsseed, stale onlynet=onion / onlynet=i2p
+# / proxy from prior runs). We rewrite from the template and only carry
+# over the secret + RAM tuning that downstream provisioning depends on,
+# so the daemon reaches a runnable baseline every install.
+echo "*** Reset Glcoin Conf from template" >> ${logFile}
+glcoinConf="/mnt/hdd/app-data/glcoin/glcoin.conf"
+preservedRpcPw=""
+preservedDbcache=""
+if [ -f "${glcoinConf}" ]; then
+  preservedRpcPw=$(grep -m1 '^rpcpassword=' "${glcoinConf}" | cut -d= -f2-)
+  preservedDbcache=$(grep -m1 '^dbcache=' "${glcoinConf}" | cut -d= -f2-)
+  cp "${glcoinConf}" "${glcoinConf}.bak.$(date +%s)"
+fi
+install -o glcoin -g glcoin -m 0640 /home/admin/assets/glcoin.conf "${glcoinConf}"
+if [ -n "${preservedRpcPw}" ]; then
+  sudo -u glcoin sed -i "s|^rpcpassword=.*|rpcpassword=${preservedRpcPw}|" "${glcoinConf}"
+fi
+if [ -n "${preservedDbcache}" ]; then
+  sudo -u glcoin sed -i "s|^dbcache=.*|dbcache=${preservedDbcache}|" "${glcoinConf}"
+fi
+/home/admin/config.scripts/blesk.data.sh link
 
 # GLCOIN INTERIMS UPDATE
 if [ ${#glcoinInterimsUpdate} -gt 0 ]; then
@@ -414,12 +436,12 @@ else
 fi
 
 #GLC RPC EXPLORER
-if [ "${GlcoinRPCexplorer}" = "on" ]; then
-  echo "Provisioning GlcoinRPCexplorer - run config script" >> ${logFile}
-  /home/admin/_cache.sh set message "Setup GlcoinRPCexplorer (takes time)"
+if [ "${GLCRPCexplorer}" = "on" ]; then
+  echo "Provisioning GLCRPCexplorer - run config script" >> ${logFile}
+  /home/admin/_cache.sh set message "Setup GLCRPCexplorer (takes time)"
   sudo -u admin /home/admin/config.scripts/bonus.glc-rpc-explorer.sh on >> ${logFile} 2>&1
 else
-  echo "Provisioning GlcoinRPCexplorer - keep default" >> ${logFile}
+  echo "Provisioning GLCRPCexplorer - keep default" >> ${logFile}
 fi
 
 #ELECTRS
@@ -438,17 +460,6 @@ if [ "${fulcrum}" = "on" ]; then
   sudo -u admin /home/admin/config.scripts/bonus.fulcrum.sh on >> ${logFile} 2>&1
 else
   echo "Provisioning Fulcrum - keep default" >> ${logFile}
-fi
-
-# BTCPAYSERVER
-if [ "${GLCPayServer}" = "on" ]; then
-
-  echo "Provisioning BTCPAYSERVER on TOR - running setup" >> ${logFile}
-  /home/admin/_cache.sh set message "Setup BTCPay (takes time)"
-  sudo -u admin /home/admin/config.scripts/bonus.btcpayserver.sh on >> ${logFile} 2>&1
-
-else
-  echo "Provisioning GLCPayServer - keep default" >> ${logFile}
 fi
 
 # CUSTOM PORT
@@ -593,8 +604,15 @@ fi
 # mempool space
 if [ "${mempoolExplorer}" = "on" ]; then
   echo "Provisioning MempoolSpace - run config script" >> ${logFile}
-  /home/admin/_cache.sh set message "Setup Mempool Space"
-  sudo -u admin /home/admin/config.scripts/bonus.mempool.sh on >> ${logFile} 2>&1
+  /home/admin/_cache.sh set message "Setup Mempool Space (can take 30–90 min)"
+  if sudo -u admin /home/admin/config.scripts/bonus.mempool.sh on >> ${logFile} 2>&1; then
+    echo "OK MEMPOOL" >> ${logFile}
+  else
+    echo "# WARNING: Mempool install failed (exit $?) — continuing without it" >> ${logFile}
+    echo "# Node core functionality is unaffected." >> ${logFile}
+    echo "# Re-run later: sudo /home/admin/config.scripts/bonus.mempool.sh on" >> ${logFile}
+    /home/admin/_cache.sh set message "Mempool failed — core node OK, continuing"
+  fi
 else
   echo "Provisioning Mempool Explorer - keep default" >> ${logFile}
 fi
@@ -788,20 +806,13 @@ else
 fi
 echo "" >> ${logFile}
 
-# repair Glcoin conf if needed
-echo "*** Repair Glcoin Conf (if needed)" >> ${logFile}
-confExists="$(ls /mnt/hdd/app-data/${network} | grep -c "${network}.conf")"
-if [ ${confExists} -eq 0 ]; then
-  echo "Doing init of ${network}.conf" >> ${logFile}
-  cp /home/admin/assets/glcoin.conf /mnt/hdd/app-data/glcoin/glcoin.conf
-  chown glcoin:glcoin /mnt/hdd/app-data/glcoin/glcoin.conf
-  /home/admin/config.scripts/blesk.data.sh link
-fi
-
-# I2P
-echo "Start i2pd" >> ${logFile}
+# I2P daemon: install apt package only — activation is opt-in via
+# `blesk.i2pd.sh on`. Forcing it during provision used to drop
+# `onlynet=i2p` into glcoin.conf, which made the node unreachable on
+# a clearnet box.
+echo "Install i2pd (not activating)" >> ${logFile}
 /home/admin/_cache.sh set message "i2pd setup"
-/home/admin/config.scripts/blesk.i2pd.sh on >> ${logFile}
+/home/admin/config.scripts/blesk.i2pd.sh install >> ${logFile}
 
 # clean up raspiblesk config from old settings
 sed -i '/^autoPilot=/d' /mnt/hdd/app-data/raspiblesk.conf
@@ -852,7 +863,12 @@ if [ "${lightning}" == "lnd" ];then
   if [ "${passwordFlagExists}" == "1" ]; then
     echo "Found /mnt/hdd/passwordc.flag .. changing password" >> ${logFile}
     oldPasswordC=$(cat /mnt/hdd/passwordc.flag)
-    /home/admin/config.scripts/lnd.initwallet.py change-password mainnet "${oldPasswordC}" "${passwordC}" >> ${logFile}
+    # Pipe both passwords as JSON via stdin so they don't appear in
+    # /proc/PID/cmdline. Previous form leaked old + new wallet passwords.
+    _stdin_json=$(oldPwC="${oldPasswordC}" newPwC="${passwordC}" \
+      python3 -c 'import json,os;print(json.dumps({"wallet_password":os.environ["oldPwC"],"wallet_password_new":os.environ["newPwC"]}))')
+    printf '%s' "${_stdin_json}" | /home/admin/config.scripts/lnd.initwallet.py change-password mainnet --stdin >> ${logFile}
+    unset _stdin_json oldPasswordC
     shred -u /mnt/hdd/passwordc.flag
   else
     echo "No /mnt/hdd/passwordc.flag" >> ${logFile}

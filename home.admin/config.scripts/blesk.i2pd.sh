@@ -151,13 +151,19 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   fi
 
   echo "# i2pd config"
-  sudo sed -i '/^debug=tor$/d' /mnt/hdd/app-data/glcoin/glcoin.conf
-  /home/admin/config.scripts/blesk.conf.sh set debug tor /mnt/hdd/app-data/glcoin/glcoin.conf noquotes
-  confAdd debug i2p /mnt/hdd/app-data/glcoin/glcoin.conf
-  /home/admin/config.scripts/blesk.conf.sh set i2psam 127.0.0.1:7656 /mnt/hdd/app-data/glcoin/glcoin.conf noquotes
-  /home/admin/config.scripts/blesk.conf.sh set i2pacceptincoming 1 /mnt/hdd/app-data/glcoin/glcoin.conf noquotes
-  /home/admin/config.scripts/blesk.conf.sh set onlynet onion /mnt/hdd/app-data/glcoin/glcoin.conf noquotes
-  confAdd onlynet i2p /mnt/hdd/app-data/glcoin/glcoin.conf
+  glcoinConf="/mnt/hdd/app-data/glcoin/glcoin.conf"
+  # Drop any prior i2p/onlynet/debug fragments first so re-runs do not stack.
+  sudo -u glcoin sed -i '/^debug=i2p$/d' "${glcoinConf}"
+  sudo -u glcoin sed -i '/^onlynet=i2p$/d' "${glcoinConf}"
+  sudo -u glcoin sed -i '/^i2psam=/d' "${glcoinConf}"
+  sudo -u glcoin sed -i '/^i2pacceptincoming=/d' "${glcoinConf}"
+  # Append clean i2p config. We keep whatever onlynet=onion/ipv4/ipv6 the
+  # user already had — turning i2p on adds i2p to the allowed set, it does
+  # not force onion-only. (Forcing onion was a longstanding bug here.)
+  echo "debug=i2p"                       | sudo -u glcoin tee -a "${glcoinConf}" >/dev/null
+  echo "onlynet=i2p"                     | sudo -u glcoin tee -a "${glcoinConf}" >/dev/null
+  echo "i2psam=127.0.0.1:7656"           | sudo -u glcoin tee -a "${glcoinConf}" >/dev/null
+  echo "i2pacceptincoming=1"             | sudo -u glcoin tee -a "${glcoinConf}" >/dev/null
   PASSWORD_B=$(sudo cat /mnt/hdd/app-data/glcoin/glcoin.conf | grep rpcpassword | cut -c 13-)
   cat <<EOF | sudo tee /etc/i2pd/i2pd.conf
 # i2pd settings for the RaspiBlesk
@@ -227,13 +233,21 @@ if [ "$1" = "addseednodes" ]; then
   if ! sudo -u glcoin glcoin-cli -netinfo 4 | grep i2p; then
     /home/admin/config.scripts/blesk.i2pd.sh on
   fi
-  echo "Add 21 randomly selected I2P seed nodes from: https://github.com/glcoin/glcoin/blob/master/contrib/seeds/nodes_main.txt"
+  echo "Adding I2P seed nodes from local fallback list..."
   echo "Monitor in a new terminal with:"
   echo "watch sudo -u glcoin glcoin-cli -netinfo 4"
   echo "This will take some time ..."
 
-  # Fetch and filter the list of seed nodes
-  i2pSeedNodeList=$(curl -sS https://raw.githubusercontent.com/glcoin/glcoin/master/contrib/seeds/nodes_main.txt | grep .b32.i2p:0)
+  # Use local fallback list, skip if not present
+  if [ -f /home/admin/assets/fallback.glcoin.nodes ]; then
+    i2pSeedNodeList=$(grep .b32.i2p:0 /home/admin/assets/fallback.glcoin.nodes 2>/dev/null || true)
+  else
+    i2pSeedNodeList=""
+  fi
+  if [ -z "${i2pSeedNodeList}" ]; then
+    echo "# No I2P seed nodes found in local fallback list — skipping"
+    exit 0
+  fi
 
   # Shuffle the list and pick the first 21 nodes
   selectedNodes=$(echo "$i2pSeedNodeList" | shuf | head -n 21)
@@ -262,14 +276,12 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   echo "# Uninstall with apt"
   sudo apt remove -y i2pd
 
-  echo "# Remove settings from glcoind"
-  sudo sed -i '/^debug=tor$/d' /mnt/hdd/app-data/glcoin/glcoin.conf
-  /home/admin/config.scripts/blesk.conf.sh delete debug /mnt/hdd/app-data/glcoin/glcoin.conf noquotes
-  /home/admin/config.scripts/blesk.conf.sh set debug tor /mnt/hdd/app-data/glcoin/glcoin.conf noquotes
-  /home/admin/config.scripts/blesk.conf.sh delete i2psam /mnt/hdd/app-data/glcoin/glcoin.conf noquotes
-  /home/admin/config.scripts/blesk.conf.sh delete i2pacceptincoming /mnt/hdd/app-data/glcoin/glcoin.conf noquotes
-  /home/admin/config.scripts/blesk.conf.sh delete onlynet /mnt/hdd/app-data/glcoin/glcoin.conf noquotes
-  /home/admin/config.scripts/blesk.conf.sh set onlynet onion /mnt/hdd/app-data/glcoin/glcoin.conf noquotes
+  echo "# Remove i2p settings from glcoind (leave tor/clearnet alone)"
+  glcoinConf="/mnt/hdd/app-data/glcoin/glcoin.conf"
+  sudo -u glcoin sed -i '/^debug=i2p$/d' "${glcoinConf}"
+  sudo -u glcoin sed -i '/^onlynet=i2p$/d' "${glcoinConf}"
+  sudo -u glcoin sed -i '/^i2psam=/d' "${glcoinConf}"
+  sudo -u glcoin sed -i '/^i2pacceptincoming=/d' "${glcoinConf}"
 
   sudo rm /etc/systemd/system/i2pd.service
 

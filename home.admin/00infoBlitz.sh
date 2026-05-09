@@ -29,7 +29,7 @@ source <(/home/admin/_cache.sh get \
   runBehindTor \
   ups \
   ElectRS \
-  BTCRPCexplorer \
+  GLCRPCexplorer \
   joinmarket \
   bleskapi \
 )
@@ -110,44 +110,44 @@ fi
 # GLCOIN INFO
 
 # get block data - use meta on cache to call dynamic variable name
-source <(/home/admin/_cache.sh meta btc_${chain}net_blocks_headers)
-btc_blocks_headers="${value}"
-source <(/home/admin/_cache.sh meta btc_${chain}net_blocks_verified)
-btc_blocks_verified="${value}"
-source <(/home/admin/_cache.sh meta btc_${chain}net_blocks_behind)
-btc_blocks_behind="${value}"
-source <(/home/admin/_cache.sh meta btc_${chain}net_sync_percentage)
+source <(/home/admin/_cache.sh meta glc_${chain}net_blocks_headers)
+glc_blocks_headers="${value}"
+source <(/home/admin/_cache.sh meta glc_${chain}net_blocks_verified)
+glc_blocks_verified="${value}"
+source <(/home/admin/_cache.sh meta glc_${chain}net_blocks_behind)
+glc_blocks_behind="${value}"
+source <(/home/admin/_cache.sh meta glc_${chain}net_sync_percentage)
 if [ "${value}" != "" ]; then
   sync_percentage="${value}%"
 fi
 
 # construct blockinfo string
-if [ "${btc_blocks_behind}" == "" ]; then 
+if [ "${glc_blocks_behind}" == "" ]; then 
   sync="WAIT"
   sync_color="${color_yellow}"
-elif [ ${btc_blocks_behind} -lt 2 ]; then 
+elif [ ${glc_blocks_behind} -lt 2 ]; then 
   sync="OK"
   sync_color="${color_green}"
 else
   sync=""
   sync_color="${color_red}"
 fi
-blockInfo="Blocks ${btc_blocks_verified}/${btc_blocks_headers} ${color_gray}Sync ${sync_color}${sync}"
-if [ "${btc_blocks_headers}" == "" ]; then
+blockInfo="Blocks ${glc_blocks_verified}/${glc_blocks_headers} ${color_gray}Sync ${sync_color}${sync}"
+if [ "${glc_blocks_headers}" == "" ]; then
   blockInfo="${color_red}Not Started | Not Ready Yet | No Data${color_gray}"
 fi
 
 # get address data - use meta on cache to call dynamic variable name
-source <(/home/admin/_cache.sh meta btc_${chain}net_version)
+source <(/home/admin/_cache.sh meta glc_${chain}net_version)
 networkVersion="${value} "
-source <(/home/admin/_cache.sh meta btc_${chain}net_peers)
-btc_peers=${value}
-if [ "${btc_peers}" == "" ]; then
+source <(/home/admin/_cache.sh meta glc_${chain}net_peers)
+glc_peers=${value}
+if [ "${glc_peers}" == "" ]; then
   networkConnectionsInfo=""
-elif [ ${btc_peers} -gt 0 ]; then
-  networkConnectionsInfo="${color_green}${btc_peers} ${color_gray}peers"
+elif [ ${glc_peers} -gt 0 ]; then
+  networkConnectionsInfo="${color_green}${glc_peers} ${color_gray}peers"
 else
-  networkConnectionsInfo="${color_red}${btc_peers} ${color_gray}peers"
+  networkConnectionsInfo="${color_red}${glc_peers} ${color_gray}peers"
 fi
 
 #######################

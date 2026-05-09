@@ -69,6 +69,11 @@ apt_install() {
   fi
 }
 
+# Write a single OK|name or FAIL|name line to the shared tracking log (if set by build_sdcard.sh)
+_track() {
+  [ -n "${BLESK_BUILD_LOG}" ] && echo "${1}|${2}" >> "${BLESK_BUILD_LOG}"
+}
+
 echo "# getting default user/repo from build_sdcard.sh"
 sudo cp /home/admin/raspiblesk/build_sdcard.sh /home/admin/build_sdcard.sh
 sudo chmod +x /home/admin/build_sdcard.sh 2>/dev/null
@@ -92,7 +97,12 @@ if [ "${defaultWEBUIuser}" == "" ] || [ "${defaultWEBUIrepo}" == "" ]; then
 fi
 
 echo "* Adding nodeJS Framework ..."
-/home/admin/config.scripts/bonus.nodejs.sh on || exit 1
+if /home/admin/config.scripts/bonus.nodejs.sh on; then
+  _track OK "NodeJS"
+else
+  _track FAIL "NodeJS"
+  exit 1
+fi
 
 echo "* Optional Packages (may be needed for extended features)"
 # fbi/unclutter/xterm are GUI packages - non-fatal if missing on headless builds
@@ -101,11 +111,21 @@ sudo DEBIAN_FRONTEND=noninteractive apt install -y fbi unclutter xterm python3-p
 
 echo "#############################################################"
 echo "* Adding LND ..."
-/home/admin/config.scripts/lnd.install.sh install || exit 1
+if /home/admin/config.scripts/lnd.install.sh install; then
+  _track OK "LND"
+else
+  _track FAIL "LND"
+  exit 1
+fi
 
 echo "#############################################################"
 echo "* Adding Core Lightning ..."
-/home/admin/config.scripts/cl.install.sh install || exit 1
+if /home/admin/config.scripts/cl.install.sh install; then
+  _track OK "Core Lightning (CLN)"
+else
+  _track FAIL "Core Lightning (CLN)"
+  exit 1
+fi
 
 # *** AUTO UPDATE FALLBACK NODE LIST FROM INTERNET (only in fatpack)
 echo "*** FALLBACK NODE LIST ***"
@@ -116,12 +136,18 @@ sudo -u admin curl https://raw.githubusercontent.com/glcoin/glcoin/master/contri
 
 echo "#############################################################"
 echo "* Adding Raspiblitz API ..."
-sudo /home/admin/config.scripts/blesk.web.api.sh on "${defaultAPIuser}" "${defaultAPIrepo}" "blitz-${branch}" || exit 1
+if sudo /home/admin/config.scripts/blesk.web.api.sh on "${defaultAPIuser}" "${defaultAPIrepo}" "blitz-${branch}"; then
+  _track OK "Blitz API"
+else
+  _track FAIL "Blitz API"
+  exit 1
+fi
 
 echo "#############################################################"
 echo "* Adding Raspiblitz WebUI ..."
 # raspiblesk-web repo may not exist yet — non-fatal, node works without WebUI
 if sudo /home/admin/config.scripts/blesk.web.ui.sh on "${defaultWEBUIuser}" "${defaultWEBUIrepo}" "release/${branch}"; then
+  _track OK "Blitz WebUI"
   # set build code as new www default
   sudo rm -rf /home/admin/assets/nginx/www_public
   sudo mkdir -p /home/admin/assets/nginx/www_public
@@ -129,6 +155,7 @@ if sudo /home/admin/config.scripts/blesk.web.ui.sh on "${defaultWEBUIuser}" "${d
   sudo chown -R admin:admin /home/admin/assets/nginx/www_public
   sudo rm -r /home/bleskapi/blitz_web/build/*
 else
+  _track FAIL "Blitz WebUI"
   echo "# WARNING: WebUI install skipped — raspiblesk-web repo not available"
   echo "# Node will function normally via SSH/CLI"
 fi
@@ -140,9 +167,11 @@ _fatpack_bonus() {
   echo "* Adding Code&Compile for WEBUI-APP: ${name}"
   if /home/admin/config.scripts/${script} install; then
     echo "# OK: ${name} installed"
+    _track OK "${name}"
   else
     echo "# WARNING: ${name} install failed (exit $?) - continuing without it"
     echo "# Node core functionality is unaffected. ${name} can be installed later."
+    _track FAIL "${name}"
   fi
 }
 

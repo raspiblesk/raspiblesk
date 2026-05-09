@@ -121,8 +121,14 @@ if [ "$1" = "target" ]; then
   # make sure /mnt/hdd/app-storage/glcoin exists
   sudo mkdir -p /mnt/hdd/app-storage/glcoin 2>/dev/null
 
-  # allow all users write to it
-  sudo chmod 777 /mnt/hdd/app-storage/glcoin
+  # Allow rsync from a non-root SSH session as user 'glcoin' to write the
+  # transferred chain data, while keeping the directory unreadable to other
+  # local users. The previous chmod 777 made the entire chain dir world-
+  # readable AND world-writable — any local user could replace block files.
+  # The rsync target in the printed instructions is glcoin@${ip}:/mnt/hdd/...,
+  # so the glcoin user is the right owner.
+  sudo chown -R glcoin:glcoin /mnt/hdd/app-storage/glcoin
+  sudo chmod 750 /mnt/hdd/app-storage/glcoin
 
   echo 
   clear

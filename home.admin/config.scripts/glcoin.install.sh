@@ -6,7 +6,6 @@
 #   2. Tarball at /tmp/glcoin-0.1.10-src.tar.gz  (copy here before running)
 #   3. Already-extracted dir at /tmp/glcoin-src or /home/admin/glcoin-src
 #   4. GitHub (once the repo is public)
-GLCOIN_TARBALL_URL="https://github.com/glcoin/glcoin/releases/download/v0.1.10/glcoin-0.1.10-src.tar.gz"
 GLCOIN_VERSION="0.1.10"
 
 # command info
@@ -122,7 +121,7 @@ if [ "$1" = "install" ]; then
     echo "# Extracting source tarball: ${TARBALL_PATH}"
     rm -rf "${SRC_DIR}"
     mkdir -p "${SRC_DIR}"
-    tar -xzf "${TARBALL_PATH}" -C "${SRC_DIR}" --strip-components=2 || exit 1
+    tar -xzf "${TARBALL_PATH}" -C "${SRC_DIR}" --strip-components=1 || exit 1
     LOCAL_SOURCE="${SRC_DIR}"
   fi
 
@@ -133,10 +132,10 @@ if [ "$1" = "install" ]; then
   elif [ -d "${SRC_DIR}" ]; then
     echo "# Using existing source in ${SRC_DIR}"
   else
-    echo "# No local source found — downloading tarball from ${GLCOIN_TARBALL_URL} ..."
-    wget -O /tmp/glcoin-src.tar.gz "${GLCOIN_TARBALL_URL}" || exit 1
-    mkdir -p "${SRC_DIR}"
-    tar -xzf /tmp/glcoin-src.tar.gz -C "${SRC_DIR}" --strip-components=2 || exit 1
+    echo "# FAIL — No local source found."
+    echo "# Provide glcoin-${GLCOIN_VERSION}-src.tar.gz in /home/admin/assets/ or /tmp/"
+    echo "# or pass an explicit path: glcoin.install.sh install /path/to/source"
+    exit 1
   fi
 
   # build
@@ -251,13 +250,6 @@ ${glcoinprefix}.zmqpubrawtx=tcp://127.0.0.1:${glcoinZmqTx}" |
         sudo tee -a /mnt/hdd/app-data/glcoin/glcoin.conf
     fi
   fi
-  if [ ${glcoinprefix} = main ] || [ -z "${glcoinprefix}" ]; then
-    if [ $(grep -c "main.addnode" /mnt/hdd/app-data/glcoin/glcoin.conf) -eq 0 ]; then
-      echo "main.addnode=glcoin.org:1618" |
-        sudo tee -a /mnt/hdd/app-data/glcoin/glcoin.conf
-    fi
-  fi
-
   removeParallelService
 
   chainparameter=""
@@ -357,8 +349,14 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   echo "# Linking /glcoin"
   unlink /mnt/hdd/glcoin 2>/dev/null
   ln -s ${storageMountedPath}/app-storage/glcoin /mnt/hdd/glcoin
+  # Ownership/permissions for chain data: glcoin:glcoin, dirs 0750, files 0640.
+  # Previous `chmod -R 777` made the entire chain data tree world-readable
+  # AND world-writable — any local user could read wallet.dat (when wallet
+  # support enabled), corrupt block files to force a resync, or replace
+  # chainstate to fool the node. Lock down to glcoin user + group only.
   chown -R glcoin:glcoin /mnt/hdd/glcoin
-  chmod -R 777 /mnt/hdd/glcoin
+  find /mnt/hdd/glcoin -type d -exec chmod 0750 {} +
+  find /mnt/hdd/glcoin -type f -exec chmod 0640 {} +
 
   installParallelService
   /home/admin/config.scripts/blesk.conf.sh set ${CHAIN} "on"

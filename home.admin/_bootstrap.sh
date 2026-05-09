@@ -56,7 +56,8 @@ echo "## prepare raspiblesk temp" >> $logFile
 
 # make sure /var/cache/raspiblesk/temp exists
 mkdir -p /var/cache/raspiblesk/temp
-chmod 777 /var/cache/raspiblesk/temp
+chown admin:admin /var/cache/raspiblesk/temp
+chmod 700 /var/cache/raspiblesk/temp
 
 ################################
 # INIT raspiblesk.info
@@ -72,9 +73,9 @@ setupStep=0
 fsexpanded=0
 bleskapi='off'
 
-btc_mainnet_sync_initial_done=0
-btc_testnet_sync_initial_done=0
-btc_signet_sync_initial_done=0
+glc_mainnet_sync_initial_done=0
+glc_testnet_sync_initial_done=0
+glc_signet_sync_initial_done=0
 
 ln_lnd_mainnet_sync_initial_done=0
 ln_lnd_testnet_sync_initial_done=0
@@ -105,9 +106,9 @@ echo "bleskapi=${bleskapi}" >> $infoFile
 echo "displayClass=${displayClass}" >> $infoFile
 echo "displayType=${displayType}" >> $infoFile
 echo "fsexpanded=${fsexpanded}" >> $infoFile
-echo "btc_mainnet_sync_initial_done=${btc_mainnet_sync_initial_done}" >> $infoFile
-echo "btc_testnet_sync_initial_done=${btc_testnet_sync_initial_done}" >> $infoFile
-echo "btc_signet_sync_initial_done=${btc_signet_sync_initial_done}" >> $infoFile
+echo "glc_mainnet_sync_initial_done=${glc_mainnet_sync_initial_done}" >> $infoFile
+echo "glc_testnet_sync_initial_done=${glc_testnet_sync_initial_done}" >> $infoFile
+echo "glc_signet_sync_initial_done=${glc_signet_sync_initial_done}" >> $infoFile
 echo "ln_lnd_mainnet_sync_initial_done=${ln_lnd_mainnet_sync_initial_done}" >> $infoFile
 echo "ln_lnd_testnet_sync_initial_done=${ln_lnd_testnet_sync_initial_done}" >> $infoFile
 echo "ln_lnd_signet_sync_initial_done=${ln_lnd_signet_sync_initial_done}" >> $infoFile
@@ -1310,13 +1311,13 @@ if [ "${scenario}" != "ready" ] ; then
 
   # wait until syncProgress is available (neeed for final dialogs)
   /home/admin/_cache.sh set state "waitsync"
-  btc_default_ready="0"
+  glc_default_ready="0"
   loop_counter=0
-  while [ "${btc_default_ready}" != "1" ]
+  while [ "${glc_default_ready}" != "1" ]
   do
     loop_counter=$((loop_counter + 1))
-    source <(/home/admin/_cache.sh get btc_default_ready)
-    echo "# waitsync loop ${loop_counter} ... btc_default_ready(${btc_default_ready})" >> $logFile
+    source <(/home/admin/_cache.sh get glc_default_ready)
+    echo "# waitsync loop ${loop_counter} ... glc_default_ready(${glc_default_ready})" >> $logFile
     sleep 2
     if [ ${loop_counter} -eq 30 ]; then
       echo "LOOP TAKES TOO LONG: Try deleting settings.json & force restart" >> $logFile
@@ -1328,7 +1329,7 @@ if [ "${scenario}" != "ready" ] ; then
   # one time add info on blockchain sync to chache
   source <(/home/admin/_cache.sh get chain)
   source <(/home/admin/config.scripts/glcoin.monitor.sh ${chain}net info)
-  /home/admin/_cache.sh set btc_default_blocks_data_kb "${btc_blocks_data_kb}"
+  /home/admin/_cache.sh set glc_default_blocks_data_kb "${glc_blocks_data_kb}"
 
   ###################################################
   # HANDOVER TO FINAL SETUP CONTROLLER
@@ -1375,8 +1376,8 @@ else
   if [ $(grep -c "shrinkdebugfile=" < /mnt/hdd/app-data/glcoin/glcoin.conf) -eq 0 ];then
     echo "shrinkdebugfile=1" | tee -a /mnt/hdd/app-data/glcoin/glcoin.conf
   fi
-  # /mnt/hdd/app-data/lnd/logs/glcoin/mainnet/lnd.log
-  rm /mnt/hdd/app-data/lnd/logs/${network}/${chain}net/lnd.log 2>/dev/null
+  # LND writes to logs/bitcoin/glcoin/lnd.log (network dir = "glcoin")
+  rm /mnt/hdd/app-data/lnd/logs/bitcoin/glcoin/lnd.log 2>/dev/null
   # https://github.com/rootzoll/raspiblesk/issues/1700
   rm /mnt/storage/app-storage/electrs/db/mainnet/LOCK 2>/dev/null
 
@@ -1489,10 +1490,10 @@ systemctl enable ${network}d
 /home/admin/_cache.sh focus internet_localip -1
 
 # if node is stil in inital blockchain download
-source <(/home/admin/_cache.sh get btc_default_sync_initialblockdownload)
-if [ "${btc_default_sync_initialblockdownload}" = "1" ]; then
-  echo "Node is still in IBD .. refresh btc_default_sync_progress faster" >> $logFile
-  /home/admin/_cache.sh focus btc_default_sync_progress 0
+source <(/home/admin/_cache.sh get glc_default_sync_initialblockdownload)
+if [ "${glc_default_sync_initialblockdownload}" = "1" ]; then
+  echo "Node is still in IBD .. refresh glc_default_sync_progress faster" >> $logFile
+  /home/admin/_cache.sh focus glc_default_sync_progress 0
 fi
 
 # backup wifi settings

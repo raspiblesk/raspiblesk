@@ -217,6 +217,7 @@ if [ "${lightning}" == "lnd" ]; then
 
   # copy lnd service
   cp /home/admin/assets/lnd.service /etc/systemd/system/lnd.service >> ${logFile}
+  systemctl daemon-reload >> ${logFile}
 
   # set permissions
   echo "# /mnt/hdd/app-data/lnd" >> ${logFile}
@@ -239,10 +240,27 @@ if [ "${lightning}" == "lnd" ]; then
     if [ ${lndRunning} -eq 0 ]; then
       date +%s >> ${logFile}
       echo "LND not ready yet ... waiting another 60 seconds (${loopcount})." >> ${logFile}
+      # Every 30s dump diagnostics so a later failure is debuggable from the log
+      # alone (no SSH session needed). v0145 had a Pi-side crash where the log
+      # showed 100 'not ready' lines and zero context to identify the cause.
+      if [ $(( loopcount % 3 )) -eq 0 ]; then
+        echo "DEBUG lnd unit state:" >> ${logFile}
+        systemctl is-active lnd 2>&1 | sed 's/^/  /' >> ${logFile}
+        systemctl is-failed lnd 2>&1 | sed 's/^/  /' >> ${logFile}
+        echo "DEBUG lnd journalctl tail:" >> ${logFile}
+        journalctl -u lnd --no-pager -n 25 2>&1 | sed 's/^/  /' >> ${logFile}
+        echo "DEBUG glcoind reachable:" >> ${logFile}
+        sudo -u glcoin /usr/local/bin/glcoin-cli -datadir=/home/glcoin/.glcoin -rpcport=1617 \
+          getblockchaininfo 2>&1 | head -3 | sed 's/^/  /' >> ${logFile}
+      fi
       sleep 10
     fi
     loopcount=$(($loopcount +1))
     if [ ${loopcount} -gt 100 ]; then
+      echo "DEBUG final - full journalctl:" >> ${logFile}
+      journalctl -u lnd --no-pager -n 100 2>&1 >> ${logFile}
+      echo "DEBUG lnd.conf:" >> ${logFile}
+      sudo cat /mnt/hdd/app-data/lnd/lnd.conf 2>&1 | sed 's/rpcpass=.*/rpcpass=<redacted>/' >> ${logFile}
       /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "lnd-start-fail" "lnd service not getting to running status" "sudo systemctl status lnd.service | grep -c running --> ${lndRunning}" ${logFile}
       exit 8
     fi
@@ -269,9 +287,15 @@ if [ "${lightning}" == "lnd" ]; then
 
     echo "WALLET --> SEED" >> ${logFile}
     /home/admin/_cache.sh set message "LND Wallet (SEED)"
-    source <(/home/admin/config.scripts/lnd.initwallet.py seed mainnet "${passwordC}" "${seedWords}" "${seedPassword}")
+    # Pipe the wallet password, seed words, and seed password as JSON via stdin
+    # so they don't appear in /proc/PID/cmdline. Build the JSON in python to
+    # safely escape any quote / backslash in the secrets.
+    _stdin_json=$(passwordC="${passwordC}" seedWords="${seedWords}" seedPassword="${seedPassword}" \
+      python3 -c 'import json,os;print(json.dumps({"wallet_password":os.environ["passwordC"],"seed_words":os.environ["seedWords"],"seed_password":os.environ["seedPassword"]}))')
+    source <(printf '%s' "${_stdin_json}" | /home/admin/config.scripts/lnd.initwallet.py seed mainnet --stdin)
+    unset _stdin_json
     if [ "${err}" != "" ]; then
-      /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "lnd-wallet-seed" "lnd.initwallet.py seed returned error" "/home/admin/config.scripts/lnd.initwallet.py seed mainnet ... --> ${err} + ${errMore}" ${logFile}
+      /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "lnd-wallet-seed" "lnd.initwallet.py seed returned error" "/home/admin/config.scripts/lnd.initwallet.py seed mainnet --stdin --> ${err} + ${errMore}" ${logFile}
       exit 12
     fi
 
@@ -285,7 +309,12 @@ if [ "${lightning}" == "lnd" ]; then
 
     echo "# WALLET --> NEW" >> ${logFile}
     /home/admin/_cache.sh set message "LND Wallet (NEW)"
-    source <(/home/admin/config.scripts/lnd.initwallet.py new mainnet "${passwordC}")
+    # Pipe the wallet password as JSON via stdin so it doesn't appear in
+    # /proc/PID/cmdline of any user listing processes during setup.
+    _stdin_json=$(passwordC="${passwordC}" \
+      python3 -c 'import json,os;print(json.dumps({"wallet_password":os.environ["passwordC"]}))')
+    source <(printf '%s' "${_stdin_json}" | /home/admin/config.scripts/lnd.initwallet.py new mainnet --stdin)
+    unset _stdin_json
     if [ "${err}" != "" ] || [ -z "${seedwords}" ]; then
       /home/admin/config.scripts/blesk.error.sh _provision.setup.sh "lnd-wallet-new" "lnd.initwallet.py new returned error" "/home/admin/config.scripts/lnd.initwallet.py new mainnet ... --> ${err} + ${errMore}" ${logFile}
       /home/admin/_cache.sh set state "error"

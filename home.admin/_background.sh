@@ -113,7 +113,7 @@ do
   # when public IP changes
   #  -  restart glcoind with new IP
   #  -  restart LND with new IP (if autounlock is enabled)
-  #  -  restart GlcoinRPCexplorer if enabled in config or running)
+  #  -  restart GLCRPCexplorer if enabled in config or running)
   ####################################################
 
   # every 15min - not too often
@@ -164,22 +164,22 @@ do
           sleep 3
           systemctl start glcoind
 
-          # if GlcoinRPCexplorer is currently running
+          # if GLCRPCexplorer is currently running
           # it needs to be restarted to pickup the new IP for its "Node Status Page"
           # but this is only needed in IPv6 only mode
           breIsRunning=$(systemctl status glc-rpc-explorer 2>/dev/null | grep -c 'active (running)')
           if [ ${breIsRunning} -eq 1 ]; then
-            echo "GlcoinRPCexplorer is running => restart GlcoinRPCexplorer to pickup up new publicIP for the glcoin node"
+            echo "GLCRPCexplorer is running => restart GLCRPCexplorer to pickup up new publicIP for the glcoin node"
             systemctl stop glc-rpc-explorer
             systemctl start glc-rpc-explorer
           else
-            echo "new publicIP but no GlcoinRPCexplorer restart because not running"
+            echo "new publicIP but no GLCRPCexplorer restart because not running"
           fi
         else
-          echo "IPv6 only is ON, but publicIP_Old OR publicIP_New is equal ::1 => no need to restart glcoind nor GlcoinRPCexplorer"
+          echo "IPv6 only is ON, but publicIP_Old OR publicIP_New is equal ::1 => no need to restart glcoind nor GLCRPCexplorer"
         fi
       else
-        echo "IPv6 only is OFF => no need to restart glcoind nor GlcoinRPCexplorer"
+        echo "IPv6 only is OFF => no need to restart glcoind nor GLCRPCexplorer"
       fi
 
       # only restart LND if auto-unlock is activated
@@ -235,12 +235,12 @@ do
   recheckSync=$(($counter % 60))
   if [ ${recheckSync} -eq 1 ] && [ "${chain}" == "main" ]; then
     source <(/home/admin/config.scripts/glcoin.monitor.sh mainnet network)
-    echo "Blockchain Sync Monitoring: peers=${btc_peers}"
-    if [ "${btc_peers}" == "0" ] && [ "${btc_running}" == "1" ]; then
+    echo "Blockchain Sync Monitoring: peers=${glc_peers}"
+    if [ "${glc_peers}" == "0" ] && [ "${glc_running}" == "1" ]; then
       echo "Blockchain Sync Monitoring: ZERO PEERS DETECTED .. doing out-of-band kickstart"
       /home/admin/config.scripts/glcoin.monitor.sh mainnet peer-kickstart
     fi
-    if [ "${i2pd}" == "on" ] && [ "${btc_peers_i2p}" == "0" ] && [ "${btc_running}" == "1" ]; then
+    if [ "${i2pd}" == "on" ] && [ "${glc_peers_i2p}" == "0" ] && [ "${glc_running}" == "1" ]; then
       echo "Blockchain Sync Monitoring: IP2TOR 0 peers .. doing out-of-band kickstart"
       /home/admin/config.scripts/glcoin.monitor.sh mainnet peer-kickstart i2p
     fi
@@ -319,37 +319,37 @@ do
     do
 
       # gat values from cache
-      source <(/home/admin/_cache.sh meta btc_${CHAIN}net_sync_initial_started)
+      source <(/home/admin/_cache.sh meta glc_${CHAIN}net_sync_initial_started)
       flagBtcStarted="${value}"
-      source <(/home/admin/_cache.sh meta btc_${CHAIN}net_sync_initialblockdownload)
+      source <(/home/admin/_cache.sh meta glc_${CHAIN}net_sync_initialblockdownload)
       flagBtcActive="${value}"
-      source <(/home/admin/_cache.sh meta btc_${CHAIN}net_synced)
+      source <(/home/admin/_cache.sh meta glc_${CHAIN}net_synced)
       flagBtcSynced="${value}"
-      source <(/home/admin/_cache.sh meta btc_${CHAIN}net_online)
+      source <(/home/admin/_cache.sh meta glc_${CHAIN}net_online)
       flagBtcOnline="${value}"
-      source <(/home/admin/_cache.sh meta btc_${CHAIN}net_sync_initial_done)
+      source <(/home/admin/_cache.sh meta glc_${CHAIN}net_sync_initial_done)
       flagBtcDone="${value}"
       #echo "CHAIN(${CHAIN}) flagBtcStarted(${flagBtcStarted}) flagBtcActive(${flagBtcActive}) flagBtcSynced(${flagBtcSynced}) flagBtcOnline(${flagBtcOnline}) flagBtcDone(${flagBtcDone})"
 
       # first check if flags need to be reset (manually delete of blockchain)
       if [ "${flagBtcDone}" == "1" ] && [ "${flagBtcActive}" == "1" ]; then
         flagBtcDone=0
-        /home/admin/config.scripts/blesk.conf.sh set btc_${CHAIN}net_sync_initial_done ${flagBtcDone} /home/admin/raspiblesk.info
-        echo "EVENT --> btc_${CHAIN}net_sync_initial_done changed to ${flagBtcDone}"
+        /home/admin/config.scripts/blesk.conf.sh set glc_${CHAIN}net_sync_initial_done ${flagBtcDone} /home/admin/raspiblesk.info
+        echo "EVENT --> glc_${CHAIN}net_sync_initial_done changed to ${flagBtcDone}"
       fi
 
       # when started flag not set yet - but is now active --> set flag
       if [ "${flagBtcStarted}" != "1" ] && [ "${flagBtcActive}" == "1" ]; then
         flagBtcStarted=1
-        /home/admin/_cache.sh set btc_${CHAIN}net_sync_initial_started ${flagBtcStarted}
-        echo "EVENT --> btc_${CHAIN}net_sync_initial_started changed to ${flagBtcStarted}"
+        /home/admin/_cache.sh set glc_${CHAIN}net_sync_initial_started ${flagBtcStarted}
+        echo "EVENT --> glc_${CHAIN}net_sync_initial_started changed to ${flagBtcStarted}"
       fi
 
       # when started done is set - but not not active anymore --> end of IDB event detected
       if [ "${flagBtcDone}" == "0" ] && [ "${flagBtcOnline}" == "1" ] && [ "${flagBtcSynced}" == "1" ]; then
         flagBtcDone=1
-        /home/admin/config.scripts/blesk.conf.sh set btc_${CHAIN}net_sync_initial_done ${flagBtcDone} /home/admin/raspiblesk.info
-        echo "EVENT --> btc_${CHAIN}net_sync_initial_done changed to ${flagBtcDone}"
+        /home/admin/config.scripts/blesk.conf.sh set glc_${CHAIN}net_sync_initial_done ${flagBtcDone} /home/admin/raspiblesk.info
+        echo "EVENT --> glc_${CHAIN}net_sync_initial_done changed to ${flagBtcDone}"
       fi
 
       # loop thru all second layers
@@ -389,14 +389,14 @@ do
 
             # LND if recovery mode was on - deactivate now
             if [ "${LN}" == "lnd" ] && [ "${flagLNRecoveryMode}" == "1" ]; then
-              /home/admin/_cache.sh set ln_lnd_mainnet_recovery_mode 0
-              /home/admin/config.scripts/lnd.backup.sh mainnet recoverymode off
+              /home/admin/_cache.sh set ln_lnd_${CHAIN}net_recovery_mode 0
+              /home/admin/config.scripts/lnd.backup.sh ${CHAIN}net recoverymode off
             fi
 
             # CLN if recovery mode was on - deactivate now
             if [ "${LN}" == "cl" ] && [ "${flagLNRecoveryMode}" == "1" ]; then
-              /home/admin/_cache.sh set ln_cl_mainnet_recovery_mode 0
-              /home/admin/config.scripts/cl.backup.sh mainnet recoverymode off
+              /home/admin/_cache.sh set ln_cl_${CHAIN}net_recovery_mode 0
+              /home/admin/config.scripts/cl.backup.sh ${CHAIN}net recoverymode off
             fi
 
           fi
@@ -422,8 +422,8 @@ do
     flagExists=$(ls /mnt/hdd/glcoin/blocks/selfsync.flag 2>/dev/null | grep -c "selfsync.flag")
     if [ ${flagExists} -eq 1 ]; then
 
-      source <(/home/admin/_cache.sh get btc_default_sync_initialblockdownload)
-      if [ "${btc_default_sync_initialblockdownload}" == "0" ]; then
+      source <(/home/admin/_cache.sh get glc_default_sync_initialblockdownload)
+      if [ "${glc_default_sync_initialblockdownload}" == "0" ]; then
 
         echo "CHECK FOR END OF IBD --> reduce RAM for next reboot"
 
@@ -448,7 +448,7 @@ do
         fi
 
         # relax sanning on sync progress (after 30 more secs)
-        /home/admin/_cache.sh focus btc_default_sync_progress 10 30
+        /home/admin/_cache.sh focus glc_default_sync_progress 10 30
 
       fi
     fi

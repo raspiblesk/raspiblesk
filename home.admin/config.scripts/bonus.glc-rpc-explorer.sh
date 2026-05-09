@@ -87,7 +87,7 @@ if [ "$1" = "status" ]; then
     fatpack=$(compgen -u | grep -c glcrpcexplorer)
     echo "fatpack=${fatpack}"
 
-  if [ "${GlcoinRPCexplorer}" = "on" ]; then
+  if [ "${GLCRPCexplorer}" = "on" ]; then
     echo "configured=1"
 
     installed=$(sudo ls /etc/systemd/system/glc-rpc-explorer.service 2>/dev/null | grep -c 'glc-rpc-explorer.service')
@@ -171,10 +171,12 @@ if [ "$1" = "prestart" ]; then
     electrumTCPport=50021
   fi
 
-  # Exit only if either service is on but not ready
+  # If an electrum server is ON but not ready, fall back to RPC-only mode
+  # rather than blocking the service from starting.
   if { [ "${ElectRS}" == "on" ] && [ "${isElectrsReady}" == "0" ]; } || { [ "${fulcrum}" == "on" ] && [ "${isFulcrumReady}" == "0" ]; }; then
-    echo "# An Electrum Server is ON but not ready .. might still building index - kick systemd service into fail/wait/restart"
-    exit 1
+    echo "# An Electrum Server is ON but not ready (index still building) -- falling back to RPC-only mode"
+    isElectrsReady=0
+    isFulcrumReady=0
   fi
 
   if [ "${isElectrsReady}" -gt 0 ] || [ "${isFulcrumReady}" -gt 0 ]; then
@@ -369,7 +371,7 @@ StartLimitIntervalSec=0
 User=glcrpcexplorer
 ExecStartPre=/home/admin/config.scripts/bonus.glc-rpc-explorer.sh prestart
 WorkingDirectory=/home/glcrpcexplorer/glc-rpc-explorer
-ExecStart=/usr/bin/npm start
+ExecStart=/usr/bin/node ./bin/www
 Restart=on-failure
 RestartSec=20
 LogLevelMax=4
@@ -393,7 +395,7 @@ EOF
   fi
 
   # setting value in raspi blitz config
-  sudo /home/admin/config.scripts/blesk.conf.sh set GlcoinRPCexplorer "on"
+  sudo /home/admin/config.scripts/blesk.conf.sh set GLCRPCexplorer "on"
 
   echo "# needs to finish creating txindex to be functional"
   echo "# monitor with: sudo tail -n 20 -f /mnt/hdd/app-data/glcoin/debug.log"
@@ -429,7 +431,7 @@ fi
 if [ "$1" = "0" ] || [ "$1" = "off" ]; then
 
   # setting value in raspi blitz config
-  sudo /home/admin/config.scripts/blesk.conf.sh set GlcoinRPCexplorer "off"
+  sudo /home/admin/config.scripts/blesk.conf.sh set GLCRPCexplorer "off"
 
   isInstalled=$(sudo ls /etc/systemd/system/glc-rpc-explorer.service 2>/dev/null | grep -c 'glc-rpc-explorer.service')
   if [ ${isInstalled} -eq 1 ]; then

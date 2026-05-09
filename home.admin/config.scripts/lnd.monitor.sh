@@ -180,9 +180,9 @@ if [ "$2" = "info" ]; then
     scanTimestamp=${nowTimestamp}
   fi
   if [ "${scanTimestamp}" != "" ]; then
-    # calculate LND scan progress by seconds since Genesis block
+    # calculate LND scan progress by seconds since Glcoin Genesis block (2026-04-16 UTC)
     echo "#scanTimestamp=${scanTimestamp}"
-    genesisTimestamp=1230940800
+    genesisTimestamp=1744761600
     totalSeconds=$(echo "${nowTimestamp}-${genesisTimestamp}" | bc)
     scannedSeconds=$(echo "${scanTimestamp}-${genesisTimestamp}" | bc)
     lnd_sync_progress=$(echo "scale=2; $scannedSeconds*100/$totalSeconds" | bc)

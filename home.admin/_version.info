@@ -1,4 +1,4 @@
 # Raspiblesk Version - always [major].[main].[sub] (sub can be a string like '2rc1')
-codeVersion="0.13.0"
+codeVersion="0.15.2"
 codeRelease="stable"
 # keep last line with comment ---> IF YOU HAVE A NEW VERSION BRANCH > EDIT ALSO build_sdcard.sh

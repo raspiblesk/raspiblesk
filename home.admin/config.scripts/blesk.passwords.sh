@@ -361,14 +361,6 @@ elif [ "${abcd}" = "b" ]; then
     sudo systemctl restart electrs.service
   fi
 
-  # GLCPayServer
-  if [ "${GLCPayServer}" == "on" ]; then
-    echo "# changing the RPC password for BTCPAYSERVER"
-    sudo sed -i "s/^glc.rpc.password=.*/glc.rpc.password=${newPassword}/g" /home/btcpay/.nbxplorer/Main/settings.config
-    echo "# restarting GLCPay Server"
-    sudo systemctl restart btcpayserver.service
-  fi
-
   # JoinMarket
   if [ "${joinmarket}" == "on" ]; then
     echo "# changing the RPC password for JOINMARKET"
@@ -527,7 +519,12 @@ elif [ "${abcd}" = "c" ]; then
     sleep 2
 
     err=""
-    source <(sudo /home/admin/config.scripts/lnd.initwallet.py change-password mainnet $oldPassword $newPassword)
+    # Pipe both passwords as JSON via stdin so they don't appear in
+    # /proc/PID/cmdline of any user listing processes during password change.
+    _stdin_json=$(oldPw="${oldPassword}" newPw="${newPassword}" \
+      python3 -c 'import json,os;print(json.dumps({"wallet_password":os.environ["oldPw"],"wallet_password_new":os.environ["newPw"]}))')
+    source <(printf '%s' "${_stdin_json}" | sudo /home/admin/config.scripts/lnd.initwallet.py change-password mainnet --stdin)
+    unset _stdin_json
     if [ "${err}" != "" ]; then
       echo "error='Was not able to change password'"
       sleep 2

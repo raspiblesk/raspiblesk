@@ -16,15 +16,10 @@ TITLE="Connect Options"
 MENU=""
 OPTIONS=()
 
+OPTIONS+=(GLCOINPEER "Set Glcoin Authority Peer")
 OPTIONS+=(MOBILE "Connect Mobile Wallet")
 if [ "${ElectRS}" == "on" ]; then
   OPTIONS+=(ELECTRS "Electrum Rust Server")
-fi
-if [ "${GLCPayServer}" == "on" ] && [ "${lnd}" = "on" ]; then
-  OPTIONS+=(BTCPAY-LND "GLCPay Server - LND connection string")
-fi
-if [ "${GLCPayServer}" == "on" ] && [ "${cl}" = "on" ]; then
-  OPTIONS+=(BTCPAY-CLN "GLCPay Server - CLN connection string")
 fi
 OPTIONS+=(${network}RPC "Connect Specter Desktop or JoinMarket")
 OPTIONS+=(BISQ "Connect Bisq to this node")
@@ -52,20 +47,12 @@ CHOICE=$(dialog --clear \
 
 case $CHOICE in
 
+  GLCOINPEER)
+    sudo /home/admin/config.scripts/glcoin.peers.sh menu;;
   MOBILE)
     /home/admin/97addMobileWallet.sh;;
   ELECTRS)
     /home/admin/config.scripts/bonus.electrs.sh menu;;
-  BTCPAY-LND)
-    /home/admin/config.scripts/lnd.export.sh btcpay
-    echo "Press ENTER to return to main menu."
-    read key
-    exit 0;;
-  BTCPAY-CLN)
-    /home/admin/config.scripts/bonus.btcpayserver.sh cln-lightning-rpc-access
-    echo "Press ENTER to return to main menu."
-    read key
-    exit 0;;
   RESET)
     sudo /home/admin/config.scripts/lnd.credentials.sh reset "${chain:-main}net"
     sudo /home/admin/config.scripts/blesk.shutdown.sh reboot

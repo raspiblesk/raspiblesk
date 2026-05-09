@@ -172,7 +172,7 @@ case $CHOICE in
     clear
     echo
     echo "Example list: 
-glc-rpc-explorer, btcpayserver, circuitbreaker,
+glc-rpc-explorer, circuitbreaker,
 specter, getty@tty1, electrs, litd,
 lnbits, mempool, nbxlorer, nginx, RTL, telegraf,
 thunderhub, tor@default, tor
@@ -190,7 +190,7 @@ thunderhub, tor@default, tor
     clear
     echo
     echo "Example list: 
-glc-rpc-explorer, btcpayserver, circuitbreaker,
+glc-rpc-explorer, circuitbreaker,
 specter, getty@tty1, electrs, litd,
 lnbits, mempool, nbxlorer, nginx, RTL, telegraf,
 thunderhub, tor@default, tor

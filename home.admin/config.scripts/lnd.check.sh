@@ -43,17 +43,32 @@ if [ "$1" == "prestart" ]; then
 
   echo "### RUNNING lnd.check.sh prestart"
 
-  if [ "$USER" != "glcoin" ]; then
+  if [ "$(id -un 2>/dev/null)" != "glcoin" ]; then
     echo "# FAIL: run as user 'glcoin'"
     exit 1
   fi
 
+  # CHAIN must be set by network.aliases.sh getvars above. Fall back to $2 (passed
+  # by systemd ExecStartPre) so a missing alias doesn't leave CHAIN empty and
+  # turn the chmod paths below into broken parent-only references.
+  if [ -z "${CHAIN}" ]; then
+    CHAIN="$2"
+  fi
+  if [ -z "${CHAIN}" ]; then
+    CHAIN="mainnet"
+  fi
+
   ##### FILE PERMISSIONS #####
-  # make sure is readable by group
-  chmod g+rx /mnt/hdd/app-data/lnd/data
-  chmod g+rx /mnt/hdd/app-data/lnd/data/chain
-  chmod g+rx /mnt/hdd/app-data/lnd/data/chain/glcoin
-  chmod g+rx /mnt/hdd/app-data/lnd/data/chain/glcoin/${CHAIN}
+  # On first start the chain dir tree does not exist yet — LND creates it on
+  # InitWallet. Skip chmod silently for missing paths instead of letting
+  # 'chmod: cannot access' clutter the log and confuse later diagnosis.
+  for _p in \
+    /mnt/hdd/app-data/lnd/data \
+    /mnt/hdd/app-data/lnd/data/chain \
+    /mnt/hdd/app-data/lnd/data/chain/glcoin \
+    /mnt/hdd/app-data/lnd/data/chain/glcoin/${CHAIN} ; do
+    [ -e "${_p}" ] && chmod g+rx "${_p}"
+  done
 
   # Glcoin-specific ZMQ ports (NOT Bitcoin standard ports 28332/28333)
   if [ "${portprefix}" = "1" ]; then
@@ -70,9 +85,9 @@ if [ "$1" == "prestart" ]; then
   sed -i '/^glcoin\./d' ${lndConfFile}
   sed -i '/^glcoind\./d' ${lndConfFile}
   # all lines with just spaces to empty lines
-  sed -i 's/^[[:space:]]*$//g' /mnt/hdd/app-data/lnd/lnd.conf
+  sed -i 's/^[[:space:]]*$//g' ${lndConfFile}
   # all double empty lines to single empty lines
-  sed -i '/^$/N;/^\n$/D' /mnt/hdd/app-data/lnd/lnd.conf
+  sed -i '/^$/N;/^\n$/D' ${lndConfFile}
 
   # set default chain parameter
   targetchain=$2
@@ -209,9 +224,14 @@ if [ "$1" == "prestart" ]; then
   echo "# sectionLine(${sectionLine})"
   insertLine=$(expr $sectionLine + 2)
 
-  # make sure API ports are set to standard
-  setting ${lndConfFile} ${insertLine} "rpclisten" "0\.0\.0\.0\:1${L2rpcportmod}009"
-  setting ${lndConfFile} ${insertLine} "restlisten" "0\.0\.0\.0\:${portprefix}8080"
+  # make sure API ports are set to standard.
+  # v0146 hardening: bind to 127.0.0.1, not 0.0.0.0 — the gRPC and REST endpoints
+  # use TLS+macaroon auth but the previous wide-open bind exposed them to every
+  # interface even though no LAN client uses them directly (lndconnect tunnels
+  # through Tor / reverse proxy). Without this, every prestart silently reverted
+  # the v0145 install-time fix.
+  setting ${lndConfFile} ${insertLine} "rpclisten" "127\.0\.0\.1\:1${L2rpcportmod}009"
+  setting ${lndConfFile} ${insertLine} "restlisten" "127\.0\.0\.1\:${portprefix}8080"
 
   # enforce LND port is set correctly (if set in raspiblesk.conf)
   if [ "${lndPort}" != "" ]; then
@@ -327,6 +347,11 @@ if [ "$1" == "prestart" ]; then
     # deprecate Tor password (remove if in lnd.conf)
     sed -i '/^tor.password=*/d' ${lndConfFile}
 
+  else
+    # Tor is OFF — disable in LND config to prevent connection-refused failures at startup
+    echo "# runBehindTor is off — disabling tor in LND config"
+    sed -i '/^\[tor\]/d' ${lndConfFile}
+    sed -i '/^tor\./d' ${lndConfFile}
   fi
 
   ##### RPCMIDDLEWARE SECTION #####

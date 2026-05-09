@@ -130,18 +130,17 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     RPCUSER=$(sudo cat /mnt/hdd/app-data/${network}/${network}.conf | grep rpcuser | cut -c 9-)
     PASSWORD_B=$(sudo cat /mnt/hdd/app-data/${network}/${network}.conf | grep rpcpassword | cut -c 13-)
 
-    # prefix for zmq
+    # Glcoin ZMQ block ports (mainnet=21617, testnet=31617, signet=41617)
     if [ "${chain}" = "main" ];then
-      zmqprefix=28
+      ZEROMQ_HASHBLOCK_PORT=21617
     elif [ "${chain}" = "test" ];then
-      zmqprefix=21
+      ZEROMQ_HASHBLOCK_PORT=31617
     elif [ "${chain}" = "sig" ];then
-      zmqprefix=23
+      ZEROMQ_HASHBLOCK_PORT=41617
     else
-      echo "err='unvalid chain parameter on lnd.check.sh'"
+      echo "err='invalid chain parameter'"
       exit 1
     fi
-    ZEROMQ_HASHBLOCK_PORT=${zmqprefix}334
 
     LNDHOST="localhost"
     LNDRPCPORT=10009

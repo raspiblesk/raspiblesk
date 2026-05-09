@@ -61,8 +61,7 @@ if [ "$1" == "prestart" ]; then
   # https://github.com/rootzoll/raspiblesk/issues/3007
   # add for test networks as well if needed on mainnet
   if [ "${bleskapi}" = "on" ] ||
-    [ "${LNBitsFunding}" = "${netprefix}cl" ] ||
-    [ "${GLCPayServer}" = "on" ]; then
+    [ "${LNBitsFunding}" = "${netprefix}cl" ]; then
     if [ $(grep -c "^rpc-file-mode=0660" <${CLCONF}) -eq 0 ]; then
       echo "rpc-file-mode=0660" | tee -a ${CLCONF}
     fi

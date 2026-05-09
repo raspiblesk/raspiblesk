@@ -102,11 +102,19 @@ if [ "$1" = "install" ]; then
     # create thunderhub user
     sudo adduser --system --group --home /home/thunderhub thunderhub
 
-    # download and install
-    sudo -u thunderhub git clone https://github.com/apotdevin/thunderhub.git /home/thunderhub/thunderhub
+    # download and install — use local source tarball if available
+    LOCAL_TAR="/home/admin/assets/thunderhub-${THUBVERSION}-src.tar.gz"
+    if [ -f "${LOCAL_TAR}" ]; then
+      echo "# Using local source tarball: ${LOCAL_TAR}"
+      sudo -u thunderhub mkdir -p /home/thunderhub/thunderhub
+      sudo -u thunderhub tar -xzf "${LOCAL_TAR}" --strip-components=1 -C /home/thunderhub/thunderhub || exit 1
+    else
+      echo "# No local tarball found — cloning from GitHub"
+      sudo -u thunderhub git clone https://github.com/apotdevin/thunderhub.git /home/thunderhub/thunderhub
+      cd /home/thunderhub/thunderhub || exit 1
+      sudo -u thunderhub git reset --hard $THUBVERSION
+    fi
     cd /home/thunderhub/thunderhub || exit 1
-    # https://github.com/apotdevin/thunderhub/releases
-    sudo -u thunderhub git reset --hard $THUBVERSION
 
     sudo -u thunderhub /home/admin/config.scripts/blesk.git-verify.sh "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" "${THUBVERSION}" || exit 1
 

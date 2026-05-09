@@ -31,7 +31,7 @@ function blitz() {
 # gives overview of commands
 function bleskhelp() {
   echo
-  echo "Blitz commands are consolidated here."
+  echo "Blesk commands are consolidated here."
   echo
   echo "Menu access:"
   echo "  raspiblesk   menu"
@@ -45,20 +45,20 @@ function bleskhelp() {
   echo "  debug -l -n  print debug logs with bin link without tor"
   echo
   echo "Checks:"
-  echo "  status       informational Blitz status screen"
+  echo "  status       informational Blesk status screen"
   echo "  sourcemode   copy blockchain source modus"
-  echo "  check        check if Blitz configuration files are correct"
+  echo "  check        check if Blesk configuration files are correct"
   echo "  patch [all]  sync all scripts with latest from github and branch"
-  echo "  patch code   sync only blitz scripts with latest from github and branch"
-  echo "  patch api    sync only Blitz-API with latest from github and branch"
-  echo "  patch web    sync only Blitz-WebUI with latest from github and branch"
+  echo "  patch code   sync only blesk scripts with latest from github and branch"
+  echo "  patch api    sync only Blesk-API with latest from github and branch"
+  echo "  patch web    sync only Blesk-WebUI with latest from github and branch"
   echo "  cache        check on chache system state"
   echo "  github       jumping directly into the options to change branch/repo/pr"
   echo
   echo "Development with VM:"
   echo "  sync         sync all repos from shared folder"
   echo "  sync code    sync only main raspiblesk repo from shared folder"
-  echo "  sync api     sync only blitz api repo from shared folder"
+  echo "  sync api     sync only blesk api repo from shared folder"
   echo "  reset        deletes all data/partitions on storage device"
   echo  
   echo "Power:"
@@ -233,21 +233,21 @@ function patch() {
   if [ "$1" == "all" ] || [ "$1" == "code" ]; then
     echo
     echo "#######################################################"
-    echo "### UPDATE BLITZ --> SCRIPTS (code)"
+    echo "### UPDATE BLESK --> SCRIPTS (code)"
     /home/admin/config.scripts/blesk.github.sh -run
   fi
 
   if [ "$1" == "all" ] || [ "$1" == "api" ]; then
     echo
     echo "#######################################################"
-    echo "### UPDATE BLITZ --> API"
+    echo "### UPDATE BLESK --> API"
     sudo /home/admin/config.scripts/blesk.web.api.sh update-code
   fi
 
   if [ "$1" == "all" ] || [ "$1" == "web" ]; then
     echo
     echo "#######################################################"
-    echo "### UPDATE BLITZ --> WEBUI"
+    echo "### UPDATE BLESK --> WEBUI"
     sudo /home/admin/config.scripts/blesk.web.ui.sh update
   fi
 

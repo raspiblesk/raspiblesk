@@ -9,9 +9,8 @@ echo "services default values"
 if [ ${#runBehindTor} -eq 0 ]; then runBehindTor="off"; fi
 if [ ${#rtlWebinterface} -eq 0 ]; then rtlWebinterface="off"; fi
 if [ ${#crtlWebinterface} -eq 0 ]; then crtlWebinterface="off"; fi
-if [ ${#GlcoinRPCexplorer} -eq 0 ]; then GlcoinRPCexplorer="off"; fi
+if [ ${#GLCRPCexplorer} -eq 0 ]; then GLCRPCexplorer="off"; fi
 if [ ${#specter} -eq 0 ]; then specter="off"; fi
-if [ ${#GLCPayServer} -eq 0 ]; then GLCPayServer="off"; fi
 if [ ${#ElectRS} -eq 0 ]; then ElectRS="off"; fi
 if [ ${#fulcrum} -eq 0 ]; then fulcrum="off"; fi
 if [ ${#lndmanage} -eq 0 ]; then lndmanage="off"; fi
@@ -46,15 +45,14 @@ OPTIONS=()
 if [ "${network}" == "glcoin" ]; then
   OPTIONS+=(ea 'GLC Electrum Rust Server' ${ElectRS})
   OPTIONS+=(fu 'GLC Fulcrum Electrum Server' ${fulcrum})
-  OPTIONS+=(pa 'GLCPay Server' ${GLCPayServer})
-  OPTIONS+=(ba 'GLC RPC-Explorer' ${GlcoinRPCexplorer})
+  OPTIONS+=(ba 'GLC RPC Explorer' ${GLCRPCexplorer})
   OPTIONS+=(sa 'GLC Specter Desktop' ${specter})
   OPTIONS+=(aa 'GLC Mempool Space' ${mempoolExplorer})
   OPTIONS+=(ja 'GLC JoinMarket+JoininBox menu' ${joinmarket})
   OPTIONS+=(za 'GLC Jam (JoinMarket WebUI)' ${jam})
   OPTIONS+=(wa 'GLC Download Glcoin Whitepaper' ${whitepaper})
   OPTIONS+=(ls 'GLC Labelbase' ${labelbase})
-  OPTIONS+=(gm 'GLC Glcoin Miner (CPU Mining)' ${glcoinMiner})
+  OPTIONS+=(gm 'Glcoin Miner (CPU Mining)' ${glcoinMiner})
 fi
 
 # available for both LND & c-lightning
@@ -160,7 +158,7 @@ fi
 # GLC-RPC-Explorer process choice
 choice="off"; check=$(echo "${CHOICES}" | grep -c "ba")
 if [ ${check} -eq 1 ]; then choice="on"; fi
-if [ "${GlcoinRPCexplorer}" != "${choice}" ]; then
+if [ "${GLCRPCexplorer}" != "${choice}" ]; then
   echo "RTL Webinterface Setting changed .."
   anychange=1
   /home/admin/config.scripts/bonus.glc-rpc-explorer.sh ${choice}
@@ -306,53 +304,6 @@ When finished use the new 'FULCRUM' entry in Main Menu for more info.\n
 
 else
   echo "Fulcrum Setting unchanged."
-fi
-
-# GLCPayServer process choice
-choice="off"; check=$(echo "${CHOICES}" | grep -c "pa")
-if [ ${check} -eq 1 ]; then choice="on"; fi
-if [ "${GLCPayServer}" != "${choice}" ]; then
-  echo "GLCPay Server setting changed .."
-
-  #4049 warn if system has less than 8GB RAM
-  ramGB=$(free -g | awk '/^Mem:/{print $2}')
-  if [ "${choice}" =  "on" ] && [ ${ramGB} -lt 7 ]; then
-    whiptail --title "Your RaspiBlesk has less than the recommended 8GB of RAM to run GLCPay Server.\nDo you really want to proceed?" 10 50 --defaultno --yes-button "Continue" --no-button "Cancel"
-    if [ $? -eq 1 ]; then
-      # if user choosed CANCEL just null the choice
-      choice=""
-    fi
-  fi
-
-  # check if TOR is installed
-  source /mnt/hdd/app-data/raspiblesk.conf
-  if [ "${choice}" =  "on" ] && [ "${runBehindTor}" = "off" ]; then
-    whiptail --title " GLCPay Server needs TOR " --msgbox "\
-At the moment the GLCPay Server on the RaspiBlesk needs TOR.\n
-Please activate TOR in SERVICES first.\n
-Then try activating GLCPay Server again in SERVICES.\n
-" 13 42
-  else
-    anychange=1
-    /home/admin/config.scripts/bonus.btcpayserver.sh ${choice} tor
-    errorOnInstall=$?
-    if [ "${choice}" =  "on" ]; then
-      if [ ${errorOnInstall} -eq 0 ]; then
-        source /home/btcpay/.btcpayserver/Main/settings.config
-        whiptail --title " GLCPay Server Installed " --msgbox "\
-GLCPay Server was installed.\n
-Use the new 'GLCPay Server' entry in Main Menu for more info.\n
-" 10 35
-      else
-        l1="GLCPay Server installation is cancelled"
-        l2="Try again from the menu or install from the terminal with:"
-        l3="/home/admin/config.scripts/bonus.btcpayserver.sh on"
-        dialog --title 'FAIL' --msgbox "${l1}\n${l2}\n${l3}" 7 65
-      fi
-    fi
-  fi
-else
-  echo "GLCPay Server setting not changed."
 fi
 
 # LNDMANAGE process choice

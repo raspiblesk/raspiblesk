@@ -56,27 +56,32 @@ if [ "$1" = getvars ]; then
   # netprefix is:     "" |  t | s
   # portprefix is:    "" |  1 | 3
   # L2rpcportmod is:   0 |  1 | 3
-  # zmqprefix is:     28 | 21 | 23
+  # glcoinZmqBlock:  21617 | 31617 | 41617
+  # glcoinZmqTx:     21618 | 31618 | 41618
   if [ "${chain}" == "main" ]; then
     netprefix=""
     L2rpcportmod=0
     portprefix=""
-    zmqprefix=28
+    glcoinZmqBlock=21617
+    glcoinZmqTx=21618
   elif [ "${chain}" == "test" ]; then
     netprefix="t"
     L2rpcportmod=1
     portprefix=1
-    zmqprefix=21
+    glcoinZmqBlock=31617
+    glcoinZmqTx=31618
   elif [ "${chain}" == "sig" ]; then
     netprefix="s"
     L2rpcportmod=3
     portprefix=3
-    zmqprefix=23
+    glcoinZmqBlock=41617
+    glcoinZmqTx=41618
   fi
   echo "netprefix=${netprefix}"
   echo "portprefix=${portprefix}"
   echo "L2rpcportmod=${L2rpcportmod}"
-  echo "zmqprefix=${zmqprefix}"
+  echo "glcoinZmqBlock=${glcoinZmqBlock}"
+  echo "glcoinZmqTx=${glcoinZmqTx}"
 
   if [ "${LNTYPE}" == "cl" ]; then
     # CLNETWORK is: glcoin / signet / testnet

@@ -39,7 +39,7 @@ defaultAPIrepo="blitz_api"
 defaultWEBUIuser="raspiblesk"
 defaultWEBUIrepo="raspiblesk-web"
 
-me="${0##/*}"
+me="${0##*/}"
 
 nocolor="\033[0m"
 red="\033[31m"
@@ -193,6 +193,61 @@ apt_install() {
     fi
   done
 }
+
+# === APP INSTALL TRACKING ===
+# Shared log written by both build_sdcard.sh and blesk.fatpack.sh (via BLESK_BUILD_LOG env var).
+# Each line: OK|<name>  or  FAIL|<name>
+BLESK_BUILD_LOG="/tmp/blesk_build_track.log"
+export BLESK_BUILD_LOG
+rm -f "${BLESK_BUILD_LOG}" 2>/dev/null
+
+track_install() {
+  local name="$1"; shift
+  if "$@"; then
+    echo "OK|${name}" >> "${BLESK_BUILD_LOG}"
+  else
+    echo "FAIL|${name}" >> "${BLESK_BUILD_LOG}"
+    return 1
+  fi
+}
+
+print_build_summary() {
+  [ ! -f "${BLESK_BUILD_LOG}" ] && return
+  local ok_count=0 fail_count=0 ok_list="" fail_list=""
+  while IFS='|' read -r status name; do
+    if [ "${status}" = "OK" ]; then
+      ok_count=$((ok_count + 1))
+      ok_list="${ok_list}    [OK]   ${name}\n"
+    elif [ "${status}" = "FAIL" ]; then
+      fail_count=$((fail_count + 1))
+      fail_list="${fail_list}  [FAIL]  ${name}\n"
+    fi
+  done < "${BLESK_BUILD_LOG}"
+  [ "${ok_count}" -eq 0 ] && [ "${fail_count}" -eq 0 ] && return
+  echo ""
+  echo "################################################"
+  echo "#       RASPIBLESK BUILD APP SUMMARY          #"
+  echo "################################################"
+  if [ "${ok_count}" -gt 0 ]; then
+    echo ""
+    echo "  INSTALLED (${ok_count}):"
+    printf "${ok_list}"
+  fi
+  if [ "${fail_count}" -gt 0 ]; then
+    echo ""
+    echo "  FAILED (${fail_count}):"
+    printf "${fail_list}"
+    echo ""
+    echo "  BUILD INCOMPLETE - check output above for errors."
+  else
+    echo ""
+    echo "  All ${ok_count} apps installed successfully."
+  fi
+  echo "################################################"
+  echo ""
+  rm -f "${BLESK_BUILD_LOG}" 2>/dev/null
+}
+trap print_build_summary EXIT
 
 general_utils="curl"
 ## loop through all general_utils to see if program is installed (placed on PATH) and if not, add to the list of commands to be installed
@@ -354,16 +409,40 @@ setup_credentials() {
   ADMIN_DEFAULT_PW=$(openssl rand -base64 24 | tr -dc 'A-Za-z0-9!@#%^&*_+=' | head -c 20)
   echo "admin:${ADMIN_DEFAULT_PW}" | chpasswd
 
-  # save private key to boot partition if accessible (SD card / USB convenience)
-  BOOT_DIR=""
-  [ -d /boot/firmware ] && BOOT_DIR="/boot/firmware"
-  [ -d /boot ] && [ -z "${BOOT_DIR}" ] && BOOT_DIR="/boot"
-  if [ -n "${BOOT_DIR}" ]; then
-    echo "${SSH_PRIVKEY}" > "${BOOT_DIR}/raspiblesk_key"
-    chmod 600 "${BOOT_DIR}/raspiblesk_key"
-    echo "# Private key also saved to: ${BOOT_DIR}/raspiblesk_key"
-    echo "# (readable from your laptop when SD card / USB is plugged in)"
+  # v0149 hardening (C-5): the boot partition on a Pi is FAT, which DOES NOT
+  # enforce POSIX permissions — chmod 600 is silently ignored. Anyone who
+  # plugs the SD card / USB into a laptop can read this file with no
+  # credentials. Combined with the sudoers NOPASSWD rule (C-4 above) and
+  # SSH key-only auth, the boot-partition copy is a single bearer token to
+  # full root over LAN.
+  # Default: do NOT write the key to the boot partition. The operator must
+  # copy the printed key from this terminal (which is shown ONCE below).
+  # Opt-in: set RASPIBLESK_KEY_ON_BOOT=1 to restore the old behaviour, with
+  # the explicit understanding that anyone with physical access to the
+  # storage device gets the key.
+  if [ "${RASPIBLESK_KEY_ON_BOOT:-0}" = "1" ]; then
+    BOOT_DIR=""
+    [ -d /boot/firmware ] && BOOT_DIR="/boot/firmware"
+    [ -d /boot ] && [ -z "${BOOT_DIR}" ] && BOOT_DIR="/boot"
+    if [ -n "${BOOT_DIR}" ]; then
+      echo "${SSH_PRIVKEY}" > "${BOOT_DIR}/raspiblesk_key"
+      chmod 600 "${BOOT_DIR}/raspiblesk_key"
+      echo "# WARNING: Private key saved to ${BOOT_DIR}/raspiblesk_key"
+      echo "# WARNING: This boot partition is FAT — perms are NOT enforced."
+      echo "# WARNING: Anyone with physical access to the storage can read it."
+    fi
+  else
+    echo "# (Skipping boot-partition key copy. To restore old behaviour set"
+    echo "#  RASPIBLESK_KEY_ON_BOOT=1 before running build_sdcard.sh.)"
   fi
+
+  # v0149 hardening (C-6): mark the build-time SSH key as a single-use
+  # bootstrap credential. The first-login wizard (00raspiblesk.sh / setup
+  # menu) MUST require the operator to add their own key and rotate
+  # authorized_keys, then this marker file is removed.
+  touch /home/admin/.ssh/first-login-rotate-required
+  chown admin:admin /home/admin/.ssh/first-login-rotate-required
+  chmod 600 /home/admin/.ssh/first-login-rotate-required
 
   rm -rf "${TMPKEYDIR}"
 
@@ -385,9 +464,16 @@ setup_credentials() {
   echo "  ${ADMIN_DEFAULT_PW}"
   echo ""
   echo "############################################################"
-  echo "# After first login the setup wizard will guide you        #"
-  echo "# through setting your own permanent passwords.            #"
-  echo "# The temporary key above will be deleted after setup.     #"
+  echo "# v0149 SECURITY:                                          #"
+  echo "#  - Boot-partition key copy is OFF by default. Save the   #"
+  echo "#    private key shown above to your laptop NOW; it will   #"
+  echo "#    not be saved anywhere on the device.                  #"
+  echo "#  - On first SSH login as 'admin' you will be prompted to #"
+  echo "#    paste your own SSH public key. The bootstrap key is   #"
+  echo "#    revoked at that moment. Type 'KEEP' to skip (not      #"
+  echo "#    recommended).                                         #"
+  echo "#  - Sudo NOPASSWD is now restricted to user 'admin' only  #"
+  echo "#    (was: every member of the sudo group).                #"
   echo "############################################################"
   echo ""
 }
@@ -800,7 +886,12 @@ echo "admin:$(openssl rand -base64 24)" | chpasswd
 adduser admin sudo
 chsh admin -s /bin/bash
 # configure sudo for usage without password entry
-echo '%sudo ALL=(ALL) NOPASSWD:ALL' | sudo EDITOR='tee -a' visudo
+# v0149 hardening (C-4): scope NOPASSWD to the 'admin' user only, NOT the
+# entire %sudo group. Previously any account that ever joined the sudo group
+# (e.g. via a future bonus app misconfig) silently inherited passwordless
+# root. Limit to the named admin user; other sudo members must still
+# authenticate with their password.
+echo 'admin ALL=(ALL) NOPASSWD:ALL' | sudo EDITOR='tee -a' visudo
 # check if group "admin" was created
 if [ $(sudo cat /etc/group | grep -c "^admin") -lt 1 ]; then
   echo -e "\nMissing group admin - creating it ..."
@@ -841,52 +932,23 @@ sudo -u admin git config --global http.postBuffer 524288000 || exit 1
 sudo -u admin rm -rf /home/admin/raspiblesk
 sudo -u admin git clone -b "${branch}" https://github.com/${github_user}/raspiblesk.git || exit 1
 
-# Overlay local fixed scripts over the cloned repo so GitHub lag doesn't break the install
-for fixedScript in \
-    _bootstrap.sh \
-    _provision_.sh \
-    _provision.update.sh \
-    00raspiblesk.sh \
-    99connectMenu.sh \
-    99lndMenu.sh \
-    config.scripts/glcoin.install.sh \
-    config.scripts/blesk.data.sh \
-    config.scripts/blesk.fatpack.sh \
-    config.scripts/bonus.lndmanage.sh \
-    config.scripts/lnd.install.sh \
-    config.scripts/cl.install.sh \
-    config.scripts/bonus.fulcrum.sh \
-    config.scripts/bonus.electrs.sh \
-    config.scripts/bonus.lnbits.sh \
-    config.scripts/bonus.jam.sh \
-    config.scripts/bonus.glc-rpc-explorer.sh \
-    config.scripts/blesk.i2pd.sh \
-    config.scripts/bonus.mempool.sh \
-    config.scripts/lnd.check.sh \
-    config.scripts/lnd.credentials.sh \
-    config.scripts/network.chain.sh \
-    setup.scripts/eventInfoWait.sh \
-    config.scripts/bonus.glcoin-mining.sh \
-    config.scripts/bonus.glcoin-miner.sh \
-    config.scripts/glcoin_miner.py \
-    config.scripts/bonus.btcpayserver.sh \
-    config.scripts/bonus.thunderhub.sh \
-    config.scripts/tor.network.sh \
-    config.scripts/tor.install.sh \
-    config.scripts/internet.wireguard.sh \
-    config.scripts/blesk.web.sh \
-    config.scripts/blesk.web.ui.sh \
-    config.scripts/blesk.display.sh \
-    config.scripts/blesk.git-verify.sh \
-    _provision.setup.sh \
-    _provision.xfinal.sh \
-    assets/bootstrap.service \
-    assets/glcoin.conf; do
-  if [ -f "${SCRIPT_DIR}/home.admin/${fixedScript}" ]; then
-    cp "${SCRIPT_DIR}/home.admin/${fixedScript}" "/home/admin/raspiblesk/home.admin/${fixedScript}"
-    echo "# Overlaid local fix: ${fixedScript}"
-  fi
-done
+# Overlay the ENTIRE local home.admin tree over the cloned repo so any fix made
+# locally — without an immediate GitHub push — actually reaches the Pi. The old
+# whitelist-based overlay missed _background.scan.sh, _cache.sh, the menu/info
+# scripts, and the parallel-chain dispatchers, which caused the v0146 hang at the
+# waitsync loop: bootstrap waited on glc_default_ready while the GitHub-cloned
+# scan script still wrote btc_default_ready (incomplete bitcoin->glcoin port
+# upstream). Recursive cp -r guarantees no script can drift between source and
+# Pi without us noticing.
+echo "# Overlaying entire local home.admin/ over cloned repo (recursive)..."
+cp -r "${SCRIPT_DIR}/home.admin/." "/home/admin/raspiblesk/home.admin/"
+echo "# Overlay done — local tree wins"
+# Same for patches/ which is needed by lnd.install.sh for the btcd Glcoin patch
+if [ -d "${SCRIPT_DIR}/patches" ]; then
+  mkdir -p "/home/admin/raspiblesk/patches"
+  cp -r "${SCRIPT_DIR}/patches/." "/home/admin/raspiblesk/patches/"
+  echo "# Overlaid patches/ directory"
+fi
 # Overlay build_sdcard.sh itself so defaultWEBUIuser/repo stay correct after git clone
 cp "${SCRIPT_DIR}/build_sdcard.sh" "/home/admin/raspiblesk/build_sdcard.sh"
 echo "# Overlaid local fix: build_sdcard.sh"
@@ -898,11 +960,29 @@ if [ -f "${SCRIPT_DIR}/home.admin/assets/raspiblitz-web-master.tar.gz" ]; then
   cp "${SCRIPT_DIR}/home.admin/assets/raspiblitz-web-master.tar.gz" "/home/admin/raspiblesk/home.admin/assets/raspiblitz-web-master.tar.gz"
   echo "# Copied bundled raspiblitz-web-master.tar.gz to repo assets"
 fi
-# Stage all pre-built Glcoin tarballs in /tmp so install scripts skip source compilation
+if [ -f "${SCRIPT_DIR}/home.admin/assets/thunderhub-v0.13.31-src.tar.gz" ]; then
+  cp "${SCRIPT_DIR}/home.admin/assets/thunderhub-v0.13.31-src.tar.gz" "/home/admin/raspiblesk/home.admin/assets/thunderhub-v0.13.31-src.tar.gz"
+  echo "# Copied bundled thunderhub-v0.13.31-src.tar.gz to repo assets"
+fi
+# Stage Glcoin source bundles and pre-built tarballs into /tmp
+# Source bundles allow offline compilation on the Pi (no internet needed)
 _arch="arm64"
 [ "$(uname -m)" = "x86_64" ] && _arch="amd64"
+# Architecture-independent source/tool bundles
 for _staged in \
-  "lnd-glcoin-0.20.99-beta-linux-${_arch}.tar.gz" \
+  "lnd-v0.20.1-beta-vendored.tar.gz" \
+  "lnd-v0.20.1-beta-src.tar.gz" \
+  "btcd-4f4ea81776d6.tar.gz" \
+  "go-1.24.11-linux-${_arch}.tar.gz"; do
+  if [ -f "${SCRIPT_DIR}/home.admin/assets/${_staged}" ]; then
+    cp "${SCRIPT_DIR}/home.admin/assets/${_staged}" "/tmp/${_staged}"
+    echo "# Staged source bundle: ${_staged}"
+  fi
+done
+# Architecture-specific pre-built binaries (optional; install scripts prefer source build)
+# LND prebuilt is staged FIRST so lnd.install.sh skips the slow source build path.
+for _staged in \
+  "lnd-glcoin-0.20.99-beta-r2-linux-${_arch}.tar.gz" \
   "cln-glcoin-v25.12.1-linux-${_arch}.tar.gz" \
   "electrs-glcoin-v0.10.10-linux-${_arch}.tar.gz" \
   "fulcrum-glcoin-v2.1.0-linux-${_arch}.tar.gz"; do
@@ -991,6 +1071,10 @@ if [ ${autostartDone} -eq 0 ]; then
   # bash autostart for admin
   bash -c "echo '# shortcut commands' >> /home/admin/.bashrc"
   bash -c "echo 'source /home/admin/_commands.sh' >> /home/admin/.bashrc"
+  # v0149 hardening (C-6): force bootstrap-key rotation prompt on first
+  # interactive admin login (sourced, so it can `return` on no-marker).
+  bash -c "echo '# RaspiBlesk bootstrap key rotation gate (v0149)' >> /home/admin/.bashrc"
+  bash -c "echo 'source /home/admin/config.scripts/blesk.bootstrap-key.sh' >> /home/admin/.bashrc"
   bash -c "echo '# automatically start main menu for admin unless' >> /home/admin/.bashrc"
   bash -c "echo '# when running in a tmux session' >> /home/admin/.bashrc"
   bash -c "echo 'if [ -z \"\$TMUX\" ]; then' >> /home/admin/.bashrc"
@@ -1110,26 +1194,26 @@ systemctl enable background
 # TOR #
 #######
 echo
-/home/admin/config.scripts/tor.install.sh install || exit 1
+track_install "TOR" /home/admin/config.scripts/tor.install.sh install || exit 1
 
 ###########
 # GLCOIN #
 ###########
 echo
-/home/admin/config.scripts/glcoin.install.sh install || exit 1
+track_install "Glcoin Core" /home/admin/config.scripts/glcoin.install.sh install || exit 1
 
 #######
 # I2P #
 #######
 echo
-/home/admin/config.scripts/blesk.i2pd.sh install || exit 1
+track_install "I2P (i2pd)" /home/admin/config.scripts/blesk.i2pd.sh install || exit 1
 
 # Ensure lndadmin group exists before web API and fatpack install apps into it
 /usr/sbin/groupadd --force --gid 9700 lndadmin 2>/dev/null || true
 
 # *** BLITZ WEB SERVICE ***
 echo "Provisioning BLITZ WEB SERVICE"
-/home/admin/config.scripts/blesk.web.sh http-on || exit 1
+track_install "Blitz Web Service" /home/admin/config.scripts/blesk.web.sh http-on || exit 1
 
 # *** FATPACK *** (can be activated by parameter - see details at start of script)
 if ${fatpack}; then
@@ -1143,27 +1227,14 @@ else
   echo "* skipping FATPACK"
 fi
 
-# check fallback list bitnodes
-# update on releases manually in asset folder with:
-# curl -H "Accept: application/json; indent=4" https://bitnodes.io/api/v1/snapshots/latest/ -o ./fallback.bitnodes.nodes
-byteSizeList=$(sudo -u admin stat -c %s /home/admin/fallback.bitnodes.nodes)
-if [ ${#byteSizeList} -eq 0 ] || [ ${byteSizeList} -lt 10240 ]; then
-  echo "Using fallback list from repo: bitnodes"
-  rm /home/admin/fallback.bitnodes.nodes 2>/dev/null
-  cp /home/admin/assets/fallback.bitnodes.nodes /home/admin/fallback.bitnodes.nodes
+# seed node fallback — shipped in assets/fallback.glcoin.nodes (glcoin.org:1618)
+seedfile="/home/admin/fallback.glcoin.nodes"
+if [ ! -f "${seedfile}" ] || [ $(stat -c %s "${seedfile}" 2>/dev/null || echo 0) -lt 10 ]; then
+  echo "Seeding fallback list from assets ..."
+  rm "${seedfile}" 2>/dev/null
+  cp /home/admin/assets/fallback.glcoin.nodes "${seedfile}"
 fi
-chown admin:admin /home/admin/fallback.bitnodes.nodes
-
-# check fallback list glcoin core
-# update on releases manually in asset folder with:
-# curl https://raw.githubusercontent.com/glcoin/glcoin/master/contrib/seeds/nodes_main.txt -o ./fallback.glcoin.nodes
-byteSizeList=$(sudo -u admin stat -c %s /home/admin/fallback.glcoin.nodes)
-if [ ${#byteSizeList} -eq 0 ] || [ ${byteSizeList} -lt 10240 ]; then
-  echo "Using fallback list from repo: glcoin core"
-  rm /home/admin/fallback.glcoin.nodes 2>/dev/null
-  cp /home/admin/assets/fallback.glcoin.nodes /home/admin/fallback.glcoin.nodes
-fi
-chown admin:admin /home/admin/fallback.glcoin.nodes
+chown admin:admin "${seedfile}"
 
 echo
 echo "*** raspiblesk.info ***"
@@ -1211,7 +1282,7 @@ if [ "${baseimage}" = "debian" ] && [ "${display}" = "lcd" ]; then
   echo "# debian baseimage detected - overriding display to headless (no LCD driver support)"
   display="headless"
 fi
-/home/admin/config.scripts/blesk.display.sh prepare-install || exit 1
+track_install "Display" /home/admin/config.scripts/blesk.display.sh prepare-install || exit 1
 # (do last - because it might trigger reboot)
 if [ "${display}" != "headless" ] || [ "${baseimage}" = "raspios_arm64" ]; then
   echo "*** ADDITIONAL DISPLAY OPTIONS ***"

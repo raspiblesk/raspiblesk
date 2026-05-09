@@ -28,7 +28,7 @@ fi
 mode="$1"
 
 # RECOMMENDED UPDATE BY RASPIBLESK TEAM (latest tested version available)
-glcoinVersion="0.1.9" # keep empty if no newer version as sd card build is available
+glcoinVersion="0.1.10" # keep empty if no newer version as sd card build is available
 
 # GATHER DATA
 # setting download directory to the current user
@@ -49,8 +49,8 @@ installedVersion=$(sudo -u glcoin glcoind --version | head -n1 | cut -d" " -f5 |
 # test if the installed version already the tested/recommended update version
 glcoinUpdateInstalled=$(echo "${installedVersion}" | grep -c "${glcoinVersion}")
 
-# get latest release from GitHub releases
-glcoinLatestVersion=$(curl --header "X-GitHub-Api-Version:2022-11-28" -s https://api.github.com/repos/glcoin/glcoin/releases | jq -r '.[].tag_name' | sort | tail -n1 | cut -c 2-)
+# No public GitHub releases yet — use the version bundled in assets
+glcoinLatestVersion="${glcoinVersion}"
 
 # INFO
 function displayInfo() {
@@ -199,7 +199,7 @@ elif [ "${mode}" = "custom" ]; then
   fi
 fi
 
-# JOINED INSTALL
+# JOINED INSTALL — always build from local source (no external binary downloads)
 if [ "${mode}" = "tested" ] || [ "${mode}" = "reckless" ] || [ "${mode}" = "custom" ]; then
 
   displayInfo
@@ -211,98 +211,25 @@ if [ "${mode}" = "tested" ] || [ "${mode}" = "reckless" ] || [ "${mode}" = "cust
   fi
 
   echo
-  echo "# clean & change into download directory"
-  sudo rm -rf "${downloadDir}"
-  mkdir -p "${downloadDir}"
-  cd "${downloadDir}" || exit 1
+  echo "# Building Glcoin Core v${glcoinVersion} from local source ..."
+  echo "# (glcoin.install.sh handles local tarball discovery)"
 
-  echo "# Receive signer keys"
-  curl -s "https://api.github.com/repos/glcoin-core/guix.sigs/contents/builder-keys" |
-    jq -r '.[].download_url' | while read url; do curl -s "$url" | gpg --import; done
-
-  # download signed binary sha256 hash sum file
-  wget --prefer-family=ipv4 --progress=bar:force -O SHA256SUMS https://glcoincore.org/bin/glcoin-core-${glcoinVersion}/SHA256SUMS
-  # download the signed binary sha256 hash sum file and check
-  wget --prefer-family=ipv4 --progress=bar:force -O SHA256SUMS.asc https://glcoincore.org/bin/glcoin-core-${glcoinVersion}/SHA256SUMS.asc
-
-  if [ "${mode}" = "custom" ] && [ "$3" = "skipverify" ]; then
-    echo "# skipping signature verification"
-    echo "# display the output of 'gpg --verify SHA256SUMS.asc'"
-    LC_ALL=C LANG=C gpg --verify SHA256SUMS.asc
-  else
-    if LC_ALL=C LANG=C gpg --verify SHA256SUMS.asc; then
-      echo
-      echo "****************************************"
-      echo "OK --> GLCOIN MANIFEST IS CORRECT"
-      echo "****************************************"
-      echo
-    else
-      echo
-      echo "# BUILD FAILED --> the PGP verification failed"
-      echo "# try again or with a different version"
-      echo "# if you want to skip verifying all signatures (and just show them) use the command:"
-      echo "# /home/admin/config.scripts/glcoin.update.sh custom ${glcoinVersion:-<version>} skipverify"
-      exit 1
-    fi
+  # Determine update marker
+  if [ "${mode}" = "tested" ] || [ "${mode}" = "custom" ]; then
+    glcoinInterimsUpdateNew="${glcoinVersion}"
+  elif [ "${mode}" = "reckless" ]; then
+    glcoinInterimsUpdateNew="reckless"
   fi
 
-  echo "# Downloading Glcoin Core v${glcoinVersion} for ${glcoinOSversion} ..."
-  binaryName="glcoin-${glcoinVersion}-${glcoinOSversion}.tar.gz"
-  wget https://glcoincore.org/bin/glcoin-core-${pathVersion}/${binaryName}
-  if [ ! -f "./${binaryName}" ]; then
-    echo "# FAIL # Downloading GLCOIN BINARY did not succeed."
-    exit 1
-  fi
-
-  echo "# Checking the binary checksum ..."
-  if ! sha256sum -c --ignore-missing SHA256SUMS; then
-    # get the sha256 value for the corresponding platform from signed hash sum file
-    glcoinSHA256=$(grep -i "${binaryName}}" SHA256SUMS | cut -d " " -f1)
-    echo "# FAIL # Downloaded GLCOIN BINARY CHECKSUM:"
-    echo "$(sha256sum ${binaryName})"
-    echo "NOT matching SHA256 checksum:"
-    echo "${glcoinSHA256}"
-    exit 1
-  else
-    echo
-    echo "# OK --> VERIFIED GLCOIN CORE BINARY CHECKSUM IS CORRECT"
-    echo
-  fi
-fi
-
-if [ "${mode}" = "tested" ] || [ "${mode}" = "custom" ]; then
-  glcoinInterimsUpdateNew="${glcoinVersion}"
-elif [ "${mode}" = "reckless" ]; then
-  glcoinInterimsUpdateNew="reckless"
-fi
-
-# JOINED INSTALL
-if [ "${mode}" = "tested" ] || [ "${mode}" = "reckless" ] || [ "${mode}" = "custom" ]; then
-
-  # install
-  echo "# Stopping glcoind ..."
-  sudo systemctl stop glcoind 2>/dev/null
-  sudo systemctl stop tglcoind 2>/dev/null
-  sudo systemctl stop sglcoind 2>/dev/null
-  echo
-  echo "# Installing Glcoin Core v${glcoinVersion}"
-  tar -xvf ${binaryName}
-  sudo install -m 0755 -o root -g root -t /usr/local/bin/ glcoin-${glcoinVersion}/bin/*
-  sudo install -m 0644 -o root -g root -D -t /usr/local/share/man/man1 glcoin-${glcoinVersion}/share/man/man1/*
-  sleep 3
-  if ! sudo -u glcoin /usr/local/bin/glcoind --version | grep "${glcoinVersion}"; then
-    echo
-    echo "# BUILD FAILED --> Was not able to install glcoind version(${glcoinVersion})"
-    exit 1
-  fi
+  # Rebuild from local source tarball
+  /home/admin/config.scripts/glcoin.install.sh install || exit 1
 
   echo "# mark update in raspiblesk config"
   /home/admin/config.scripts/blesk.conf.sh set glcoinInterimsUpdate "${glcoinInterimsUpdateNew}"
 
   echo "# OK Glcoin Core ${glcoinVersion} is installed"
   exit 0
-
-else
-  echo "# error='parameter not known'"
-  exit 1
 fi
+
+echo "# error='parameter not known'"
+exit 1

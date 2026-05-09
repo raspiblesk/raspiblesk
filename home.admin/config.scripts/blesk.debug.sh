@@ -84,7 +84,7 @@ echo
 echo "***************************************************************"
 echo "* RASPIBLESK DEBUG LOGS "
 echo "***************************************************************"
-echo "blitzversion: ${codeVersion}"
+echo "bleskversion: ${codeVersion}"
 echo "commit-release: ${codeRelease}"
 echo "commit-active: ${codeCommit}"
 echo "chainnetwork: ${network} / ${chain}"
@@ -130,8 +130,8 @@ if [ "${lightning}" == "lnd" ] || [ "${lnd}" == "on" ] || [ "${lnd}" == "1" ]; t
   sudo journalctl -u lnd -b --no-pager -n12
   echo
   echo "*** LAST LND (MAINNET) INFO LOGS ***"
-  echo "sudo tail -n 50 /mnt/hdd/app-data/lnd/logs/${network}/mainnet/lnd.log"
-  sudo tail -n 50 /mnt/hdd/app-data/lnd/logs/${network}/mainnet/lnd.log
+  echo "sudo tail -n 50 /mnt/hdd/app-data/lnd/logs/bitcoin/glcoin/lnd.log"
+  sudo tail -n 50 /mnt/hdd/app-data/lnd/logs/bitcoin/glcoin/lnd.log
 else
   echo "- OFF by config -"
 fi
@@ -175,8 +175,8 @@ if [ "${tlnd}" == "on" ] || [ "${tlnd}" == "1" ]; then
   sudo journalctl -u tlnd -b --no-pager -n12
   echo
   echo "*** LAST 30 LND (TESTNET) INFO LOGS ***"
-  echo "sudo tail -n 30 /mnt/hdd/app-data/lnd/logs/${network}/testnet/tnd.log"
-  sudo tail -n 30 /mnt/hdd/app-data/lnd/logs/${network}/testnet/lnd.log
+  echo "sudo journalctl -u tlnd -b --no-pager -n30"
+  sudo journalctl -u tlnd -b --no-pager -n30
 else
   echo "- OFF by config -"
 fi
@@ -249,21 +249,21 @@ echo "--> CHECK CONFIG: sudo nginx -t"
 sudo nginx -t 2>&1
 echo
 
-echo "*** BLITZAPI STATUS ***"
+echo "*** BLESKAPI STATUS ***"
 /home/admin/config.scripts/blesk.web.api.sh info
 if [ $(sudo systemctl status bleskapi 2>/dev/null | grep -c "bleskapi.service") -lt 1 ]; then
-  echo "- BLITZAPI is not running"
+  echo "- BLESKAPI is not running"
 else
   sudo systemctl status bleskapi -n2 --no-pager
   echo
 
-  echo "*** LAST BLITZAPI LOGS ***"
+  echo "*** LAST BLESKAPI LOGS ***"
   echo "sudo journalctl -u bleskapi -b --no-pager -n40"
   sudo journalctl -u bleskapi -b --no-pager -n40
   echo
 fi
 
-echo "*** BLITZ WebUI STATUS ***"
+echo "*** BLESK WebUI STATUS ***"
 /home/admin/config.scripts/blesk.web.ui.sh info
 echo
 
@@ -364,17 +364,7 @@ else
   echo "- LNDg is OFF by config"
 fi
 
-if [ "${GLCPayServer}" == "on" ]; then
-  echo
-  echo "*** LAST 20 GLCPay Server LOGS ***"
-  echo "sudo journalctl -u btcpayserver -b --no-pager -n20"
-  sudo journalctl -u btcpayserver -b --no-pager -n20
-  echo
-else
-  echo "- GLCPay Server is OFF by config"
-fi
-
-if [ "${GlcoinRPCexplorer}" == "on" ]; then
+if [ "${GLCRPCexplorer}" == "on" ]; then
   echo
   echo "*** LAST 20 GLC-RPC-Explorer LOGS ***"
   echo "sudo journalctl -u glc-rpc-explorer -b --no-pager -n20"
@@ -438,8 +428,8 @@ fi
 if [ "${glcoinMiner}" == "on" ]; then
   echo
   echo "*** LAST 20 GLCOIN MINER LOGS ***"
-  echo "sudo journalctl -u glcoin-mining -b --no-pager -n20"
-  sudo journalctl -u glcoin-mining -b --no-pager -n20
+  echo "sudo journalctl -u glcoin-miner -b --no-pager -n20"
+  sudo journalctl -u glcoin-miner -b --no-pager -n20
 else
   echo "- GLCOIN MINER is OFF by config"
 fi
@@ -491,7 +481,7 @@ echo
 echo "*** SYSTEM CACHE STATUS ***"
 /home/admin/_cache.sh "export" system_
 /home/admin/_cache.sh "export" ln_default | grep -v "ln_default_address"
-/home/admin/_cache.sh "export" btc_default | grep -v "btc_default_address"
+/home/admin/_cache.sh "export" glc_default | grep -v "glc_default_address"
 
 echo "*** POSSIBLE ERROR REPORTS ***"
 ls -1  /home/admin/error* 2>/dev/null

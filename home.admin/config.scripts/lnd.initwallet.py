@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import json
 import os
 import sys
 from pathlib import Path
@@ -12,11 +13,22 @@ if sys.version_info < (3, 0):
 # display config script info
 if len(sys.argv) <= 1 or sys.argv[1] in ["-h", "--help", "help"]:
     print("# creating or recovering the LND wallet")
+    print("# Secrets MAY be passed as argv (legacy, visible via /proc/PID/cmdline)")
+    print("# OR as a single JSON object on stdin via --stdin (recommended).")
+    print("# stdin schema:")
+    print("#   new:             {\"wallet_password\":\"...\", \"seed_password\":\"...\"}")
+    print("#   seed:            {\"wallet_password\":\"...\", \"seed_words\":\"w1 w2 ... w24\", \"seed_password\":\"...\"}")
+    print("#   unlock:          {\"wallet_password\":\"...\", \"recovery_window\":N}")
+    print("#   change-password: {\"wallet_password\":\"...\", \"wallet_password_new\":\"...\"}")
     print("# lnd.initwallet.py new [mainnet|testnet|signet] [walletpassword] [?seedpassword]")
+    print("# lnd.initwallet.py new [mainnet|testnet|signet] --stdin")
     print("# lnd.initwallet.py seed [mainnet|testnet|signet] [walletpassword] [\"seeds-words-seperated-spaces\"] [?seedpassword]")
+    print("# lnd.initwallet.py seed [mainnet|testnet|signet] --stdin")
     print("# lnd.initwallet.py unlock [mainnet|testnet|signet] [walletpassword] [recovery_window]")
+    print("# lnd.initwallet.py unlock [mainnet|testnet|signet] --stdin")
     print("# lnd.initwallet.py scb [mainnet|testnet|signet] [filepathSCB] [macaroonPath]")
     print("# lnd.initwallet.py change-password [mainnet|testnet|signet] [walletpassword-old] [walletpassword-new]")
+    print("# lnd.initwallet.py change-password [mainnet|testnet|signet] --stdin")
     print("err='missing parameters'")
     sys.exit(1)
 
@@ -192,6 +204,30 @@ def change_password(stub, wallet_password="", wallet_password_new=""):
         sys.exit(1)
 
 
+def _read_stdin_secrets():
+    """Read a single-line JSON object from stdin holding the secrets.
+
+    Used when '--stdin' is passed instead of putting the wallet password,
+    seed words and seed password on argv where /proc/PID/cmdline exposes
+    them to every local user. The shell caller pipes the JSON in, e.g.:
+        printf '%s' "$json" | sudo -u glcoin lnd.initwallet.py seed mainnet --stdin
+    """
+    try:
+        raw = sys.stdin.read()
+        if not raw.strip():
+            print("err='--stdin given but no JSON received'")
+            sys.exit(1)
+        data = json.loads(raw)
+        if not isinstance(data, dict):
+            print("err='stdin JSON must be an object'")
+            sys.exit(1)
+        return data
+    except json.JSONDecodeError as e:
+        print("err='invalid JSON on stdin'")
+        print("errMore=\"{}\"".format(str(e).replace('"', "'")))
+        sys.exit(1)
+
+
 def parse_args():
     network = ""
     wallet_password = ""
@@ -208,77 +244,120 @@ def parse_args():
         print("err='missing parameters'")
         sys.exit(1)
 
+    # Detect --stdin sentinel as the 4th argv. When present, secrets come
+    # from a JSON object on stdin instead of argv. This avoids leaking
+    # the wallet password / seed words / seed password via /proc/PID/cmdline.
+    stdin_mode = (len(sys.argv) > 3 and sys.argv[3] == "--stdin")
+    secrets = _read_stdin_secrets() if stdin_mode else {}
+
     if mode == "new":
-        if len(sys.argv) > 3:
-            wallet_password = sys.argv[3]
+        if stdin_mode:
+            wallet_password = secrets.get("wallet_password", "")
+            seed_password = secrets.get("seed_password", "")
             if len(wallet_password) < 8:
                 print("err='wallet password is too short'")
                 sys.exit(1)
         else:
-            print("err='missing parameters'")
-            sys.exit(1)
+            if len(sys.argv) > 3:
+                wallet_password = sys.argv[3]
+                if len(wallet_password) < 8:
+                    print("err='wallet password is too short'")
+                    sys.exit(1)
+            else:
+                print("err='missing parameters'")
+                sys.exit(1)
 
-        if len(sys.argv) > 4:
-            seed_password = sys.argv[4]
+            if len(sys.argv) > 4:
+                seed_password = sys.argv[4]
 
     elif mode == "change-password":
 
-        if len(sys.argv) > 4:
-            wallet_password = sys.argv[3]
-            if len(wallet_password) < 8:
+        if stdin_mode:
+            wallet_password = secrets.get("wallet_password", "")
+            wallet_password_new = secrets.get("wallet_password_new", "")
+            if len(wallet_password) < 8 or len(wallet_password_new) < 8:
                 print("err='wallet password is too short'")
                 sys.exit(1)
-            wallet_password_new = sys.argv[4]
-            if len(wallet_password_new ) < 8:
-                print("err='wallet password new is too short'")
-                sys.exit(1)
         else:
-            print("err='missing parameters'")
-            sys.exit(1)
+            if len(sys.argv) > 4:
+                wallet_password = sys.argv[3]
+                if len(wallet_password) < 8:
+                    print("err='wallet password is too short'")
+                    sys.exit(1)
+                wallet_password_new = sys.argv[4]
+                if len(wallet_password_new ) < 8:
+                    print("err='wallet password new is too short'")
+                    sys.exit(1)
+            else:
+                print("err='missing parameters'")
+                sys.exit(1)
 
     elif mode == "seed":
 
-        if len(sys.argv) > 3:
-            wallet_password = sys.argv[3]
+        if stdin_mode:
+            wallet_password = secrets.get("wallet_password", "")
+            seed_word_str = secrets.get("seed_words", "")
+            seed_password = secrets.get("seed_password", "")
             if len(wallet_password) < 8:
                 print("err='wallet password is too short'")
                 sys.exit(1)
-        else:
-            print("err='not correct amount of parameter - missing wallet password'")
-            sys.exit(1)
-
-        if len(sys.argv) > 4:
-            seed_word_str = sys.argv[4]
             seed_words = seed_word_str.split(" ")
             if len(seed_words) < 24:
-                print("err='not 24 seed words separated by just spaces (surrounded with \")'")
+                print("err='not 24 seed words separated by just spaces'")
                 sys.exit(1)
         else:
-            print("err='not correct amount of parameter  - missing seed string'")
-            sys.exit(1)
+            if len(sys.argv) > 3:
+                wallet_password = sys.argv[3]
+                if len(wallet_password) < 8:
+                    print("err='wallet password is too short'")
+                    sys.exit(1)
+            else:
+                print("err='not correct amount of parameter - missing wallet password'")
+                sys.exit(1)
 
-        if len(sys.argv) > 5:
-                seed_password = sys.argv[5]
+            if len(sys.argv) > 4:
+                seed_word_str = sys.argv[4]
+                seed_words = seed_word_str.split(" ")
+                if len(seed_words) < 24:
+                    print("err='not 24 seed words separated by just spaces (surrounded with \")'")
+                    sys.exit(1)
+            else:
+                print("err='not correct amount of parameter  - missing seed string'")
+                sys.exit(1)
+
+            if len(sys.argv) > 5:
+                    seed_password = sys.argv[5]
 
 
     elif mode == "unlock":
 
-        if len(sys.argv) > 3:
-            wallet_password = sys.argv[3]
+        if stdin_mode:
+            wallet_password = secrets.get("wallet_password", "")
+            try:
+                scan_depth = int(secrets.get("recovery_window", 0))
+            except (TypeError, ValueError):
+                print("err='expecting a number for recovery_window'")
+                sys.exit(1)
             if len(wallet_password) < 8:
                 print("err='wallet password is too short'")
                 sys.exit(1)
         else:
-            print("err='not correct amount of parameter - missing wallet password'")
-            sys.exit(1)
-        if len(sys.argv) > 4:
-            scan_depth = int(sys.argv[4])
-            if type(scan_depth) is not int:
-                print("err='expecting a number for recovery_window'")
+            if len(sys.argv) > 3:
+                wallet_password = sys.argv[3]
+                if len(wallet_password) < 8:
+                    print("err='wallet password is too short'")
+                    sys.exit(1)
+            else:
+                print("err='not correct amount of parameter - missing wallet password'")
                 sys.exit(1)
-        else:
-            print("err='not correct amount of parameter - missing recovery_window'")
-            sys.exit(1)
+            if len(sys.argv) > 4:
+                scan_depth = int(sys.argv[4])
+                if type(scan_depth) is not int:
+                    print("err='expecting a number for recovery_window'")
+                    sys.exit(1)
+            else:
+                print("err='not correct amount of parameter - missing recovery_window'")
+                sys.exit(1)
 
     elif mode == "scb":
 

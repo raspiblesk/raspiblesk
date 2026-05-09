@@ -180,24 +180,33 @@ with open('angular.json', 'w') as f:
 "
   # end mempool v3.2.1 patches
 
-  sudo -u mempool NG_CLI_ANALYTICS=false NO_UPDATE_NOTIFIER=1 npm ci --no-audit --no-fund 2>&1 | grep -Ev "^npm (warn deprecated|warn old lockfile|notice)"
+# patch: replace BTC/Bitcoin denomination with GLC/Glcoin in the frontend
+echo "# Patching mempool frontend denomination: BTC→GLC, Bitcoin→Glcoin"
+sudo -u mempool find src/ -type f \( -name "*.ts" -o -name "*.html" -o -name "*.js" -o -name "*.json" \) \
+  -exec sed -i 's/\bBTC\b/GLC/g; s/\bBitcoin\b/Glcoin/g' {} +
+# end mempool denomination patch
+
+  echo "# npm ci (frontend) — can take 10–20 min on a Pi, please be patient"
+  sudo -u mempool NG_CLI_ANALYTICS=false NO_UPDATE_NOTIFIER=1 npm ci --no-audit --no-fund 2>&1 | grep --line-buffered -Ev "^npm (warn deprecated|warn old lockfile|notice)"
   if [ "${PIPESTATUS[0]}" -ne 0 ]; then
     echo "FAIL - npm install did not run correctly, aborting"
     exit 1
   fi
-  sudo -u mempool NG_CLI_ANALYTICS=false NO_UPDATE_NOTIFIER=1 npm run build 2>&1 | grep -Ev "^No translation found for"
+  echo "# npm run build (frontend) — can take 30–60 min on a Pi, please be patient"
+  echo "# monitor: sudo tail -f /home/mempool/mempool/frontend/npm-debug.log 2>/dev/null"
+  sudo -u mempool NG_CLI_ANALYTICS=false NO_UPDATE_NOTIFIER=1 npm run build 2>&1 | grep --line-buffered -Ev "^No translation found for"
   if [ "${PIPESTATUS[0]}" -ne 0 ]; then
     echo "FAIL - npm run build did not run correctly, aborting (1)"
     exit 1
   fi
 
   echo "# install Rust for mempool"
-  sudo -u mempool curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sudo -u mempool sh -s -- -y
+  sudo -u mempool curl --proto '=https' --tlsv1.2 --connect-timeout 30 --max-time 300 -sSf https://sh.rustup.rs | sudo -u mempool sh -s -- -y || echo "# WARN: rustup install failed — continuing"
 
-  echo "# npm install for mempool explorer (backend)"
+  echo "# npm ci (backend) — can take 5–10 min on a Pi, please be patient"
 
   cd ../backend/ || exit 1
-  sudo -u mempool NG_CLI_ANALYTICS=false NO_UPDATE_NOTIFIER=1 PATH=$PATH:/home/mempool/.cargo/bin npm ci --no-audit --no-fund 2>&1 | grep -Ev "^npm (warn deprecated|warn old lockfile|notice)"
+  sudo -u mempool NG_CLI_ANALYTICS=false NO_UPDATE_NOTIFIER=1 PATH=$PATH:/home/mempool/.cargo/bin npm ci --no-audit --no-fund 2>&1 | grep --line-buffered -Ev "^npm (warn deprecated|warn old lockfile|notice)"
   if [ "${PIPESTATUS[0]}" -ne 0 ]; then
     echo "# FAIL - npm install did not run correctly, aborting"
     echo "result='failed npm install'"
@@ -497,10 +506,11 @@ if [ "$1" = "update" ]; then
     echo "# npm install for mempool explorer (backend)"
 
     echo "# install Rust for mempool"
-    sudo -u mempool curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sudo -u mempool sh -s -- -y
+    sudo -u mempool curl --proto '=https' --tlsv1.2 --connect-timeout 30 --max-time 300 -sSf https://sh.rustup.rs | sudo -u mempool sh -s -- -y || echo "# WARN: rustup install failed — continuing"
 
+    echo "# npm ci (backend) — can take 5–10 min on a Pi, please be patient"
     cd /home/mempool/mempool/backend/ || exit 1
-    sudo -u mempool NG_CLI_ANALYTICS=false NO_UPDATE_NOTIFIER=1 PATH=$PATH:/home/mempool/.cargo/bin npm ci --no-audit --no-fund 2>&1 | grep -Ev "^npm (warn deprecated|warn old lockfile|notice)"
+    sudo -u mempool NG_CLI_ANALYTICS=false NO_UPDATE_NOTIFIER=1 PATH=$PATH:/home/mempool/.cargo/bin npm ci --no-audit --no-fund 2>&1 | grep --line-buffered -Ev "^npm (warn deprecated|warn old lockfile|notice)"
     if [ "${PIPESTATUS[0]}" -ne 0 ]; then
       echo "FAIL - npm install did not run correctly, aborting"
       exit 1
@@ -510,15 +520,16 @@ if [ "$1" = "update" ]; then
       exit 1
     fi
 
-    echo "# npm install for mempool explorer (frontend)"
+    echo "# npm ci (frontend) — can take 10–20 min on a Pi, please be patient"
 
     cd ../frontend || exit 1
-    sudo -u mempool NG_CLI_ANALYTICS=false NO_UPDATE_NOTIFIER=1 npm ci --no-audit --no-fund 2>&1 | grep -Ev "^npm (warn deprecated|warn old lockfile|notice)"
+    sudo -u mempool NG_CLI_ANALYTICS=false NO_UPDATE_NOTIFIER=1 npm ci --no-audit --no-fund 2>&1 | grep --line-buffered -Ev "^npm (warn deprecated|warn old lockfile|notice)"
     if [ "${PIPESTATUS[0]}" -ne 0 ]; then
       echo "FAIL - npm install did not run correctly, aborting"
       exit 1
     fi
-    sudo -u mempool NG_CLI_ANALYTICS=false NO_UPDATE_NOTIFIER=1 npm run build 2>&1 | grep -Ev "^No translation found for"
+    echo "# npm run build (frontend) — can take 30–60 min on a Pi, please be patient"
+    sudo -u mempool NG_CLI_ANALYTICS=false NO_UPDATE_NOTIFIER=1 npm run build 2>&1 | grep --line-buffered -Ev "^No translation found for"
     if [ "${PIPESTATUS[0]}" -ne 0 ]; then
       echo "FAIL - npm run build did not run correctly, aborting (4)"
       exit 1

@@ -78,15 +78,9 @@ DISPLAY_GLCOIN_RPC_USER="$RPC_USER"
 DISPLAY_GLCOIN_RPC_PASS="$RPC_PASS"
 
 # Exchange rates to show.
-# Use identifiers supported by BTCPay/Kraken, e.g. EUR, CHF
+# Use identifiers supported by Kraken, e.g. EUR, CHF
 DISPLAY_RATE1="USD"
 DISPLAY_RATE2="EUR"
-
-# BTCPay Settings for rate fetching.
-# Generate API via Store > Access Tokens > Legacy API Keys
-# Omit these setting to use Kraken as a fallback.
-# BTCPAY_HOST="https://my.btcpayserver.com"
-# BTCPAY_API_TOKEN="myBtcPayLegacyApiKey"
 
 # Shall the fallbacks be used?
 DISPLAY_FALLBACK_BLOCK=false

@@ -12,8 +12,8 @@
 
 RASPIBLESK_GITHUB_ORG="raspiblesk"
 RASPIBLESK_GITHUB_REPO="raspiblesk"
-GLCOIN_GITHUB_ORG="glcoin"
-GLCOIN_GITHUB_REPO="glcoin"
+GLCOIN_GITHUB_ORG="${RASPIBLESK_GITHUB_ORG}"
+GLCOIN_GITHUB_REPO="${RASPIBLESK_GITHUB_REPO}"
 
 if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
   echo "blesk.update.sh check    - compare installed version vs latest GitHub release"

@@ -15,9 +15,9 @@ fi
 
 # get data from cache
 source <(/home/admin/_cache.sh get \
-  btc_default_ready \
-  btc_default_sync_percentage \
-  btc_default_peers \
+  glc_default_ready \
+  glc_default_sync_percentage \
+  glc_default_peers \
   system_count_start_blockchain \
 )
 
@@ -27,18 +27,18 @@ width=45
 actionString="Please wait - this can take some time"
 
 # formatting BLOCKCHAIN SYNC PROGRESS
-if [ "${btc_default_ready}" == "0" ] || [ "${btc_default_peers}" == "" ]; then
+if [ "${glc_default_ready}" == "0" ] || [ "${glc_default_peers}" == "" ]; then
     if [ "${system_count_start_blockchain}" != "" ] && [ ${system_count_start_blockchain} -gt 1 ]; then
         syncProgress="${system_count_start_blockchain} restarts"
     else
         syncProgress="waiting for start"
     fi
-elif [ "${btc_default_peers}" == "0" ]; then
+elif [ "${glc_default_peers}" == "0" ]; then
     syncProgress="waiting for peers"
-elif [ ${#btc_default_sync_percentage} -lt 6 ]; then
-    syncProgress=" ${btc_default_sync_percentage} % ${btc_default_peers} peers"
+elif [ ${#glc_default_sync_percentage} -lt 6 ]; then
+    syncProgress=" ${glc_default_sync_percentage} % ${glc_default_peers} peers"
 else
-    syncProgress="${btc_default_sync_percentage} % ${btc_default_peers} peers"
+    syncProgress="${glc_default_sync_percentage} % ${glc_default_peers} peers"
 fi
 
 # get data from cache

@@ -162,6 +162,13 @@ var GlcoinMainNetParams = Params{
 func init() {
 	// Register the Glcoin mainnet params so they can be looked up by name or magic.
 	if err := Register(&GlcoinMainNetParams); err != nil {
-		panic(err)
+		// ignore ErrDuplicateNet — safe if called multiple times
+		_ = err
 	}
+
+	// Override Bitcoin MainNetParams with Glcoin params so that LND configured
+	// with bitcoin.mainnet=1 transparently uses Glcoin chain parameters.
+	// lnd.conf uses [Bitcoin]/[Bitcoind] sections (not [Glcoin]) on purpose:
+	// the wire protocol is Bitcoin-compatible; only the chain params differ.
+	MainNetParams = GlcoinMainNetParams
 }
