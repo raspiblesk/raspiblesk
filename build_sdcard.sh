@@ -104,6 +104,31 @@ if [ "$1" = "-EXPORT" ] || [ "$1" = "EXPORT" ]; then
   exit 0
 fi
 
+# ----------------------------------------------------------------------
+# Audit-grade install log capture (Schweizer Reproduzierbarkeit).
+# Mirrors stdout+stderr from this point on into a persistent file so
+# every install run can be reconstructed after first boot. Survives
+# reboots; child scripts inherit the redirection automatically.
+# ----------------------------------------------------------------------
+RASPIBLESK_LOG_DIR="/var/log/raspiblesk"
+RASPIBLESK_LOG_RUN="$(date +%Y%m%d-%H%M%S)"
+mkdir -p "${RASPIBLESK_LOG_DIR}"
+chmod 755 "${RASPIBLESK_LOG_DIR}"
+RASPIBLESK_LOG_FILE="${RASPIBLESK_LOG_DIR}/build_sdcard-${RASPIBLESK_LOG_RUN}.log"
+ln -sfn "${RASPIBLESK_LOG_FILE}" "${RASPIBLESK_LOG_DIR}/latest.log"
+export RASPIBLESK_LOG_FILE RASPIBLESK_LOG_DIR
+exec > >(stdbuf -oL tee -a "${RASPIBLESK_LOG_FILE}") 2>&1
+echo "==================================================="
+echo "# RaspiBlesk build_sdcard.sh"
+echo "# start  : $(date -Iseconds)"
+echo "# host   : $(hostname) ($(uname -srm))"
+echo "# script : $(readlink -f "$0")"
+echo "# args   : $*"
+echo "# pid    : $$"
+echo "# log    : ${RASPIBLESK_LOG_FILE}"
+echo "# follow : sudo tail -f ${RASPIBLESK_LOG_DIR}/latest.log"
+echo "==================================================="
+
 ## default user message
 error_msg(){ printf %s"${red}${me}: ${1}${nocolor}\n"; exit 1; }
 
@@ -212,7 +237,10 @@ track_install() {
 }
 
 print_build_summary() {
-  [ ! -f "${BLESK_BUILD_LOG}" ] && return
+  [ ! -f "${BLESK_BUILD_LOG}" ] && {
+    [ -n "${RASPIBLESK_LOG_FILE}" ] && echo "# build log saved: ${RASPIBLESK_LOG_FILE}"
+    return
+  }
   local ok_count=0 fail_count=0 ok_list="" fail_list=""
   while IFS='|' read -r status name; do
     if [ "${status}" = "OK" ]; then
@@ -245,6 +273,7 @@ print_build_summary() {
   fi
   echo "################################################"
   echo ""
+  [ -n "${RASPIBLESK_LOG_FILE}" ] && echo "# build log saved: ${RASPIBLESK_LOG_FILE}"
   rm -f "${BLESK_BUILD_LOG}" 2>/dev/null
 }
 trap print_build_summary EXIT
@@ -952,9 +981,9 @@ fi
 # Overlay build_sdcard.sh itself so defaultWEBUIuser/repo stay correct after git clone
 cp "${SCRIPT_DIR}/build_sdcard.sh" "/home/admin/raspiblesk/build_sdcard.sh"
 echo "# Overlaid local fix: build_sdcard.sh"
-if [ -f "${SCRIPT_DIR}/home.admin/assets/glcoin-0.1.10-src.tar.gz" ]; then
-  cp "${SCRIPT_DIR}/home.admin/assets/glcoin-0.1.10-src.tar.gz" "/home/admin/raspiblesk/home.admin/assets/glcoin-0.1.10-src.tar.gz"
-  echo "# Copied bundled glcoin-0.1.10-src.tar.gz to repo assets"
+if [ -f "${SCRIPT_DIR}/home.admin/assets/glcoin-0.2.3-src.tar.gz" ]; then
+  cp "${SCRIPT_DIR}/home.admin/assets/glcoin-0.2.3-src.tar.gz" "/home/admin/raspiblesk/home.admin/assets/glcoin-0.2.3-src.tar.gz"
+  echo "# Copied bundled glcoin-0.2.3-src.tar.gz to repo assets"
 fi
 if [ -f "${SCRIPT_DIR}/home.admin/assets/raspiblitz-web-master.tar.gz" ]; then
   cp "${SCRIPT_DIR}/home.admin/assets/raspiblitz-web-master.tar.gz" "/home/admin/raspiblesk/home.admin/assets/raspiblitz-web-master.tar.gz"
@@ -1135,6 +1164,13 @@ if [ ! -f /var/log/auth.log ]; then
   touch /var/log/auth.log
 fi
 
+# v0.15.12: mask rpcbind (NFS portmapper). Pulled in transitively by some
+# nfs-utils dependency tree and binds 0.0.0.0:111 + [::]:111 by default.
+# RaspiBlesk is not an NFS server and exposes nothing on 111. Mask the unit
+# (mask, not just disable — disable can be re-enabled by socket activation).
+systemctl mask rpcbind.service rpcbind.socket 2>/dev/null || true
+systemctl stop rpcbind.service rpcbind.socket 2>/dev/null || true
+
 # *** CACHE DISK IN RAM & KEYVALUE-STORE ***
 echo "Activating CACHE RAM DISK ... "
 /home/admin/_cache.sh ramdisk on || exit 1
@@ -1190,11 +1226,61 @@ systemctl enable background
 # *** BACKGROUND SCAN ***
 /home/admin/_background.scan.sh install || exit 1
 
+# *** INITIALIZE DATA STORAGE LAYOUT (must run BEFORE any app install) ***
+# Subsequent app installers (kubo, glcoin, electrs, fulcrum, mempool, lnd, etc.)
+# write into /mnt/hdd/app-storage/<app>/ and /mnt/hdd/app-data/<app>/ during the
+# build phase. If those parent directories do not exist as symlinks yet,
+# `mkdir -p /mnt/hdd/app-storage/<app>` would create /mnt/hdd/app-storage as a
+# real directory in the root-FS — and blesk.data.sh link (first-boot) would
+# then fail with `error='/mnt/hdd/app-storage is real directory'` because it
+# expects to claim that path as a symlink target.
+#
+# So we set up the bind-mount + symlink chain RIGHT NOW:
+#   /mnt/raspiblesk-data/app-storage          (real dir in root-FS, our data)
+#     <--bind-mount-->  /mnt/disk_storage     (fstab nofail bind)
+#     <-symlink--  /mnt/hdd/app-storage       (canonical path apps reference)
+# Same for app-data. After this block, `mkdir -p /mnt/hdd/app-storage/kubo`
+# resolves through the symlink + bind into /mnt/raspiblesk-data/app-storage/kubo,
+# which is the actual filesystem location and survives a reboot.
+#
+# raspiblesk.conf is intentionally NOT written here; its absence signals
+# "not yet provisioned" to blesk.data.sh's first-boot dialog.
+echo -e "\n*** INITIALIZING RASPIBLESK DATA DIRECTORIES ***"
+_bleskdata="/mnt/raspiblesk-data"
+mkdir -p "${_bleskdata}/app-storage/glcoin"
+mkdir -p "${_bleskdata}/app-data/glcoin"
+mkdir -p /mnt/disk_storage /mnt/hdd
+chown -R glcoin:glcoin "${_bleskdata}" 2>/dev/null || true
+chmod 755 "${_bleskdata}" "${_bleskdata}/app-storage" "${_bleskdata}/app-data"
+
+# Register bind-mount in fstab (auto-mounted before bootstrap via local-fs.target)
+sed -i "\#/mnt/disk_storage#d" /etc/fstab
+echo "${_bleskdata} /mnt/disk_storage none bind,nofail 0 0" >> /etc/fstab
+
+# Activate the bind-mount immediately so the symlinks below resolve right now
+# during the build, not only after first reboot.
+systemctl daemon-reload
+mount /mnt/disk_storage 2>/dev/null || mount -a 2>/dev/null || true
+
+# Lay down the canonical /mnt/hdd/{app-storage,app-data} symlinks NOW so that
+# app installers writing under those paths land in the storage layout from
+# the very first mkdir. blesk.data.sh link (first-boot) will unlink + recreate
+# these — that path is safe because they are symlinks, not real directories.
+ln -sfn /mnt/disk_storage/app-storage /mnt/hdd/app-storage
+ln -sfn /mnt/disk_storage/app-data    /mnt/hdd/app-data
+echo "# storage layout ready: /mnt/hdd/app-storage -> /mnt/disk_storage/app-storage (-> ${_bleskdata}/app-storage)"
+
 #######
 # TOR #
 #######
 echo
 track_install "TOR" /home/admin/config.scripts/tor.install.sh install || exit 1
+
+#########
+# KUBO  #  (IPFS daemon — mandatory dependency for Glcoin 0.2.x auto-pin)
+#########
+echo
+track_install "Kubo (IPFS)" /home/admin/config.scripts/kubo.install.sh install || exit 1
 
 ###########
 # GLCOIN #
@@ -1240,29 +1326,10 @@ echo
 echo "*** raspiblesk.info ***"
 cat /home/admin/raspiblesk.info
 
-# *** INITIALIZE DATA STORAGE (prevents first-boot system wipe on single-NVMe builds) ***
-# On Pi5/NVMe systems, bootstrap's first-boot "setup" would repartition the WHOLE NVMe,
-# destroying this just-completed installation. We prevent this by:
-#   1. Creating app-storage/app-data directories now on the existing filesystem
-#   2. Registering a bind-mount at /mnt/disk_storage in fstab
-#   3. bootstrap.service (After=local-fs.target) mounts this before bootstrap runs
-#   4. blesk.data.sh detects pre-mounted storage and skips the repartition
-# NOTE: raspiblesk.conf is intentionally NOT written here.
-#   Its absence signals "not yet provisioned" -> blesk.data.sh gives scenario=setup
-#   so the user gets the full guided first-boot dialogs (passwords + LND wallet).
-#   After provisioning writes the conf, subsequent boots get scenario=ready.
-echo -e "\n*** INITIALIZING RASPIBLESK DATA DIRECTORIES ***"
-_bleskdata="/mnt/raspiblesk-data"
-mkdir -p "${_bleskdata}/app-storage/glcoin"
-mkdir -p "${_bleskdata}/app-data/glcoin"
-mkdir -p /mnt/disk_storage /mnt/hdd
-chown -R glcoin:glcoin "${_bleskdata}" 2>/dev/null || true
-chmod 755 "${_bleskdata}" "${_bleskdata}/app-storage" "${_bleskdata}/app-data"
-
-# Register bind-mount in fstab (auto-mounted before bootstrap via local-fs.target)
-sed -i "\#/mnt/disk_storage#d" /etc/fstab
-echo "${_bleskdata} /mnt/disk_storage none bind,nofail 0 0" >> /etc/fstab
-echo "# RaspiBlesk data directories initialized at ${_bleskdata} -> /mnt/disk_storage"
+# Storage layout was initialized earlier (before kubo/glcoin/lnd installs) so
+# that those installers' mkdir -p /mnt/hdd/app-storage/<app> calls resolved
+# through the symlink chain. See the "INITIALIZE DATA STORAGE LAYOUT" block
+# above. Nothing to do here at end-of-build.
 
 # *** RASPIBLESK IMAGE READY INFO ***
 echo -e "\n**********************************************"

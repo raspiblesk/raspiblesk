@@ -38,6 +38,7 @@ import base64
 import binascii
 import hashlib
 import json
+import logging
 import os
 import socket
 import sys
@@ -50,14 +51,84 @@ from pathlib import Path
 from typing import Any, Iterable
 
 
+# ---------------------------------------------------------------------------
+# Debug log (`buglog`)
+# ---------------------------------------------------------------------------
+# Why this exists: running under systemd with stdout/stderr piped to journal,
+# CPython block-buffers writes by default unless PYTHONUNBUFFERED=1 is set or
+# python is launched with -u. That made the miner look like a silent zombie:
+# no startup banner, no errors, no progress lines for many minutes. buglog()
+# always flushes after every line AND mirrors to a persistent file so
+# diagnostics survive a journal rotation. Use it for everything in the hot
+# mining loops; reserve `print(json.dumps(...))` for the machine-readable
+# block-accepted records on stdout.
+DEFAULT_BUGLOG_FILE = "/mnt/hdd/app-data/glcoin-miner/miner.log"
+_BUGLOG: logging.Logger | None = None
+
+
+def _init_buglog() -> logging.Logger:
+    global _BUGLOG
+    if _BUGLOG is not None:
+        return _BUGLOG
+    log = logging.getLogger("glcoin-miner")
+    log.setLevel(logging.DEBUG)
+    log.propagate = False
+    fmt = logging.Formatter(
+        "%(asctime)s %(levelname)-5s %(message)s",
+        datefmt="%Y-%m-%dT%H:%M:%S",
+    )
+    # stderr handler — visible in `journalctl -u glcoin-miner`. AutoFlush via
+    # StreamHandler's emit() + flush(); combined with PYTHONUNBUFFERED=1 in
+    # the service unit, lines appear in journal in real time.
+    sh = logging.StreamHandler(sys.stderr)
+    sh.setFormatter(fmt)
+    log.addHandler(sh)
+    # File handler — survives journal vacuum + lets `tail -f` work cleanly.
+    path = os.environ.get("GLCOIN_MINER_LOG", DEFAULT_BUGLOG_FILE)
+    try:
+        d = os.path.dirname(path)
+        if d:
+            os.makedirs(d, mode=0o755, exist_ok=True)
+        fh = logging.FileHandler(path, mode="a", encoding="utf-8")
+        fh.setFormatter(fmt)
+        log.addHandler(fh)
+    except OSError as e:
+        # No file — keep going with stderr only. Note via stderr what failed.
+        sys.stderr.write(f"buglog: cannot open {path}: {e}\n")
+        sys.stderr.flush()
+    _BUGLOG = log
+    return log
+
+
+def buglog(msg: str, level: str = "info") -> None:
+    """Timestamped, always-flushed log line to stderr + a file. Safe to call
+    before/during/after mining loops. Levels: debug, info, warn, error."""
+    log = _init_buglog()
+    lvl = level.lower()
+    if lvl in ("warn", "warning"):
+        log.warning(msg)
+    elif lvl == "error":
+        log.error(msg)
+    elif lvl == "debug":
+        log.debug(msg)
+    else:
+        log.info(msg)
+    for h in log.handlers:
+        try:
+            h.flush()
+        except Exception:
+            pass
+
+
 DEFAULT_RPC_URL = "http://127.0.0.1:1617/"
 DEFAULT_RPC_URL_REGTEST = "http://127.0.0.1:41617/"
 DEFAULT_RPC_URL_SIGNET = "http://127.0.0.1:31617/"
 DEFAULT_RPC_URL_TESTNET4 = "http://127.0.0.1:21617/"
+# Local Kubo gateway only — RaspiBlesk runs Kubo as a mandatory dependency,
+# and public gateways break the threat model (third party sees which CIDs the
+# miner fetches, and can lie about content / hashes if reachability is faked).
 DEFAULT_GATEWAYS = (
-    "https://ipfs.io/ipfs/",
-    "https://cloudflare-ipfs.com/ipfs/",
-    "https://dweb.link/ipfs/",
+    "http://127.0.0.1:8080/ipfs/",
 )
 
 
@@ -517,8 +588,8 @@ def check_anchor_burn(rpc: RPCClient, anchor_txid: str, cid: str) -> None:
     actual = get_anchor_burn_sats(rpc, anchor_txid)
     if actual < required:
         raise RPCError(
-            f"anchor tx {anchor_txid[:16]}… burns only {actual} sat; "
-            f"need {required} sat ({len(cid_bytes)} CID bytes × {burn_per_byte} sat/byte) — "
+            f"anchor tx {anchor_txid[:16]}… burns only {actual} gsat; "
+            f"need {required} gsat ({len(cid_bytes)} CID bytes × {burn_per_byte} gsat/byte) — "
             f"consensus would reject with ipfs-commit-anchor-underpaid"
         )
 
@@ -710,6 +781,11 @@ def mine_block(rpc: RPCClient, payout_address: str, ipfs_cid: str | None,
     height = int(template["height"])
     reward = int(template["coinbasevalue"])
     payout_spk = decode_address_to_scriptpubkey(rpc, payout_address)
+    buglog(
+        f"template fetched height={height} reward={reward} gsats "
+        f"txs={len(template.get('transactions', []))} target_bits={template.get('bits')}",
+        level="debug",
+    )
 
     witness_spk: bytes | None = None
     wc_hex = template.get("default_witness_commitment")
@@ -769,8 +845,11 @@ def mine_block(rpc: RPCClient, payout_address: str, ipfs_cid: str | None,
             tries += 1
             if tries % progress_every == 0:
                 rate = tries / max(time.monotonic() - start, 1e-6)
-                print(f"  {tries:,} hashes, {rate/1e3:.1f} kH/s, extra_nonce={extra_nonce}",
-                      file=sys.stderr)
+                buglog(
+                    f"mining h={height} {tries:,} hashes {rate/1e3:.1f} kH/s "
+                    f"extra_nonce={extra_nonce}",
+                    level="debug",
+                )
             if tries >= max_tries:
                 break
         extra_nonce += 1
@@ -782,20 +861,30 @@ def mine_block(rpc: RPCClient, payout_address: str, ipfs_cid: str | None,
 # ---------------------------------------------------------------------------
 def cmd_mine_plain(args: argparse.Namespace) -> int:
     rpc = rpc_from_args(args)
+    buglog(f"mine-plain: payout={args.address} max_tries={args.max_tries:,}")
+    consecutive_rpc_errors = 0
     while True:
         try:
             info = mine_block(rpc, args.address, ipfs_cid=None, max_tries=args.max_tries)
+            consecutive_rpc_errors = 0
         except RPCError as exc:
             msg = str(exc)
             if "no solution" in msg:
-                # Template exhausted without finding a block — fetch a fresh one and retry immediately.
+                buglog(f"template exhausted (no solution in {args.max_tries:,} hashes) — refreshing template", level="debug")
                 continue
-            print(f"error: {exc}", file=sys.stderr)
+            consecutive_rpc_errors += 1
+            buglog(f"RPC error #{consecutive_rpc_errors}: {exc} — sleeping 30s", level="error")
             time.sleep(30)
             continue
+        # Block found — keep stdout JSON for machine consumers, but also tag
+        # the human log so journal users see it.
+        buglog(
+            f"block FOUND height={info.get('height')} hash={info.get('hash','')[:16]}… "
+            f"tries={info.get('tries'):,} elapsed={info.get('elapsed_s')}s accepted={info.get('accepted')}"
+        )
         print(json.dumps(info, indent=2), flush=True)
         if not info["accepted"]:
-            print(f"warning: block rejected ({info['result']}), retrying", file=sys.stderr)
+            buglog(f"block rejected by node: {info.get('result')} — retry in 5s", level="warn")
             time.sleep(5)
 
 
@@ -931,7 +1020,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--datadir", default=os.environ.get("GLCOIN_DATADIR",
                                                        str(Path.home() / ".glcoin")))
     p.add_argument("--gateway", action="append",
-                   help="IPFS HTTP gateway (may be repeated; default: ipfs.io, cloudflare, dweb.link)")
+                   help="IPFS HTTP gateway (default: local Kubo at http://127.0.0.1:8080/ipfs/)")
     p.add_argument("--timeout", type=float, default=30.0)
 
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -979,7 +1068,24 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    return args.func(args)
+    # Startup banner — proves the service launched and shows what it'll do.
+    cmd = getattr(args, "cmd", "?")
+    addr = getattr(args, "address", None)
+    txid = getattr(args, "txid", None)
+    buglog(
+        f"glcoin-miner starting: cmd={cmd}"
+        + (f" address={addr}" if addr else "")
+        + (f" anchor_txid={txid}" if txid else "")
+        + f" rpc={args.rpc_url}"
+    )
+    try:
+        return args.func(args)
+    except KeyboardInterrupt:
+        buglog("interrupted (KeyboardInterrupt)", level="warn")
+        return 130
+    except Exception as exc:
+        buglog(f"unhandled exception: {type(exc).__name__}: {exc}", level="error")
+        raise
 
 
 if __name__ == "__main__":

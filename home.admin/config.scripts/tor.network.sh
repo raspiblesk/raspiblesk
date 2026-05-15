@@ -146,6 +146,18 @@ case "$1" in
     . /mnt/hdd/app-data/raspiblesk.conf 2>/dev/null
     /home/admin/config.scripts/tor.onion-service.sh web80 80 80 443 443
     /home/admin/config.scripts/tor.onion-service.sh debuglogs 80 6969
+    # glcoind inbound P2P over Tor: external .onion:1618 → 127.0.0.1:1619.
+    # glcoind opens 127.0.0.1:1619 via its `bind=127.0.0.1:1619=onion` line
+    # so inbound onion peers can dial it. Without this HS the glcoind side
+    # of Tor was outbound-only (onlynet=onion in activateGlcoinOverTor) —
+    # a Tor leech with no inbound peers. v0.15.11 shipped without it.
+    /home/admin/config.scripts/tor.onion-service.sh glcoind 1618 1619
+    # LND REST API over Tor: external .onion:443 → 127.0.0.1:8080.
+    # Mobile wallets (Zeus etc.) can dial this for REST-over-Tor without
+    # opening 8080 to the LAN. Conditional on LND being installed.
+    if [ -f /etc/systemd/system/lnd.service ]; then
+      /home/admin/config.scripts/tor.onion-service.sh lndrest 443 8080
+    fi
     [ "${GLCRPCexplorer}" = "on" ] && /home/admin/config.scripts/tor.onion-service.sh glc-rpc-explorer 80 3022 443 3023
     [ "${rtlWebinterface}" = "on" ] && /home/admin/config.scripts/tor.onion-service.sh RTL 80 3002 443 3003
     [ "${ElectRS}" = "on" ] && /home/admin/config.scripts/tor.onion-service.sh electrs 50002 50002 50001 50001

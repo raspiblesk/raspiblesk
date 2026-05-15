@@ -162,6 +162,26 @@ if [ "$1" = "install" ]; then
 
   sudo -u rtl /home/admin/config.scripts/blesk.git-verify.sh "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" "${RTLVERSION}" || exit 1
 
+  # Glcoin display rebrand: sat -> gsat in RTL frontend i18n + HTML templates.
+  # Touches only user-visible strings. TypeScript identifiers, API field
+  # names, and BOLT protocol values (which are sat on the wire) are not
+  # modified. Idempotent — sed is a no-op once the strings are replaced.
+  echo "# Rebrand RTL display unit sat -> gsat"
+  if [ -d /home/rtl/RTL/src ]; then
+    sudo -u rtl find /home/rtl/RTL/src \( -name '*.html' -o -name '*.json' \) -print0 \
+      | xargs -0 -r sudo -u rtl sed -i \
+          -e 's| Sats| gsats|g' \
+          -e 's|"Sats"|"gsats"|g' \
+          -e 's|> Sats<|> gsats<|g' \
+          -e 's|>Sats<|>gsats<|g' \
+          -e 's| sats | gsats |g' \
+          -e 's|"sats"|"gsats"|g' \
+          -e 's|>sats<|>gsats<|g' \
+          -e 's| sat | gsat |g' \
+          -e 's|"sat"|"gsat"|g' \
+          -e 's|>sat<|>gsat<|g'
+  fi
+
   # from https://github.com/Ride-The-Lightning/RTL/commits/master
   # git checkout 917feebfa4fb583360c140e817c266649307ef72
   if [ -f /home/rtl/RTL/LICENSE ]; then

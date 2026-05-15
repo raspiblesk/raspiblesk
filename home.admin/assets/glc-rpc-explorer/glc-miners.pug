@@ -1,0 +1,75 @@
+extends layout
+
+block headContent
+	title KYC Miners
+
+block content
+	h1.h3 KYC Miner Registry
+	hr
+
+	.mb-3
+		each f in allFilters
+			a.btn.btn-sm.me-2(
+				href="./miners?status=" + f,
+				class=(f === filter ? "btn-primary" : "btn-outline-secondary"))= f
+
+	if error
+		.alert.alert-danger
+			strong Error:
+			|  #{error}
+			|
+			small (call the RPC via
+				a(href="./rpc-browser") /rpc-browser
+				|  if the daemon is missing the registry.)
+	else if !miners || miners.length === 0
+		.alert.alert-secondary No miners with status "#{filter}".
+	else
+		p.text-muted #{miners.length} miner#{miners.length === 1 ? "" : "s"} matching status "#{filter}".
+
+		.table-responsive
+			table.table.table-hover.table-sm
+				thead
+					tr
+						th Display Name
+						th KYC ID
+						th Address
+						th Status
+						th Registered
+						th Approved
+						th Expires
+				tbody
+					each m in miners
+						tr
+							td= m.display_name || ""
+							td
+								code.text-muted= m.kyc_id || ""
+							td
+								a(href="./address/" + m.address)
+									code= m.address
+							td
+								- var statusClass = m.status === "approved" ? "success" : (m.status === "pending" ? "warning" : "secondary")
+								span(class="badge bg-" + statusClass)= m.status
+							td.text-muted
+								if m.registered_at
+									= new Date(m.registered_at * 1000).toISOString().slice(0, 10)
+								else
+									| —
+							td.text-muted
+								if m.approved_at
+									= new Date(m.approved_at * 1000).toISOString().slice(0, 10)
+								else
+									| —
+							td.text-muted
+								if m.expires_at
+									= new Date(m.expires_at * 1000).toISOString().slice(0, 10)
+								else
+									| never
+
+	hr
+	p.text-muted.small
+		| Data source: RPC
+		code listminers &lt;status&gt;
+		|  on the local Glcoin daemon. Identity binding (KYC ID ↔ address) is
+		| recorded via on-chain
+		code GLCM
+		|  registry transactions.

@@ -32,6 +32,7 @@ if [ ${#fints} -eq 0 ]; then fints="off"; fi
 if [ ${#lndk} -eq 0 ]; then lndk="off"; fi
 if [ ${#labelbase} -eq 0 ]; then labelbase="off"; fi
 if [ ${#glcoinMiner} -eq 0 ]; then glcoinMiner="off"; fi
+if [ ${#dtn} -eq 0 ]; then dtn="off"; fi
 if [ ${#albyhub} -eq 0 ]; then albyhub="off"; fi
 if [ "${albyhub}" == "on" ] && [ $(sudo ls /etc/systemd/system/albyhub.service 2>/dev/null | grep -c 'albyhub.service') -lt 1 ]; then albyhub="off"; fi
 if [ ${#wireguard} -eq 0 ]; then wireguard="off"; fi
@@ -53,6 +54,7 @@ if [ "${network}" == "glcoin" ]; then
   OPTIONS+=(wa 'GLC Download Glcoin Whitepaper' ${whitepaper})
   OPTIONS+=(ls 'GLC Labelbase' ${labelbase})
   OPTIONS+=(gm 'Glcoin Miner (CPU Mining)' ${glcoinMiner})
+  OPTIONS+=(dn 'DTN Bundle Daemon (v5 bridge foundation)' ${dtn})
 fi
 
 # available for both LND & c-lightning
@@ -630,6 +632,21 @@ if [ "${glcoinMiner}" != "${choice}" ]; then
   fi
 else
   echo "GlcoinMiner setting unchanged."
+fi
+
+# dtn (DTN Bundle Daemon) process choice
+choice="off"; check=$(echo "${CHOICES}" | grep -c "dn")
+if [ ${check} -eq 1 ]; then choice="on"; fi
+if [ "${dtn}" != "${choice}" ]; then
+  echo "DTN setting changed .."
+  anychange=1
+  sudo /home/admin/config.scripts/bonus.dtn.sh ${choice}
+  source /mnt/hdd/app-data/raspiblesk.conf
+  if [ "${dtn}" = "on" ]; then
+    sudo /home/admin/config.scripts/bonus.dtn.sh menu
+  fi
+else
+  echo "DTN setting unchanged."
 fi
 
 # albyhub process choice

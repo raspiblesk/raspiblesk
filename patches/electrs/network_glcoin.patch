@@ -2,7 +2,7 @@
 +++ b/src/config.rs
 @@ -100,7 +100,12 @@ impl FromStr for BitcoinNetwork {
      type Err = <Network as FromStr>::Err;
-
+ 
      fn from_str(string: &str) -> std::result::Result<Self, Self::Err> {
 -        Network::from_str(string).map(BitcoinNetwork)
 +        match string {
@@ -13,7 +13,7 @@
 +        }
      }
  }
-
+ 
 @@ -109,7 +114,7 @@ impl ::configure_me::parse_arg::ParseArgFromStr for BitcoinNetwork {
      fn describe_type<W: fmt::Write>(mut writer: W) -> fmt::Result {
          write!(
@@ -23,3 +23,36 @@
          )
      }
  }
+@@ -251,17 +256,24 @@ impl Config {
+             unsupported => unsupported_network(unsupported),
+         };
+ 
++        // Glcoin mainnet uses pchMessageStart = 0xf9 0xb4 0xb4 0xd9 (one byte
++        // off from Bitcoin's 0xf9 0xbe 0xb4 0xd9). The bitcoin crate's
++        // Network::Bitcoin::magic() hardcodes the Bitcoin bytes, so without
++        // an override the P2P handshake to glcoind fails on byte #2 and the
++        // block-fetcher channel dies with "receiving on empty and
++        // disconnected channel". Allow `signet_magic` (admittedly a
++        // misnamed field) to override the P2P magic on Network::Bitcoin too.
++        // The systemd unit shipped by bonus.electrs.sh passes
++        // --signet-magic=f9b4b4d9 when running against glcoind.
+         let magic = match (config.network, config.signet_magic) {
+-            (Network::Signet, Some(magic)) => magic.parse().unwrap_or_else(|error| {
+-                eprintln!(
+-                    "Error: signet magic '{}' is not a valid hex string: {}",
+-                    magic, error
+-                );
+-                std::process::exit(1);
+-            }),
++            (Network::Signet, Some(magic))
++            | (Network::Bitcoin, Some(magic)) => magic.parse().unwrap_or_else(|error| {
++                eprintln!("Error: magic '{}' is not a valid hex string: {}", magic, error);
++                std::process::exit(1);
++            }),
+             (network, None) => network.magic(),
+             (_, Some(_)) => {
+-                eprintln!("Error: signet magic only available on signet");
++                eprintln!("Error: magic override only supported on signet and bitcoin networks");
+                 std::process::exit(1);
+             }
+         };

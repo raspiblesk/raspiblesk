@@ -701,7 +701,7 @@ Try again later, enter another address or cancel.
     for idx, hostEntry in enumerate(hosts):
         choices.append(
             ("{0}".format(idx),
-             "{0} ({1} hours, first: {2} sats, next: {3} sats)".format(
+             "{0} ({1} hours, first: {2} gsats, next: {3} gsats)".format(
                  hostEntry['name'].ljust(20),
                  hostEntry['tor_bridge_duration_hours'],
                  hostEntry['tor_bridge_price_initial_sats'],

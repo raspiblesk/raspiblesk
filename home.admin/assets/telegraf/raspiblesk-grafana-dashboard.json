@@ -3145,7 +3145,7 @@
           ]
         }
       ],
-      "title": "< 1 sat/vbyte",
+      "title": "< 1 gsat/vbyte",
       "transparent": true,
       "type": "stat"
     },
@@ -3268,7 +3268,7 @@
           ]
         }
       ],
-      "title": "< 2 sat/vbyte",
+      "title": "< 2 gsat/vbyte",
       "transparent": true,
       "type": "stat"
     },

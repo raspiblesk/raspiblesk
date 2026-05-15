@@ -28,7 +28,7 @@ fi
 mode="$1"
 
 # RECOMMENDED UPDATE BY RASPIBLESK TEAM (latest tested version available)
-glcoinVersion="0.1.10" # keep empty if no newer version as sd card build is available
+glcoinVersion="0.2.2" # keep empty if no newer version as sd card build is available
 
 # GATHER DATA
 # setting download directory to the current user

@@ -237,11 +237,11 @@ if [ "${lightning}" != "" ]; then
       ln_weeklyfees="${value}"
       source <(/home/admin/_cache.sh meta ln_${lightning}_${chain}net_fees_month)
       ln_monthlyfees="${value}"
-      ln_feeReport="Fee Report (D-W-M): ${color_green}${ln_dailyfees}-${ln_weeklyfees}-${ln_monthlyfees} ${color_gray}${netprefix}sat"
+      ln_feeReport="Fee Report (D-W-M): ${color_green}${ln_dailyfees}-${ln_weeklyfees}-${ln_monthlyfees} ${color_gray}${netprefix}gsat"
     else
       source <(/home/admin/_cache.sh meta ln_${lightning}_${chain}net_fees_total)
       ln_totalfees="${value}"
-      ln_feeReport="Fee Report: ${color_green}${ln_totalfees} ${color_gray}${netprefix}msat"
+      ln_feeReport="Fee Report: ${color_green}${ln_totalfees} ${color_gray}${netprefix}mgsat"
     fi
 
     # on-chain wallet info
@@ -251,7 +251,7 @@ if [ "${lightning}" != "" ]; then
     if [ "${ln_onchain_pending}" != "" ] && [ ${ln_onchain_pending} -gt 0 ]; then ln_pendingonchain=" (+${ln_onchain_pending})"; fi
     source <(/home/admin/_cache.sh meta ln_${lightning}_${chain}net_wallet_onchain_balance)
     ln_walletbalance=$(printf "%'d" "${value}")
-    ln_baseInfo="${color_gray}Wallet ${ln_walletbalance} ${netprefix}sat ${ln_pendingonchain}"
+    ln_baseInfo="${color_gray}Wallet ${ln_walletbalance} ${netprefix}gsat ${ln_pendingonchain}"
 
     # channel pending info
     ln_channelbalance_pending=""
@@ -268,7 +268,7 @@ if [ "${lightning}" != "" ]; then
     ln_channels_total="${value}"
 
     # construct channel info string
-    ln_channelInfo="${ln_channels_online}/${ln_channels_total} Channels ${ln_channels_balance} ${netprefix}sat${ln_channelbalance_pending}"
+    ln_channelInfo="${ln_channels_online}/${ln_channels_total} Channels ${ln_channels_balance} ${netprefix}gsat${ln_channelbalance_pending}"
   fi
 
 fi

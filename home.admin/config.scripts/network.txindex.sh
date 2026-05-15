@@ -17,10 +17,15 @@ fi
 # set variable ${txindex}
 source <(grep -E "^txindex=.*" /mnt/hdd/app-data/${network}/${network}.conf)
 
-# check for testnet and set pathAdd (e.g. for debug.log)
+# check for non-mainnet and set pathAdd (e.g. for debug.log).
+# Mirrors the debuglogfile= chain prefixes set in assets/glcoin.conf.
 pathAdd=""
 if [ "${chain}" = "test" ]; then
 	  pathAdd="/testnet3"
+elif [ "${chain}" = "signet" ]; then
+	  pathAdd="/signet"
+elif [ "${chain}" = "regtest" ]; then
+	  pathAdd="/regtest"
 fi
 
 ###################
@@ -51,8 +56,12 @@ if [ "$1" = "status" ]; then
   # try to gather if still indexing
   source <(/home/admin/_cache.sh get glc_mainnet_blocks_headers)
   blockchainHeight="${glc_mainnet_blocks_headers}"
-  indexedToBlock=$(tail -n 200 /mnt/hdd/app-storage/${network}${pathAdd}/debug.log | grep "Syncing txindex with block chain from height" | tail -n 1 | cut -d " " -f 9 | sed 's/[^0-9]*//g')
-  indexFinished=$(tail -n 200 /mnt/hdd/app-storage/${network}${pathAdd}/debug.log | grep -c "txindex is enabled at height")
+  # debug.log lives under app-data per glcoin.conf's main/test/signet.debuglogfile=
+  # (NOT app-storage — that holds blockchain blocks). The old app-storage path
+  # produced spurious "tail: cannot open" in 00infoBlitz.sh's INFO loop.
+  debugLogPath="/mnt/hdd/app-data/${network}${pathAdd}/debug.log"
+  indexedToBlock=$(tail -n 200 "${debugLogPath}" 2>/dev/null | grep "Syncing txindex with block chain from height" | tail -n 1 | cut -d " " -f 9 | sed 's/[^0-9]*//g')
+  indexFinished=$(tail -n 200 "${debugLogPath}" 2>/dev/null | grep -c "txindex is enabled at height")
 
   if [ ${#indexedToBlock} -eq 0 ] || [ ${indexFinished} -gt 0 ] || [ "${indexedToBlock}" = "${blockchainHeight}" ]; then
     echo "isIndexed=1"
@@ -97,7 +106,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
       echo "# ${network}d is not running - so NOT restarting"
     fi
     echo "# The indexing takes ~7h on an RPi4 with SSD"
-    echo "# monitor with: sudo tail -n 20 -f /mnt/hdd/app-storage/${network}${pathAdd}/debug.log"
+    echo "# monitor with: sudo tail -n 20 -f /mnt/hdd/app-data/${network}${pathAdd}/debug.log"
     exit 0
   else
     echo "# txindex is already active"

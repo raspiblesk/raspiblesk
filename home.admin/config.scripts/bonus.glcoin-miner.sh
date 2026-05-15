@@ -297,6 +297,13 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
 
   sudo mkdir -p "${MINER_DIR}"
 
+  # Pre-create the buglog dir so the script's logging.FileHandler can open it
+  # as user `glcoin` (parent /mnt/hdd/app-data is root-owned). Without this
+  # the file handler silently falls back to stderr-only.
+  sudo mkdir -p /mnt/hdd/app-data/glcoin-miner
+  sudo chown glcoin:glcoin /mnt/hdd/app-data/glcoin-miner
+  sudo chmod 0755 /mnt/hdd/app-data/glcoin-miner
+
   # load config
   address=""
   mode="plain"
@@ -338,6 +345,10 @@ Requires=glcoind.service
 User=glcoin
 Group=glcoin
 WorkingDirectory=${MINER_DIR}
+# Force unbuffered stdout/stderr (Python block-buffers when piped to journal,
+# which made the service look silent for minutes). Together with buglog() in
+# glcoin_miner.py this gives real-time output in journalctl + miner.log.
+Environment=PYTHONUNBUFFERED=1
 ExecStart=${EXEC_START}
 Restart=always
 RestartSec=10s

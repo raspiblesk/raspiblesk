@@ -677,13 +677,12 @@ if [ "$1" = "install" ]; then
 
   # make sure dependencies are installed
   sudo apt-get install -y pkg-config build-essential python3-dev libsecp256k1-dev libffi-dev libgmp-dev || true
-  # LNbits requires Python 3.10-3.12; install 3.12 explicitly (available in Debian Trixie repos).
-  # Trixie ships python3.13 by default; python3.12 must be installed alongside it.
+  # Try to install python3.12 (preferred LNbits target). On Debian Trixie
+  # this is NOT in the default repo; the install will fail and we fall back
+  # to python3.13 via the pyproject.toml widening patch above.
   sudo apt-get update -qq || true
-  if ! sudo apt-get install -y python3.12 python3.12-venv python3.12-dev; then
-    echo "# WARNING: python3.12 apt install failed — LNbits may not be installable on this system"
-    echo "# On Debian Trixie: sudo apt-get install python3.12 python3.12-venv python3.12-dev"
-  fi
+  sudo apt-get install -y python3.12 python3.12-venv python3.12-dev 2>/dev/null || \
+    echo "# INFO: python3.12 not available via apt (expected on Debian Trixie) — will use python3.13 via patched pyproject.toml"
 
   # add lnbits user
   echo "*** Add the 'lnbits' user ***"
@@ -699,6 +698,23 @@ if [ "$1" = "install" ]; then
   cd /home/lnbits/lnbits || exit 1
   sudo -u lnbits git checkout ${tag} || exit 1
 
+  # Debian Trixie ships python3.13 but LNbits' upstream pyproject.toml only
+  # allows 3.10-3.12, causing poetry to fail at runtime ("not supported by
+  # the project (~3.12 | ~3.11 | ~3.10)"). Widen the constraint to include
+  # 3.13. LNbits 0.12+ runs cleanly on 3.13 in practice (no syntax/stdlib
+  # breakage observed); upstream just hasn't bumped the spec yet.
+  if [ -f /home/lnbits/lnbits/pyproject.toml ]; then
+    # Replace the entire `python = "..."` line with a constraint that
+    # accepts 3.10–3.13 inclusive, regardless of upstream's exact syntax
+    # (~3.10|~3.11|~3.12 vs ^3.10 vs >=3.10,<3.13 etc.). Single-quote sed
+    # script avoids any shell expansion of pipe chars; `#` delimiter avoids
+    # collision with `|` characters inside poetry version specs.
+    sudo -u lnbits sed -i \
+      's#^python *= *".*"#python = ">=3.10,<3.14"#' \
+      /home/lnbits/lnbits/pyproject.toml
+    echo "# pyproject.toml python-version widened to include 3.13"
+  fi
+
   # to the install
   echo "# installing application dependencies"
   cd /home/lnbits/lnbits || exit 1
@@ -711,37 +727,46 @@ if [ "$1" = "install" ]; then
     sudo pip3 install poetry || { echo "# FAIL - could not install poetry"; exit 1; }
   fi
 
-  # LNbits supports Python 3.10-3.12 only; locate a compatible interpreter.
-  # IMPORTANT: on Debian Trixie, /usr/bin/python3.11 may be a symlink to python3.13
-  # (created by build_sdcard.sh for backwards compat). We must verify the actual
-  # runtime version, not just the filename.
+  # LNbits supports Python 3.10-3.13 (3.13 enabled by our pyproject.toml
+  # widening above). Locate a compatible interpreter.
+  # IMPORTANT: on Debian Trixie, /usr/bin/python3.11 may be a symlink to
+  # python3.13 (created by build_sdcard.sh for backwards compat). We must
+  # verify the actual runtime version, not just the filename.
   LNBITS_PYTHON=""
-  for _py in /usr/bin/python3.12 /usr/local/bin/python3.12 "$(which python3.12 2>/dev/null)" \
+  for _py in /usr/bin/python3.13 /usr/local/bin/python3.13 "$(which python3.13 2>/dev/null)" \
+             /usr/bin/python3.12 /usr/local/bin/python3.12 "$(which python3.12 2>/dev/null)" \
              /usr/bin/python3.11 /usr/local/bin/python3.11 "$(which python3.11 2>/dev/null)" \
              /usr/bin/python3.10 /usr/local/bin/python3.10 "$(which python3.10 2>/dev/null)"; do
     [ -x "${_py}" ] || continue
     _actual_minor=$("${_py}" -c "import sys; print(sys.version_info.minor)" 2>/dev/null)
-    if [ -n "${_actual_minor}" ] && [ "${_actual_minor}" -ge 10 ] && [ "${_actual_minor}" -le 12 ]; then
+    if [ -n "${_actual_minor}" ] && [ "${_actual_minor}" -ge 10 ] && [ "${_actual_minor}" -le 13 ]; then
       LNBITS_PYTHON="${_py}"
       break
     fi
   done
   if [ -z "${LNBITS_PYTHON}" ]; then
-    # Last resort: system python3 only if it is 3.10-3.12
+    # Last resort: system python3 only if it is 3.10-3.13
     _syspy=$(python3 --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+' | head -1)
     _major=$(echo "${_syspy}" | cut -d. -f1)
     _minor=$(echo "${_syspy}" | cut -d. -f2)
-    if [ "${_major}" = "3" ] && [ "${_minor:-99}" -ge "10" ] && [ "${_minor:-99}" -le "12" ]; then
+    if [ "${_major}" = "3" ] && [ "${_minor:-99}" -ge "10" ] && [ "${_minor:-99}" -le "13" ]; then
       LNBITS_PYTHON="$(which python3)"
       echo "# INFO: using system python ${_syspy} for LNbits"
     else
-      echo "# WARNING: LNbits requires Python 3.10-3.12; system python is ${_syspy} (unsupported)"
-      echo "# Skipping LNbits install — install python3.12 manually and re-run this script"
-      exit 0
+      echo "# WARNING: LNbits requires Python 3.10-3.13; system python is ${_syspy} (unsupported)"
+      echo "# FAIL — aborting LNbits install (caller must not enable the service)"
+      exit 1
     fi
   fi
   echo "# Using python for LNBits: ${LNBITS_PYTHON}"
   sudo -u lnbits "${POETRY_BIN}" env use "${LNBITS_PYTHON}" || { echo "# FAIL - poetry env use failed"; exit 1; }
+
+  # Re-render poetry.lock against the pyproject.toml we patched above
+  # (python-version widening). Poetry 2.x refuses `install` outright when
+  # the lockfile hash does not match pyproject.toml, where 1.x only warned.
+  # Default `lock` is conservative: no dep upgrades, only re-hash.
+  echo "# refreshing poetry.lock against patched pyproject.toml"
+  sudo -u lnbits "${POETRY_BIN}" lock || { echo "# FAIL - poetry lock failed"; exit 1; }
 
   echo "# install"
   exitCode=0
@@ -1049,7 +1074,7 @@ if [ "$1" = "switch" ]; then
 
   echo "##############"
   echo "# NOTE: If you switch the funding source of a running LNbits instance all sub account will keep balance."
-  echo "# Make sure that the new funding source has enough sats to cover the LNbits bookeeping of sub accounts."
+  echo "# Make sure that the new funding source has enough gsats to cover the LNbits bookeeping of sub accounts."
   echo "##############"
 
   # remove all old possible settings for former funding source (clean state)

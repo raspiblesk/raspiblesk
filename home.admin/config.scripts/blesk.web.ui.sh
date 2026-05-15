@@ -133,6 +133,27 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     fi
   fi
   cd /home/bleskapi/blitz_web || exit 1
+
+  # Glcoin display rebrand: sat -> gsat in WebUI i18n + locale files.
+  # Touches user-visible JSON translation strings only. TSX/JSX source
+  # remains untouched (would risk renaming code identifiers like
+  # `satsAmount` or `satoshi*`). Idempotent.
+  echo "# Rebrand WebUI display unit sat -> gsat in i18n files"
+  for _dir in src/i18n src/locale src/locales public/locale public/locales src/assets/i18n; do
+    if [ -d "/home/bleskapi/blitz_web/${_dir}" ]; then
+      find "/home/bleskapi/blitz_web/${_dir}" -name '*.json' -print0 \
+        | xargs -0 -r sed -i \
+            -e 's|"sat/vB"|"gsat/vB"|g' \
+            -e 's|"sat/WU"|"gsat/WU"|g' \
+            -e 's| sats | gsats |g' \
+            -e 's| sat | gsat |g' \
+            -e 's|>sats<|>gsats<|g' \
+            -e 's|>sat<|>gsat<|g' \
+            -e 's|^"sat"|"gsat"|g' \
+            -e 's|"sat":|"gsat":|g'
+    fi
+  done
+
   echo "# Compile WebUI"
   /home/admin/config.scripts/bonus.nodejs.sh on
   # Debian nodejs package doesn't bundle npm; nodesource may also fail — install explicitly

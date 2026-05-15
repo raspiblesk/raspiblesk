@@ -1,0 +1,77 @@
+extends layout
+
+block headContent
+	title On-chain IPFS Links
+
+block content
+	h1.h3 On-chain IPFS Links
+	hr
+
+	p.text-muted CIDs anchored on-chain via OP_RETURN /
+		code glc1
+		|  /
+		code glc2
+		|  /
+		code glc3
+		|  commitments. The local Kubo daemon auto-pins these.
+
+	.mb-3
+		form.row.g-2.align-items-center(method="get", action="./ipfs-links")
+			.col-auto
+				label.col-form-label.text-muted Limit
+			.col-auto
+				input.form-control.form-control-sm(type="number", name="limit", value=limit, min=1, max=500, style="width: 100px;")
+			.col-auto
+				label.col-form-label.text-muted Offset
+			.col-auto
+				input.form-control.form-control-sm(type="number", name="offset", value=offset, min=0, style="width: 100px;")
+			.col-auto
+				button.btn.btn-sm.btn-primary(type="submit") Apply
+
+	if error
+		.alert.alert-danger
+			strong Error:
+			|  #{error}
+	else if !links || links.length === 0
+		.alert.alert-secondary No IPFS links recorded yet.
+	else
+		p.text-muted #{links.length} link#{links.length === 1 ? "" : "s"} returned (limit=#{limit}, offset=#{offset}).
+
+		.table-responsive
+			table.table.table-hover.table-sm
+				thead
+					tr
+						th Time
+						th CID
+						th Anchor txid
+						th Description
+				tbody
+					each l in links
+						tr
+							td.text-muted.small
+								if l.timestamp
+									= new Date(l.timestamp * 1000).toISOString().replace("T", " ").slice(0, 19)
+								else
+									| —
+							td
+								if l.cid
+									a(href="//127.0.0.1:8080/ipfs/" + l.cid, target="_blank", rel="noopener noreferrer")
+										code= l.cid
+								else
+									| —
+							td
+								if l.txid
+									a(href="./tx/" + l.txid)
+										code= l.txid.slice(0, 16) + "…"
+								else
+									| —
+							td.text-muted= l.description || ""
+
+	hr
+	p.text-muted.small
+		| Data source: RPC
+		code listipfslinks &lt;limit&gt; &lt;offset&gt;
+		|  on the local Glcoin daemon. Click a CID to fetch from the local Kubo
+		| gateway (
+		code 127.0.0.1:8080
+		| ).

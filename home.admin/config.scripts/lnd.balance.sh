@@ -80,7 +80,7 @@ LN_TOTAL_BALANCE_BTC=$(printf %.8f\\n "$((LN_TOTAL_BALANCE))e-8")
 echo -e "\n${YELLOW}LN BALANCE${RESET}"
 echo -e "LOCAL             REMOTE            TOTAL           "
 echo -e "----------------  ----------------  ----------------"
-echo -e "$(printf %11s "$LN_LOCAL_BALANCE") sats  $(printf %11s "$LN_REMOTE_BALANCE") sats  $(printf %11s $LN_TOTAL_BALANCE) sats"
+echo -e "$(printf %11s "$LN_LOCAL_BALANCE") gsats  $(printf %11s "$LN_REMOTE_BALANCE") gsats  $(printf %11s $LN_TOTAL_BALANCE) gsats"
 if [ $LN_TOTAL_BALANCE -ne 0 ]; then
     echo -e "$(printf %11s "$LN_LOCAL_BALANCE_BTC") GLC   $(printf %11s "$LN_REMOTE_BALANCE_BTC") GLC   $(printf %11s "$LN_TOTAL_BALANCE_BTC") GLC"
     echo -e "$(printf %11s $LN_LOCAL_BALANCE_PERCENTAGE) %     $(printf %11s $LN_REMOTE_BALANCE_PERCENTAGE) %     $(printf %11s $TOTAL_BALANCE_PERCENTAGE) %"
@@ -89,29 +89,29 @@ fi
 echo -e "\n${YELLOW}ON-CHAIN BALANCE${RESET}"
 echo -e "CONFIRMED         UNCONFIRMED       TOTAL           "
 echo -e "----------------  ----------------  ----------------"
-echo -e "$(printf %11s "$ONCHAIN_FUNDS_CONFIRMED") sats  $(printf %11s "$ONCHAIN_FUNDS_UNCONFIRMED") sats  $(printf %11s "$ONCHAIN_FUNDS_TOTAL") sats"
+echo -e "$(printf %11s "$ONCHAIN_FUNDS_CONFIRMED") gsats  $(printf %11s "$ONCHAIN_FUNDS_UNCONFIRMED") gsats  $(printf %11s "$ONCHAIN_FUNDS_TOTAL") gsats"
 if [ $ONCHAIN_FUNDS_TOTAL -ne 0 ]; then
     echo -e "$(printf %11s "$ONCHAIN_FUNDS_CONFIRMED_BTC") GLC   $(printf %11s "$ONCHAIN_FUNDS_UNCONFIRMED_BTC") GLC   $(printf %11s "$ONCHAIN_FUNDS_TOTAL_BTC") GLC"
     echo -e "$(printf %11s $ONCHAIN_FUNDS_CONFIRMED_PERCENTAGE) %     $(printf %11s $ONCHAIN_FUNDS_UNCONFIRMED_PERCENTAGE) %     $(printf %11s $TOTAL_BALANCE_PERCENTAGE) %"
 fi
 
 echo -e "\n${YELLOW}OWNED BALANCE [LN + ON-CHAIN]${RESET}"
-echo -e "$(printf %11s "$TOTAL_BALANCE") sats"
+echo -e "$(printf %11s "$TOTAL_BALANCE") gsats"
 echo -e "$(printf %11s "$TOTAL_BALANCE_BTC") GLC"
 echo -e ""
 
 echo -e "\n${YELLOW}AUDIT${CYAN}*${RESET}"
 echo -e "---------------------------------------------"
-echo -e "ON-CHAIN CONFIRMED           $(printf %10s "$ONCHAIN_FUNDS_CONFIRMED") sats"
-echo -e "ON-CHAIN UNCONFIRMED         $(printf %10s "$ONCHAIN_FUNDS_UNCONFIRMED") sats"
-echo -e "ON-CHAIN FEES                ${RED}$(printf %10s "-$ONCHAIN_TX_FEES")${RESET} sats"
+echo -e "ON-CHAIN CONFIRMED           $(printf %10s "$ONCHAIN_FUNDS_CONFIRMED") gsats"
+echo -e "ON-CHAIN UNCONFIRMED         $(printf %10s "$ONCHAIN_FUNDS_UNCONFIRMED") gsats"
+echo -e "ON-CHAIN FEES                ${RED}$(printf %10s "-$ONCHAIN_TX_FEES")${RESET} gsats"
 echo -e "---------------------------------------------"
-echo -e "LN LOCAL BALANCE             $(printf %10s "$LN_LOCAL_BALANCE") sats"
-echo -e "LN LOCKED IN COMMIT FEES     $(printf %10s "$LN_COMMIT_FEES") sats"
-echo -e "LN INVOICES (RECEIVED)       $(printf %10s "$LN_INVOICES") sats"
-echo -e "LN PAYMENTS (PAID)           $(printf %10s "-$LN_PAYMENTS") sats"
-echo -e "LN PAYMENTS FEES             $(printf %10s "-$LN_PAYMENTS_FEES") sats"
-echo -e "LN EARNED (FORWARD) FEES     ${GREEN}$(printf %10s $LN_EARNED_FEES_IN_SATS)${RESET} sats"
+echo -e "LN LOCAL BALANCE             $(printf %10s "$LN_LOCAL_BALANCE") gsats"
+echo -e "LN LOCKED IN COMMIT FEES     $(printf %10s "$LN_COMMIT_FEES") gsats"
+echo -e "LN INVOICES (RECEIVED)       $(printf %10s "$LN_INVOICES") gsats"
+echo -e "LN PAYMENTS (PAID)           $(printf %10s "-$LN_PAYMENTS") gsats"
+echo -e "LN PAYMENTS FEES             $(printf %10s "-$LN_PAYMENTS_FEES") gsats"
+echo -e "LN EARNED (FORWARD) FEES     ${GREEN}$(printf %10s $LN_EARNED_FEES_IN_SATS)${RESET} gsats"
 echo -e "---------------------------------------------"
 
 if [ $PROFIT_AND_LOSS -gt 0 ]; then
@@ -120,13 +120,13 @@ else
   COLORED_PNL=${RED}$(printf %10s "$PROFIT_AND_LOSS")${RESET}
 fi
 
-echo -e "${YELLOW}PROFIT AND LOSS${RESET}              $COLORED_PNL sats"
+echo -e "${YELLOW}PROFIT AND LOSS${RESET}              $COLORED_PNL gsats"
 echo -e "---------------------------------------------"
-echo -e "CONTROL SUM${CYAN}**${RESET}                $(printf %10s $CONTROL_SUM) sats"
-echo -e "LN SPEND                     $(printf %10s $LN_SPEND) sats"
+echo -e "CONTROL SUM${CYAN}**${RESET}                $(printf %10s $CONTROL_SUM) gsats"
+echo -e "LN SPEND                     $(printf %10s $LN_SPEND) gsats"
 echo -e ""
 echo -e "${CYAN} * Pending channels are ignored.${RESET}"
 echo -e "${CYAN}** CONTROL SUM is supposed to match amount"
 echo -e "   of funds that had been put onto this node"
-echo -e "   (can be off few sats due rounding).\e${RESET}"
+echo -e "   (can be off few gsats due rounding).\e${RESET}"
 echo -e ""

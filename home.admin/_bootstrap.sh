@@ -71,7 +71,12 @@ echo "## INIT raspiblesk.info" >> $logFile
 setupPhase='boot'
 setupStep=0
 fsexpanded=0
-bleskapi='off'
+# RaspiBlesk default: WebUI/API on. The fatpack image installs bleskapi.service
+# + the React SPA into /var/www/public anyway; with bleskapi=off the SPA
+# loads, then hangs forever on its first /api/ call (nginx 502 from a dead
+# 127.0.0.1:11111) and the password-A login modal never renders. Trust-Layer
+# infrastructure ships its UI on by default — opt-out is fine, opt-in is not.
+bleskapi='on'
 
 glc_mainnet_sync_initial_done=0
 glc_testnet_sync_initial_done=0

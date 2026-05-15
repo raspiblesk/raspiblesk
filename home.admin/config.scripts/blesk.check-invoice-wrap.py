@@ -44,7 +44,7 @@ try:
 		exit(3)
 
 	if amt1 != Decimal(0):
-		print(f"Hashes match, routing fee is {(amt2-amt1)*10**8:0,.0f} sat ({(amt2-amt1)/amt1*100:0.2f}%)")
+		print(f"Hashes match, routing fee is {(amt2-amt1)*10**8:0,.0f} gsat ({(amt2-amt1)/amt1*100:0.2f}%)")
 	else:
 		print(f"Hashes match")
 

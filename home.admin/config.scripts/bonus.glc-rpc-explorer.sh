@@ -192,9 +192,20 @@ if [ "$1" = "prestart" ]; then
   fi
 
   #  UPDATE RPC PASSWORD
-  RPCPASSWORD=$(cat /mnt/hdd/app-data/${network}/${network}.conf | grep "^rpcpassword=" | cut -d "=" -f2)
-  echo "# updating BTCEXP_BITCOIND_PASS=${RPCPASSWORD}"
-  sed -i "s/^BTCEXP_BITCOIND_PASS=.*/BTCEXP_BITCOIND_PASS=${RPCPASSWORD}/g" /home/glcrpcexplorer/.config/glc-rpc-explorer.env
+  # Defensive read: if glcoin.conf is not readable (e.g. glcrpcexplorer not
+  # in group 'glcoin' on an old install) we MUST NOT blank the existing
+  # password in .env — that would corrupt a working configuration on every
+  # service start. Log a warning instead and keep what's already there.
+  RPCPASSWORD=$(cat /mnt/hdd/app-data/${network}/${network}.conf 2>/dev/null | grep "^rpcpassword=" | cut -d "=" -f2)
+  if [ -z "${RPCPASSWORD}" ]; then
+    echo "# WARN: could not read rpcpassword from /mnt/hdd/app-data/${network}/${network}.conf"
+    echo "# Check: 'id glcrpcexplorer' must include group '${network}'"
+    echo "# Fix:   sudo usermod -a -G ${network} glcrpcexplorer && sudo systemctl restart glc-rpc-explorer"
+    echo "# Leaving existing BTCEXP_BITCOIND_PASS in .env untouched"
+  else
+    echo "# updating BTCEXP_BITCOIND_PASS (length=${#RPCPASSWORD})"
+    sed -i "s/^BTCEXP_BITCOIND_PASS=.*/BTCEXP_BITCOIND_PASS=${RPCPASSWORD}/g" /home/glcrpcexplorer/.config/glc-rpc-explorer.env
+  fi
 
   # WALLET PROTECTION (only if Glcoin has wallet active protect GLC-RPC-Explorer with additional passwordB)
   isGlcoinWalletOff=$(cat /mnt/hdd/app-data/${network}/${network}.conf | grep -c "^disablewallet=1")
@@ -231,6 +242,13 @@ if [ "$1" = "install" ]; then
   # add glcrpcexplorer user
   sudo adduser --system --group --home /home/glcrpcexplorer glcrpcexplorer
 
+  # Membership in group 'glcoin' is required so the prestart script can read
+  # /mnt/hdd/app-data/glcoin/glcoin.conf (mode 0640, group glcoin per v0149
+  # audit). Without this, prestart's RPCPASSWORD lookup silently returns
+  # empty and BTCEXP_BITCOIND_PASS gets blanked on every service start —
+  # the explorer process runs but every RPC call to glcoind fails auth.
+  sudo usermod -a -G glcoin glcrpcexplorer
+
   # install glc-rpc-explorer (using btc-rpc-explorer codebase, cloned as glc-rpc-explorer)
   cd /home/glcrpcexplorer
   sudo -u glcrpcexplorer git clone https://github.com/janoside/btc-rpc-explorer.git glc-rpc-explorer
@@ -242,6 +260,23 @@ if [ "$1" = "install" ]; then
       echo "FAIL - npm ci did not run correctly, aborting"
       echo "result='fail npm ci'"
       exit 1
+  fi
+
+  # apply Glcoin patches on top of the btc-rpc-explorer codebase:
+  # injects app/coins/glc.js, registers GLC in app/coins.js so
+  # BTCEXP_COIN=GLC actually resolves to a coin module
+  if [ -d /home/admin/assets/glc-rpc-explorer ]; then
+    echo "# applying Glcoin patches to explorer tree ..."
+    sudo cp -r /home/admin/assets/glc-rpc-explorer /home/glcrpcexplorer/.glcoin-patches
+    sudo chown -R glcrpcexplorer:glcrpcexplorer /home/glcrpcexplorer/.glcoin-patches
+    sudo -u glcrpcexplorer bash /home/glcrpcexplorer/.glcoin-patches/apply-glcoin-patches.sh \
+      /home/glcrpcexplorer/glc-rpc-explorer || {
+        echo "FAIL - Glcoin patch step failed"
+        echo "result='fail glcoin-patch'"
+        exit 1
+    }
+  else
+    echo "# WARN: /home/admin/assets/glc-rpc-explorer not found — explorer will run with BTC branding"
   fi
 
   exit 0
@@ -296,6 +331,9 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     touch /var/cache/raspiblesk/glc-rpc-explorer.env
     chmod 600 /var/cache/raspiblesk/glc-rpc-explorer.env || exit 1
     cat > /var/cache/raspiblesk/glc-rpc-explorer.env <<EOF
+# Coin selection — must match the GLC module we inject post-clone
+# (apply-glcoin-patches.sh registers 'glc' in app/coins.js).
+BTCEXP_COIN=GLC
 # Host/Port to bind to
 # Defaults: shown
 BTCEXP_HOST=0.0.0.0
@@ -326,6 +364,10 @@ BTCEXP_PRIVACY_MODE=true
 # Default: none
 BTCEXP_ADDRESS_API=none
 BTCEXP_ELECTRUMX_SERVERS=tcp://127.0.0.1:50001
+# Expose every RPC method through /rpc-browser. Glcoin 0.2.x adds custom RPCs
+# (listminers, getminerinfo, getminerregistrystats, getipfslink, listipfslinks,
+# pinipfslink, …) that the default whitelist doesn't cover.
+BTCEXP_RPC_ALLOWALL=true
 EOF
     sudo -u glcrpcexplorer mkdir /home/glcrpcexplorer/.config
     sudo mv /var/cache/raspiblesk/glc-rpc-explorer.env /home/glcrpcexplorer/.config/glc-rpc-explorer.env
@@ -371,10 +413,20 @@ StartLimitIntervalSec=0
 User=glcrpcexplorer
 ExecStartPre=/home/admin/config.scripts/bonus.glc-rpc-explorer.sh prestart
 WorkingDirectory=/home/glcrpcexplorer/glc-rpc-explorer
+# btc-rpc-explorer's dotenv loader looks at ~/.config/btc-rpc-explorer/.env, not
+# our renamed glc-rpc-explorer.env — so without an explicit EnvironmentFile
+# every BTCEXP_* var falls back to the upstream BTC defaults (RPC port 8332,
+# coin BTC, etc.) and the Glcoin overrides written by the prestart are ignored.
+EnvironmentFile=/home/glcrpcexplorer/.config/glc-rpc-explorer.env
 ExecStart=/usr/bin/node ./bin/www
 Restart=on-failure
 RestartSec=20
-LogLevelMax=4
+# LogLevelMax intentionally not set — Node logs at INFO (level 6) and the
+# previous LogLevelMax=4 dropped every line from the journal, masking
+# RPC-auth failures, prestart warnings, and "Listening on port 3020"
+# banners. Without journal output we cannot diagnose anything.
+Environment=NODE_ENV=production
+Environment=DEBUG=*
 
 # Hardening measures
 PrivateTmp=true

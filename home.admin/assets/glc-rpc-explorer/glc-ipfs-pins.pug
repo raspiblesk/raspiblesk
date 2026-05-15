@@ -1,0 +1,54 @@
+extends layout
+
+block headContent
+	title Local Kubo Pins
+
+block content
+	h1.h3 Local Kubo Pins
+	hr
+
+	p.text-muted CIDs currently pinned by this node's Kubo daemon (
+		code 127.0.0.1:5001
+		| ).
+
+	.mb-3
+		each t in ["all", "direct", "indirect", "recursive"]
+			a.btn.btn-sm.me-2(
+				href="./ipfs-pins?type=" + t,
+				class=(t === type ? "btn-primary" : "btn-outline-secondary"))= t
+
+	if error
+		.alert.alert-danger
+			strong Error:
+			|  #{error}
+			|
+			small (Is Kubo running? Try
+				code  sudo systemctl status kubo
+				| .)
+	else if !pins || Object.keys(pins).length === 0
+		.alert.alert-secondary No pinned CIDs (yet) matching type "#{type}".
+	else
+		p.text-muted #{Object.keys(pins).length} pinned CID#{Object.keys(pins).length === 1 ? "" : "s"} (type "#{type}").
+
+		.table-responsive
+			table.table.table-hover.table-sm
+				thead
+					tr
+						th CID
+						th Pin Type
+				tbody
+					each entry, cid in pins
+						tr
+							td
+								a(href="//127.0.0.1:8080/ipfs/" + cid, target="_blank", rel="noopener noreferrer")
+									code= cid
+							td
+								span.badge.bg-secondary= (entry && entry.Type) || (entry && entry.type) || "?"
+
+	hr
+	p.text-muted.small
+		| Data source: RPC
+		code listipfspins &lt;type&gt;
+		|  on the local Glcoin daemon — forwarded to Kubo's
+		code /api/v0/pin/ls
+		|  endpoint.

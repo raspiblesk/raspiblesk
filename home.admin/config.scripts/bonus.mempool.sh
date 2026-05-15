@@ -186,6 +186,30 @@ sudo -u mempool find src/ -type f \( -name "*.ts" -o -name "*.html" -o -name "*.
   -exec sed -i 's/\bBTC\b/GLC/g; s/\bBitcoin\b/Glcoin/g' {} +
 # end mempool denomination patch
 
+# patch: Glcoin-specific mempool customisation (two concerns, one script):
+#   1) silver peg — fiat display (USD/EUR/...) → grams of silver (g Ag).
+#      Reason: Glcoin targets interplanetary settlement; fiat exchange rates
+#      don't survive light-speed delays — silver mass is a universal unit.
+#      Default peg: 1 gsat = 0.01 g Ag  (GLC_SILVER_GRAMS_PER_GLC=1e6).
+#      Plus: rebrand display unit "sat/vB" -> "gsat/vB" everywhere in the
+#      frontend (mempool-silver/apply-silver-patch.sh handles this).
+#   2) KYC miner pool registry — replaces Github BTC pools-v2.json fetch
+#      with a glcoind-RPC `listminers approved` call, so KYC-approved miners
+#      show as labelled pools instead of "Unknown".
+if [ -d /home/admin/assets/mempool-silver ]; then
+  echo "# applying Glcoin mempool patches (silver peg + KYC miner pools) ..."
+  sudo cp -r /home/admin/assets/mempool-silver /home/mempool/.silver-patch
+  sudo chown -R mempool:mempool /home/mempool/.silver-patch
+  sudo -u mempool bash /home/mempool/.silver-patch/apply-silver-patch.sh /home/mempool/mempool || {
+    echo "FAIL - Glcoin mempool patches failed"
+    echo "result='fail glcoin-patches'"
+    exit 1
+  }
+else
+  echo "# WARN: /home/admin/assets/mempool-silver not found — mempool will show fiat (USD) + Unknown miners"
+fi
+# end Glcoin mempool patches
+
   echo "# npm ci (frontend) — can take 10–20 min on a Pi, please be patient"
   sudo -u mempool NG_CLI_ANALYTICS=false NO_UPDATE_NOTIFIER=1 npm ci --no-audit --no-fund 2>&1 | grep --line-buffered -Ev "^npm (warn deprecated|warn old lockfile|notice)"
   if [ "${PIPESTATUS[0]}" -ne 0 ]; then
@@ -502,6 +526,22 @@ if [ "$1" = "update" ]; then
 
     sudo -u mempool git fetch
     sudo -u mempool git checkout $updateVersion
+
+    # re-apply post-clone source patches (git checkout reverts the source tree)
+    echo "# Patching mempool frontend denomination: BTC→GLC, Bitcoin→Glcoin"
+    cd /home/mempool/mempool/frontend || exit 1
+    sudo -u mempool find src/ -type f \( -name "*.ts" -o -name "*.html" -o -name "*.js" -o -name "*.json" \) \
+      -exec sed -i 's/\bBTC\b/GLC/g; s/\bBitcoin\b/Glcoin/g' {} +
+    if [ -d /home/admin/assets/mempool-silver ]; then
+      echo "# re-applying Glcoin mempool patches (silver peg + KYC miner pools) ..."
+      sudo rm -rf /home/mempool/.silver-patch
+      sudo cp -r /home/admin/assets/mempool-silver /home/mempool/.silver-patch
+      sudo chown -R mempool:mempool /home/mempool/.silver-patch
+      sudo -u mempool bash /home/mempool/.silver-patch/apply-silver-patch.sh /home/mempool/mempool || {
+        echo "FAIL - Glcoin mempool patches failed during update"
+        exit 1
+      }
+    fi
 
     echo "# npm install for mempool explorer (backend)"
 

@@ -74,8 +74,14 @@ if [ "$1" = "update-config" ]; then
   cp ./.env_sample ./.env
   dateStr=$(date)
   echo "# Update Web API CONFIG (${dateStr})"
-  sed -i "s/^# BAPI_PLATFORM=.*/BAPI_PLATFORM=raspiblesk/g" ./.env
-  sed -i "s/^BAPI_PLATFORM=.*/BAPI_PLATFORM=raspiblesk/g" ./.env
+  # The upstream fusion44/blitz_api fork does NOT register "raspiblesk" as a
+  # known APIPlatform value — it only knows "raspiblitz" and "native_python".
+  # Until a proper Glcoin fork of blitz_api exists, declare the platform as
+  # raspiblitz so the FastAPI app boots; all the actual config below points
+  # at glcoind on 127.0.0.1:1617 and LND with the Glcoin macaroon path, so
+  # the runtime semantics are Glcoin's regardless of the platform label.
+  sed -i "s/^# BAPI_PLATFORM=.*/BAPI_PLATFORM=raspiblitz/g" ./.env
+  sed -i "s/^BAPI_PLATFORM=.*/BAPI_PLATFORM=raspiblitz/g" ./.env
 
   # configure access token secret
   if [ "${secret}" == "" ] || [ "${secret}" == "please_please_update_me_please" ]; then
@@ -87,28 +93,55 @@ if [ "$1" = "update-config" ]; then
   sed -i "s/^BAPI_JWT_SECRET=.*/BAPI_JWT_SECRET=${secret}/g" ./.env
 
   source /home/admin/raspiblesk.info 2>/dev/null
-  if [ "${setupPhase}" == "done" ]; then
+  # The original gate `setupPhase == done` blocked the daemon/wallet config
+  # from ever being written during fatpack provisioning (setupPhase is still
+  # "boot" or "setup" at that point), leaving the .env at its placeholder
+  # values (RPC user "raspibolt", password "please_please_update_me_please",
+  # port 8332). The result was bleskapi crash-looping or talking to nothing.
+  # Always patch the daemon credentials — at worst the values are blank if
+  # glcoin.conf isn't readable yet, which is fine because the API restarts
+  # automatically on every config change anyway.
 
-    # configure glcoin
-    RPCUSER=$(sudo cat /mnt/hdd/app-data/${network}/${network}.conf 2>/dev/null | grep rpcuser | cut -c 9-)
-    RPCPASS=$(sudo cat /mnt/hdd/app-data/${network}/${network}.conf 2>/dev/null | grep rpcpassword | cut -c 13-)
-    if [ "${RPCUSER}" == "" ]; then
-      RPCUSER="raspibolt"
-    fi
-    if [ "${RPCPASS}" == "" ]; then
-      RPCPASS="passwordB"
-    fi
-    sed -i "s/^BAPI_NETWORK=.*/BAPI_NETWORK=${chain}net/g" ./.env
-    sed -i "s/^BAPI_GLCOIND_ADDRESS=.*/BAPI_GLCOIND_ADDRESS=127.0.0.1/g" ./.env
-    sed -i "s/^BAPI_GLCOIND_USER=.*/BAPI_GLCOIND_USER=${RPCUSER}/g" ./.env
-    sed -i "s/^BAPI_GLCOIND_RPC_PW=.*/BAPI_GLCOIND_RPC_PW=${RPCPASS}/g" ./.env
+  # configure glcoin RPC — upstream blitz_api uses BAPI_BITCOIND_* env vars
+  # (Bitcoin-named in the codebase, but pointed at Glcoin's daemon here)
+  RPCUSER=$(sudo cat /mnt/hdd/app-data/${network}/${network}.conf 2>/dev/null | grep "^rpcuser=" | cut -d= -f2-)
+  RPCPASS=$(sudo cat /mnt/hdd/app-data/${network}/${network}.conf 2>/dev/null | grep "^rpcpassword=" | cut -d= -f2-)
+  if [ "${RPCUSER}" == "" ]; then
+    RPCUSER="raspibolt"
+  fi
+  if [ "${RPCPASS}" == "" ]; then
+    RPCPASS="passwordB"
+  fi
+  # Glcoin port map: mainnet RPC=1617, testnet=11617, signet=21617.
+  # ZMQ pubrawblock per glcoin.check.sh: mainnet=21617, testnet=31617, signet=41617.
+  if [ "${chain}" == "main" ]; then
+    GLC_RPC_PORT=1617
+    GLC_ZMQ_PORT=21617
+  elif [ "${chain}" == "test" ]; then
+    GLC_RPC_PORT=11617
+    GLC_ZMQ_PORT=31617
+  elif [ "${chain}" == "sig" ]; then
+    GLC_RPC_PORT=21617
+    GLC_ZMQ_PORT=41617
+  else
+    GLC_RPC_PORT=1617
+    GLC_ZMQ_PORT=21617
+  fi
+  sed -i "s/^BAPI_NETWORK=.*/BAPI_NETWORK=${chain}net/g" ./.env
+  sed -i "s/^BAPI_BITCOIND_ADDRESS=.*/BAPI_BITCOIND_ADDRESS=127.0.0.1/g" ./.env
+  sed -i "s/^BAPI_BITCOIND_PORT_RPC=.*/BAPI_BITCOIND_PORT_RPC=${GLC_RPC_PORT}/g" ./.env
+  sed -i "s/^BAPI_BITCOIND_USER=.*/BAPI_BITCOIND_USER=${RPCUSER}/g" ./.env
+  sed -i "s/^BAPI_BITCOIND_RPC_PW=.*/BAPI_BITCOIND_RPC_PW=${RPCPASS}/g" ./.env
+  sed -i "s/^BAPI_BITCOIND_ZMQ_BLOCK_PORT=.*/BAPI_BITCOIND_ZMQ_BLOCK_PORT=${GLC_ZMQ_PORT}/g" ./.env
 
-    # configure LND
-    if [ "${lightning}" == "lnd" ]; then
+  # configure LND — accept both lightning=lnd (primary RaspiBlesk flag) and
+  # lnd=on (secondary, used by some provisioning paths). LND is mandatory on
+  # RaspiBlesk so default to lnd_grpc when neither flag is set.
+  if [ "${lightning}" == "lnd" ] || [ "${lnd}" == "on" ] || { [ -z "${lightning}" ] && [ -z "${lnd}" ]; }; then
 
       echo "# CONFIG Web API Lightning --> LND"
-      tlsCert=$(sudo xxd -ps -u -c 1000 /mnt/hdd/lnd/tls.cert)
-      adminMacaroon=$(sudo xxd -ps -u -c 1000 /mnt/hdd/lnd/data/chain/glcoin/${chain}net/admin.macaroon)
+      tlsCert=$(sudo xxd -ps -u -c 1000 /mnt/hdd/app-data/lnd/tls.cert 2>/dev/null)
+      adminMacaroon=$(sudo xxd -ps -u -c 1000 /mnt/hdd/app-data/lnd/data/chain/glcoin/${chain}net/admin.macaroon 2>/dev/null)
       sed -i "s/^BAPI_LN_NODE=.*/BAPI_LN_NODE=lnd_grpc/g" ./.env
       sed -i "s/^BAPI_LND_GRPC_IP=.*/BAPI_LND_GRPC_IP=127.0.0.1/g" ./.env
       sed -i "s/^BAPI_LND_MACAROON=.*/BAPI_LND_MACAROON=${adminMacaroon}/g" ./.env
@@ -152,12 +185,6 @@ if [ "$1" = "update-config" ]; then
       echo "# CONFIG Web API Lightning --> OFF"
       sed -i "s/^BAPI_LN_NODE=.*/BAPI_LN_NODE=none/g" ./.env
     fi
-
-  else
-    echo "# CONFIG Web API ... still in setup, skip glcoin & lightning"
-    sed -i "s/^BAPI_NETWORK=.*/BAPI_NETWORK=none/g" ./.env
-    sed -i "s/^BAPI_LN_NODE=.*/BAPI_LN_NODE=none/g" ./.env
-  fi
 
   # Note: Celery services might need a restart if config changes affect them.
   # The main bleskapi service restarts automatically due to ExecStartPre.
@@ -310,6 +337,90 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     echo "# using the latest code in branch"
   fi
 
+  # ----- RASPIBLESK_FORK_PATCH -----
+  # Upstream blitz_api (fusion44/blitz_api dev branch) hardcodes RaspiBlitz
+  # paths and a charset-restricted password regex. RaspiBlesk renames
+  # raspiblitz.conf → raspiblesk.conf, the cache dir to /var/cache/raspiblesk/,
+  # and blesk.passwords.sh accepts !@#%^&*()_+=<>?.- in passwords.
+  # Without this sed-pass:
+  #   - /setup/status reads the wrong config file (always reports "needs setup")
+  #   - /system/login returns 401 for any password containing special chars
+  #     outside the dev-branch regex `^[\.a-zA-Z0-9-_]*$` (so any of
+  #     !@#%^&*()_+=<>? rejects) — even when the hash on disk matches,
+  #     password_valid() rejects format BEFORE the hash check runs.
+  # File layout matches dev branch:
+  #   app/system/impl/raspiblitz_utils.py    — password_valid regex
+  #   app/setup/impl/raspiblitz/router.py    — setupFilePath, configFilePath
+  #   app/apps/impl/raspiblitz.py            — install log path
+  # Idempotent: marked with "RASPIBLESK_FORK_PATCH" inside each patched file.
+  # sed delimiters chosen per-line to avoid collision with content chars.
+  SYSTEM_UTILS=/home/bleskapi/blitz_api/app/system/impl/raspiblitz_utils.py
+  SETUP_ROUTER=/home/bleskapi/blitz_api/app/setup/impl/raspiblitz/router.py
+  APPS_IMPL=/home/bleskapi/blitz_api/app/apps/impl/raspiblitz.py
+  if ! grep -q 'RASPIBLESK_FORK_PATCH' "${SYSTEM_UTILS}" 2>/dev/null; then
+    echo "# applying RASPIBLESK_FORK_PATCH to blitz_api source"
+
+    # password_valid(): widen charset to match blesk.passwords.sh's
+    # 'A-Za-z0-9!@#%^&*()_+=<>?.-'. Dev-branch upstream regex is
+    # `^[\.a-zA-Z0-9-_]*$` (allows ._- already, missing !@#%^&*()_+=<>?).
+    # Use Python heredoc instead of sed — the Python regex string has a
+    # literal backslash (\.) inside double quotes inside a Python string,
+    # which would require a forest of escaping in BRE. We carefully patch
+    # ONLY the password_valid() function (not the identical name_valid()
+    # regex on the same module) by anchoring on the function-def line.
+    sudo -u bleskapi python3 - "${SYSTEM_UTILS}" <<'PY'
+import io, sys
+path = sys.argv[1]
+with io.open(path, "r", encoding="utf-8") as f:
+    src = f.read()
+NEEDLE = 'def password_valid(password: str):'
+OLD_RX = 'return re.match("^[\\.a-zA-Z0-9-_]*$", password)'
+NEW_RX = 'return re.match(r"^[a-zA-Z0-9!@#%^&*()_+=<>?.-]*$", password)\t# RASPIBLESK_FORK_PATCH'
+i = src.find(NEEDLE)
+if i < 0:
+    sys.stderr.write(f"# RASPIBLESK_FORK_PATCH: {NEEDLE!r} not found in {path}\n")
+    sys.exit(1)
+# scan from i to next 'def ' (or EOF) and replace OLD_RX inside that window
+j = src.find('\ndef ', i + len(NEEDLE))
+if j < 0:
+    j = len(src)
+window = src[i:j]
+if OLD_RX not in window:
+    sys.stderr.write(f"# RASPIBLESK_FORK_PATCH: regex line not found inside password_valid in {path}\n")
+    sys.exit(1)
+new_window = window.replace(OLD_RX, NEW_RX, 1)
+src = src[:i] + new_window + src[j:]
+with io.open(path, "w", encoding="utf-8") as f:
+    f.write(src)
+print(f"# RASPIBLESK_FORK_PATCH: password_valid charset widened in {path}")
+PY
+
+    # setupFilePath + configFilePath in app/setup/impl/raspiblitz/router.py.
+    # Delimiter `|` chosen — string literals contain `/` (delim-conflict
+    # with `/`) and the comment uses `#` (delim-conflict with `#`).
+    sudo -u bleskapi sed -i \
+      -e 's|"/var/cache/raspiblitz/temp/raspiblitz\.setup"|"/var/cache/raspiblesk/temp/raspiblesk.setup"\t# RASPIBLESK_FORK_PATCH|' \
+      -e 's|"/mnt/hdd/raspiblitz\.conf"|"/mnt/hdd/app-data/raspiblesk.conf"\t# RASPIBLESK_FORK_PATCH|' \
+      "${SETUP_ROUTER}"
+
+    # install-log path in app/apps/impl/raspiblitz.py (snake_case on dev)
+    sudo -u bleskapi sed -i \
+      's|f"/var/cache/raspiblitz/temp/install\.{app_id}\.log"|f"/var/cache/raspiblesk/temp/install.{app_id}.log"\t# RASPIBLESK_FORK_PATCH|' \
+      "${APPS_IMPL}"
+
+    # Verify each patch landed (sed -i exit-0 on no-match — silent failure)
+    for marker_file in "${SYSTEM_UTILS}" "${SETUP_ROUTER}" "${APPS_IMPL}"; do
+      if ! grep -q 'RASPIBLESK_FORK_PATCH' "${marker_file}"; then
+        echo "error='RASPIBLESK_FORK_PATCH sed missed marker in ${marker_file}'"
+        exit 1
+      fi
+    done
+    echo "# RASPIBLESK_FORK_PATCH applied + verified"
+  else
+    echo "# RASPIBLESK_FORK_PATCH already applied (skipping)"
+  fi
+
+
   # install python dependencies
   echo "# running install (Python venv & dependencies)"
   # Make sure python3-venv is installed
@@ -421,13 +532,30 @@ WantedBy=multi-user.target
 
   chown -R bleskapi:bleskapi /home/bleskapi/blitz_api
 
+  # blitz_api's raspiblitz platform module (loaded because BAPI_PLATFORM=raspiblitz
+  # in update-config — see comment there for the masquerade rationale) calls
+  # /home/admin/config.scripts/blitz.*.sh by hardcoded path. We renamed every
+  # blitz.*.sh to blesk.*.sh in this fork, so without these aliases blitz_api
+  # crashes on startup with "required file does not exist: blitz.debug.sh".
+  # Idempotent: ln -sf is safe to re-run.
+  for s in debug shutdown migration backupdevice passwords systemd; do
+    if [ -f "/home/admin/config.scripts/blesk.${s}.sh" ]; then
+      ln -sfn "blesk.${s}.sh" "/home/admin/config.scripts/blitz.${s}.sh"
+    fi
+  done
+
   # Enable and start services
   echo "# Enabling and starting services..."
   systemctl enable bleskapi bleskapi-celery-worker bleskapi-celery-beat
   systemctl start bleskapi bleskapi-celery-worker bleskapi-celery-beat
 
-  # TODO: remove after experimental step (only have forward on nginx:80 /api)
-  ufw allow 11111 comment 'WebAPI Develop'
+  # bleskapi listens on 11111; clearnet access goes through nginx :80 /api
+  # reverse-proxy. Scope the firewall opening to localhost + LAN so the dev
+  # port isn't exposed Anywhere. (v0.15.11 had this Anywhere — public.)
+  ufw allow from 127.0.0.1 to any port 11111 comment 'bleskapi dev localhost'
+  ufw allow from 10.0.0.0/8 to any port 11111 comment 'bleskapi dev LAN'
+  ufw allow from 172.16.0.0/12 to any port 11111 comment 'bleskapi dev LAN'
+  ufw allow from 192.168.0.0/16 to any port 11111 comment 'bleskapi dev LAN'
 
   source <(/home/admin/_cache.sh export internet_localip)
 

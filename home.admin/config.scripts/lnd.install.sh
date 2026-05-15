@@ -9,7 +9,7 @@ lndVersion="0.20.99-beta"
 LND_CLONE_TAG="v0.20.1-beta"
 # btcd commit from LND v0.20.1-beta go.mod (pseudo-version: v0.24.3-0.20250318170759-4f4ea81776d6)
 BTCD_COMMIT="4f4ea81776d6"
-GLCOIN_RELEASE="v0.1.10"
+GLCOIN_RELEASE="v0.2.2"
 GITHUB_RELEASE_BASE="https://github.com/raspiblesk/raspiblesk/releases/download/${GLCOIN_RELEASE}"
 
 # olaoluwa
@@ -25,7 +25,11 @@ PGPcheck="A5B61896952D9FDA83BC054CDC42612E89237182"
 # a malicious GitHub release (or MITM'd asset) and a backdoored lnd /
 # go toolchain running with channel-funds authority.
 # -----------------------------------------------------------------------
-SHA256_LND_PREBUILT_arm64="a96d52145abb3e2455d4b16d06df5ab60db65cdd147657daa9cb3dccbd4a6c57"
+# Empty until a fresh r3 prebuilt is cross-compiled and bundled (one-time
+# audit-grade rebuild after the btcd wire-magic patch). Empty pin makes
+# the install path drop any /tmp prebuilt that happens to be present and
+# fall through to the source-compile branch (~30-60 min on Pi5).
+SHA256_LND_PREBUILT_arm64=""
 SHA256_GO_TOOLCHAIN_arm64="beaf0f51cbe0bd71b8289b2b6fa96c0b11cd86aa58672691ef2f1de88eb621de"
 SHA256_LND_VENDORED="d756dadf5fa1b235ac3e5d8880b6c797c3cf44967d48c982f1ab4439f6309d0c"
 SHA256_LND_SRC="db479a6d4cf7bd00817f8ce9bad2f57d81933b0b408364dc3f9c1e94682a27d3"
@@ -52,6 +56,55 @@ verify_sha256() {
     exit 1
   fi
   echo "# OK - ${_name} sha256 verified (${_expected:0:16}…)"
+}
+
+# -----------------------------------------------------------------------
+# Glcoin wire-magic patch for btcd's wire/protocol.go.
+#
+# Why: btcwallet has three switches that compare chainParams.Net against
+# the typed constant wire.MainNet (0xd9b4bef9, Bitcoin's magic):
+#   vendor/github.com/btcsuite/btcwallet/waddrmgr/scoped_manager.go
+#   vendor/github.com/btcsuite/btcwallet/wallet/import.go
+#   vendor/github.com/btcsuite/btcwallet/internal/legacy/keystore/keystore.go
+# Our btcd_glcoin_params.go init() overrides chaincfg.MainNetParams with
+# GlcoinMainNetParams (Net = 0xd9b4b4f9), but the wire.MainNet *constant*
+# stays at Bitcoin's value. Result: every wallet RPC fails with
+#   "failed to retrieve account public key: unsupported net
+#    Unknown BitcoinNet (3652498681)"  (3652498681 == 0xd9b4b4f9).
+# LND otherwise starts cleanly (taproot check passes, wallet unlocks,
+# chain backend connects) — wallet is just unusable.
+#
+# Fix: change the wire.MainNet constant to Glcoin's magic. One source-
+# level edit, audit-grade. Consistent with our "Glcoin IS our mainnet"
+# stance in chaincfg. Side-effect: btcd no longer recognises Bitcoin's
+# real magic 0xd9b4bef9 — desired (this build is not in Bitcoin's net).
+#
+# Idempotent: detects already-patched state and re-fails-closed if the
+# expected source pattern is missing (e.g. upstream btcd renamed the
+# constant) — better to break the build loudly than ship a wallet bug.
+# -----------------------------------------------------------------------
+_patch_btcd_wire_magic() {
+  local _proto_go="$1"
+  if [ ! -f "${_proto_go}" ]; then
+    echo "# FAIL - wire/protocol.go not found at ${_proto_go}"
+    return 1
+  fi
+  if grep -q 'MainNet BitcoinNet = 0xd9b4b4f9' "${_proto_go}"; then
+    echo "# wire/protocol.go already patched (Glcoin magic in MainNet const)"
+    return 0
+  fi
+  if ! grep -q 'MainNet BitcoinNet = 0xd9b4bef9' "${_proto_go}"; then
+    echo "# FAIL - expected Bitcoin MainNet pattern not found in ${_proto_go}"
+    echo "#   Pattern: 'MainNet BitcoinNet = 0xd9b4bef9'"
+    echo "#   Refusing to build a wallet-broken LND."
+    return 1
+  fi
+  sed -i 's/MainNet BitcoinNet = 0xd9b4bef9/MainNet BitcoinNet = 0xd9b4b4f9/' "${_proto_go}"
+  if ! grep -q 'MainNet BitcoinNet = 0xd9b4b4f9' "${_proto_go}"; then
+    echo "# FAIL - sed did not apply Glcoin wire-magic patch to ${_proto_go}"
+    return 1
+  fi
+  echo "# Patched btcd wire.MainNet → 0xd9b4b4f9 (Glcoin magic) in ${_proto_go}"
 }
 
 # guggero
@@ -157,13 +210,19 @@ if [ "$1" = "install" ] ; then
   # Format: contains lnd and lncli binaries at the top level.
   # -----------------------------------------------------------------------
   # Cache filename includes a build-recipe revision so old broken caches
-  # (e.g. v0143 binaries that panic on init due to chaincfg init-order bug)
   # are not picked up by newer scripts. Bump LND_CACHE_REV when patch changes.
-  LND_CACHE_REV="r2"
+  #   r2 (2026-05-08): chaincfg init-order fix (zglcoin_params.go).
+  #   r3 (2026-05-14): wire.MainNet const change to Glcoin magic (this
+  #     fixes "unsupported net Unknown BitcoinNet (3652498681)" on every
+  #     wallet RPC; r2 binary built before the patch existed).
+  LND_CACHE_REV="r3"
   PREBUILT_NAME="lnd-glcoin-${lndVersion}-${LND_CACHE_REV}-linux-${lndArch}.tar.gz"
   PREBUILT_TARBALL="/tmp/${PREBUILT_NAME}"
   # Clean up older cache revisions to avoid confusion
-  for _old in /tmp/lnd-glcoin-${lndVersion}-linux-${lndArch}.tar.gz; do
+  for _old in \
+    /tmp/lnd-glcoin-${lndVersion}-linux-${lndArch}.tar.gz \
+    /tmp/lnd-glcoin-${lndVersion}-r2-linux-${lndArch}.tar.gz
+  do
     [ -f "${_old}" ] && rm -f "${_old}"
   done
   # Fallback search order: /tmp (build_sdcard.sh stages here) -> /home/admin/assets
@@ -324,6 +383,10 @@ if [ "$1" = "install" ] ; then
         echo "# Renaming glcoin_params.go → zglcoin_params.go (fix init order)"
         mv "${_vendor_chaincfg}/glcoin_params.go" "${_vendor_chaincfg}/zglcoin_params.go"
       fi
+      _patch_btcd_wire_magic \
+        "${BUILD_BASE}/lnd/vendor/github.com/btcsuite/btcd/wire/protocol.go" || {
+        echo "# FAIL - btcd wire-magic patch failed in vendored tree"; exit 1
+      }
     elif [ -f "${LOCAL_LND}" ]; then
       echo "# Extracting LND source from assets (btcd will still be needed)"
       verify_sha256 "${LOCAL_LND}" "${SHA256_LND_SRC}" "LND source bundle"
@@ -363,6 +426,9 @@ if [ "$1" = "install" ] ; then
       # Filename prefixed with 'z' so init() runs AFTER btcd's params.go init()
       cp "${GLCOIN_PARAMS_FILE}" "${BUILD_BASE}/btcd/chaincfg/zglcoin_params.go" || {
         echo "# FAIL - could not copy zglcoin_params.go into btcd"; exit 1
+      }
+      _patch_btcd_wire_magic "${BUILD_BASE}/btcd/wire/protocol.go" || {
+        echo "# FAIL - btcd wire-magic patch failed in standalone btcd tree"; exit 1
       }
       cd "${BUILD_BASE}/lnd" || exit 1
       go mod edit -replace github.com/btcsuite/btcd="${BUILD_BASE}/btcd"
@@ -497,9 +563,15 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   echo "# Make sure the user glcoin is in the debian-tor group"
   sudo usermod -a -G debian-tor glcoin
 
+  # LND P2P (9735) is the actual Lightning Network peer port — must be Anywhere.
+  # LND REST (8080) and gRPC (10009) carry the admin macaroon: any client with
+  # that token can move funds. Scope to localhost + LAN by default; remote
+  # access goes through the Tor 'lndrest' onion service (tor.network.sh).
   sudo ufw allow ${portprefix}9735 comment "${netprefix}lnd"
-  sudo ufw allow ${portprefix}8080 comment "${netprefix}lnd REST"
-  sudo ufw allow 1${rpcportmod}009 comment "${netprefix}lnd RPC"
+  for src in "127.0.0.1" "10.0.0.0/8" "172.16.0.0/12" "192.168.0.0/16"; do
+    sudo ufw allow from ${src} to any port ${portprefix}8080 comment "${netprefix}lnd REST $([ \"${src}\" = 127.0.0.1 ] && echo localhost || echo LAN)"
+    sudo ufw allow from ${src} to any port 1${rpcportmod}009 comment "${netprefix}lnd RPC $([ \"${src}\" = 127.0.0.1 ] && echo localhost || echo LAN)"
+  done
 
   sudo chown -R glcoin:glcoin /mnt/hdd/app-data/lnd
   sudo chmod -R 750 /mnt/hdd/app-data/lnd

@@ -3,10 +3,10 @@
 # Glcoin Core - build & install from source tarball
 # Source lookup order:
 #   1. Explicit path passed as 2nd argument
-#   2. Tarball at /tmp/glcoin-0.1.10-src.tar.gz  (copy here before running)
+#   2. Tarball at /tmp/glcoin-0.2.3-src.tar.gz  (copy here before running)
 #   3. Already-extracted dir at /tmp/glcoin-src or /home/admin/glcoin-src
 #   4. GitHub (once the repo is public)
-GLCOIN_VERSION="0.1.10"
+GLCOIN_VERSION="0.2.2"
 
 # command info
 if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
@@ -14,7 +14,7 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
   echo "glcoin.install.sh install [source_path_or_tarball]"
   echo "Install or remove parallel chains for Glcoin Core:"
   echo "glcoin.install.sh install"
-  echo "glcoin.install.sh install /path/to/glcoin-0.1.10-src.tar.gz"
+  echo "glcoin.install.sh install /path/to/glcoin-0.2.3-src.tar.gz"
   echo "glcoin.install.sh install /path/to/extracted/glcoin-src"
   echo "glcoin.install.sh [on|off] [signet|testnet|mainnet]"
   echo
@@ -93,10 +93,10 @@ if [ "$1" = "install" ]; then
     TARBALL_PATH="${2}"
   elif [ -n "${2}" ] && [ -d "${2}" ]; then
     LOCAL_SOURCE="${2}"
-  elif [ -f "/home/admin/assets/glcoin-0.1.10-src.tar.gz" ]; then
-    TARBALL_PATH="/home/admin/assets/glcoin-0.1.10-src.tar.gz"
-  elif [ -f "/tmp/glcoin-0.1.10-src.tar.gz" ]; then
-    TARBALL_PATH="/tmp/glcoin-0.1.10-src.tar.gz"
+  elif [ -f "/home/admin/assets/glcoin-0.2.3-src.tar.gz" ]; then
+    TARBALL_PATH="/home/admin/assets/glcoin-0.2.3-src.tar.gz"
+  elif [ -f "/tmp/glcoin-0.2.3-src.tar.gz" ]; then
+    TARBALL_PATH="/tmp/glcoin-0.2.3-src.tar.gz"
   elif [ -d "/tmp/glcoin-src" ]; then
     LOCAL_SOURCE="/tmp/glcoin-src"
   elif [ -d "/home/admin/glcoin-src" ]; then
@@ -260,8 +260,8 @@ ${glcoinprefix}.zmqpubrawtx=tcp://127.0.0.1:${glcoinZmqTx}" |
 [Unit]
 Description=Glcoin daemon on ${CHAIN}
 
-Wants=redis.service
-After=redis.service
+Wants=redis.service kubo.service
+After=redis.service kubo.service
 
 [Service]
 Environment='MALLOC_ARENA_MAX=1'

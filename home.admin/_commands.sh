@@ -108,17 +108,20 @@ function raspiblesk() {
 }
 
 # command: menu
-# calls directly the main menu
+# Loops 00mainMenu.sh while it exits 0. 00mainMenu.sh forwards the exit
+# code of the chosen submenu — without the loop, every successful action
+# (exit 0) drops back to the shell prompt instead of redisplaying the
+# menu. Mirrors the outer loop in 00raspiblesk.sh.
 function menu() {
   cd /home/admin
-  ./00mainMenu.sh
+  while ./00mainMenu.sh; do :; done
 }
 
 # command: repair
-# calls directly the repair menu
+# Loops 98repairMenu.sh (same rationale as menu()).
 function repair() {
   cd /home/admin
-  ./98repairMenu.sh
+  while ./98repairMenu.sh; do :; done
 }
 
 # command: reset

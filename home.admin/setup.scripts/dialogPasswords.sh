@@ -38,9 +38,9 @@ PASSWORD C) Lightning Wallet Password for Unlock
 You will need to set now Password: ${passwordinfo}
 
 Follow Password Rule: Minimum of 8 characters,
-no spaces and only special characters - or .
+no spaces. Allowed: A-Z a-z 0-9 and !@#%^&*()_+=<>?.-
 Write them down & store them in a safe place.
-" 16 54
+" 16 64
 
 else
 
@@ -56,7 +56,7 @@ You will need to set now Password: ${passwordinfo}
 (other passwords might stay like on your old node)
 
 Follow Password Rules: Minimum of 8 characters,
-no spaces and only special characters - or .
+no spaces. Allowed: A-Z a-z 0-9 and !@#%^&*()_+=<>?.-
 Write them down & store them in a safe place.
 " 17 64
 

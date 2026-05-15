@@ -127,10 +127,10 @@ ufw allow from 127.0.0.1 to any port 1617 comment 'glcoin mainnet RPC localhost'
 ufw allow from 10.0.0.0/8 to any port 1617 comment 'glcoin mainnet RPC LAN'
 ufw allow from 172.16.0.0/12 to any port 1617 comment 'glcoin mainnet RPC LAN'
 ufw allow from 192.168.0.0/16 to any port 1617 comment 'glcoin mainnet RPC LAN'
-echo 'allow: lightning testnet'
-ufw allow 19735 comment 'lightning testnet'
 echo "allow: lightning mainnet"
 ufw allow 9735 comment 'lightning mainnet'
+# (lightning testnet 19735 used to be allowed Anywhere unconditionally —
+# removed in v0.15.12. Re-add scoped to LAN if testnet is ever enabled.)
 echo "allow: lightning gRPC (localhost + LAN only)"
 ufw allow from 127.0.0.1 to any port 10009 comment 'lightning gRPC localhost'
 ufw allow from 10.0.0.0/8 to any port 10009 comment 'lightning gRPC LAN'

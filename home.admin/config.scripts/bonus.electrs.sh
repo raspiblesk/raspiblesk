@@ -390,13 +390,20 @@ if [ "$1" = "install" ]; then
       sudo -u electrs /home/admin/config.scripts/blesk.git-verify.sh \
         "${PGPsigner}" "${PGPpubkeyLink}" "${PGPpubkeyFingerprint}" "${ELECTRSVERSION}" || exit 1
 
-      # apply Glcoin network name patch
+      # apply Glcoin network name patch (mandatory — vanilla electrs rejects
+      # --network=glcoin and the systemd unit passes that flag at startup).
       GLCOIN_PATCH="/home/admin/patches/electrs/network_glcoin.patch"
-      if [ -f "${GLCOIN_PATCH}" ]; then
-        sudo -u electrs patch -p1 < "${GLCOIN_PATCH}" || { echo "# FAIL - could not apply Glcoin patch"; exit 1; }
-      else
-        echo "# WARNING: Glcoin electrs patch not found at ${GLCOIN_PATCH}"
-        echo "# Build may fail at startup with 'unknown network: glcoin'"
+      if [ ! -f "${GLCOIN_PATCH}" ]; then
+        echo "# FAIL - Glcoin electrs patch not found at ${GLCOIN_PATCH}"
+        echo "# Build aborted: a vanilla electrs would crash-loop at startup."
+        exit 1
+      fi
+      sudo -u electrs patch -p1 < "${GLCOIN_PATCH}" || { echo "# FAIL - could not apply Glcoin patch"; exit 1; }
+      # Verify the patch took effect (defensive: a corrupted .patch could
+      # silently no-op leaving config.rs vanilla).
+      if ! grep -q '"glcoin" => Ok(BitcoinNetwork' /home/electrs/electrs/src/config.rs; then
+        echo "# FAIL - patch applied but glcoin literal missing in src/config.rs"
+        exit 1
       fi
 
       sudo -u electrs /home/electrs/.cargo/bin/cargo build --locked --release || exit 1
@@ -434,6 +441,24 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
       echo "# The electrs database will be built in /mnt/hdd/app-storage/electrs/db. Takes ~18 hours and ~50Gb diskspace"
       echo
     fi
+
+    # Reset stale DB on reinstall: when re-flashing across versions where
+    # electrs ABI changed (e.g. magic-byte handling in v0164's
+    # network_glcoin.patch hunk #3), the previous DB at .../db/bitcoin/ may
+    # contain headers with the wrong magic and cause "receiving on empty and
+    # disconnected channel" on first start. /mnt/hdd/app-storage/ is
+    # persistent across re-flashes (see project_raspiblesk_v0159), so the
+    # install script must do this cleanup itself; we cannot rely on a fresh
+    # SD card alone. Cheap: ~50 GB delete on a re-install, +18h re-sync.
+    # Guarded by a marker so we only wipe ONCE per install run, not on every
+    # "switch on" toggle.
+    if [ ! -f /mnt/hdd/app-storage/electrs/.v0164-reset.done ]; then
+      echo "# v0164 first-install: wiping any stale electrs index (magic-byte format change)"
+      sudo rm -rf /mnt/hdd/app-storage/electrs/db
+      sudo rm -f /mnt/hdd/app-storage/electrs/initial-sync.done
+      sudo touch /mnt/hdd/app-storage/electrs/.v0164-reset.done
+    fi
+
     # always fix user id
     sudo chown -R electrs:electrs /mnt/hdd/app-storage/electrs
 
@@ -460,7 +485,12 @@ db_dir = \"/mnt/hdd/app-storage/electrs/db\"
 daemon_p2p_addr = \"127.0.0.1:1618\"
 daemon_rpc_addr = \"127.0.0.1:1617\"
 auth = \"${RPC_USER}:${PASSWORD_B}\"
-network = \"glcoin\"
+# network is passed via --network=glcoin in the systemd ExecStart, NOT here.
+# configure_me reads CLI args through FromStr (our network_glcoin.patch covers
+# that path) but reads TOML values through serde::Deserialize (which derives
+# directly on bitcoin::Network and rejects \"glcoin\" as unknown variant).
+# Moving it to CLI keeps the Glcoin masquerade working without a much
+# more invasive serde-deserializer patch.
 # allow GLC-RPC-explorer show tx-s for addresses with a history of more than 100
 txid_limit = 1000
 server_banner = \"Welcome to electrs $ELECTRSVERSION - the Electrum Rust Server on your RaspiBlesk\"
@@ -548,13 +578,26 @@ After=glcoind.service
 
 [Service]
 WorkingDirectory=/home/electrs/electrs
-ExecStart=/home/electrs/electrs/target/release/electrs --electrum-rpc-addr=\"0.0.0.0:50001\"
+# --network=glcoin uses the FromStr code path (patched in network_glcoin.patch
+# to map glcoin -> Network::Bitcoin internally). TOML's serde path is not
+# patched, so passing this here instead of in config.toml is mandatory.
+# --signet-magic=f9b4b4d9 is the Glcoin mainnet pchMessageStart (chainparams.cpp
+# CMainParams). The network_glcoin.patch extends config.rs to accept this
+# override on Network::Bitcoin (not just Signet), since the bitcoin crate
+# hardcodes Network::Bitcoin::magic() to Bitcoin's 0xf9beb4d9. Without this
+# the P2P handshake to glcoind fails and the block-fetcher channel dies
+# with \"receiving on empty and disconnected channel\".
+ExecStart=/home/electrs/electrs/target/release/electrs --network=glcoin --signet-magic=f9b4b4d9 --electrum-rpc-addr=\"0.0.0.0:50001\"
 User=electrs
 Group=electrs
 Type=simple
 TimeoutSec=60
 Restart=always
 RestartSec=60
+# Stop after 10 failures in 10 min so a broken config can't crash-loop forever
+# and flood the journal (v0.15.11: 82 restarts in 82 min before this guard).
+StartLimitInterval=600
+StartLimitBurst=10
 
 # Hardening measures
 PrivateTmp=true
