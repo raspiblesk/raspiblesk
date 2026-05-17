@@ -80,7 +80,7 @@ if [ "$1" = "off" ]; then
 
   echo "# Removing Tailscale"
   sudo systemctl disable --now tailscaled
-  sudo apt purge -y tailscale
+  sudo apt-get purge -y tailscale
 
   # get delete data status - either by parameter or if not set by user dialog
   deleteData=""

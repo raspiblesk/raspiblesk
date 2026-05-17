@@ -47,7 +47,7 @@ fi
 # switch off
 if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   echo "*** REMOVING NODEJS ***"
-  sudo apt remove nodejs -y
+  sudo apt-get remove nodejs -y
   sudo rm /etc/apt/sources.list.d/nodesource.list
   echo "OK NodeJS removed."
   exit 0

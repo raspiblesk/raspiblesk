@@ -27,22 +27,64 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
 fi
 
 echo "# Running: 'bonus.lnbits.sh $*'"
-source /mnt/hdd/app-data/raspiblesk.conf
+# v0.15.20 (Bug F1): conf is only created during _provision_.sh, after
+# bonus.lnbits.sh install has already run from build_sdcard.sh. The
+# unconditional source produced "Datei oder Verzeichnis nicht gefunden"
+# in the build log. Install path does not read any conf vars so the
+# guard is safe — activation paths (on/switch/off) run later when the
+# conf file exists.
+if [ -f /mnt/hdd/app-data/raspiblesk.conf ]; then
+  source /mnt/hdd/app-data/raspiblesk.conf
+fi
 
 lnbitsDataDir="/mnt/hdd/app-data/LNBits/data"
 lnbitsConfig="${lnbitsDataDir}/.env"
 
 LNBITS_DB_PASS_FILE="/mnt/hdd/app-data/LNBits/db_password.conf"
+LNBITS_DB_PASS_RESET_MARKER="/mnt/hdd/app-data/LNBits/.v0166-pw-reset.done"
 
 loadOrGenerateLNBitsDBPassword() {
-  if [ -f "${LNBITS_DB_PASS_FILE}" ]; then
-    source "${LNBITS_DB_PASS_FILE}"
+  # Bug Q (v0.15.16): pre-v0166 passwords could contain URL-unsafe chars
+  # (+ = < > ? . - and others) that broke asyncpg's URL-parser in
+  # LNBITS_DATABASE_URL. lnbits crashed at startup with InvalidPasswordError
+  # for "lnbits_user" even though the user existed in postgres. Invalidate
+  # any pre-v0166 password file exactly once so the regenerate path below
+  # produces a URL-safe alphanumeric replacement and the postgres user gets
+  # recreated with the new password on the next postgresConfig run.
+  # Bug Y (v0.15.19): this function is called from _provision_.sh:554 via
+  # `sudo -u admin bonus.lnbits.sh on`, but /mnt/hdd/app-data/LNBits is owned
+  # lnbits:lnbits mode 0755 — admin has no write permission. Every raw
+  # rm/mkdir/touch/echo > $PASS_FILE silent-failed, neither marker nor
+  # password file was ever persisted, and each call re-rolled a fresh
+  # LNBITS_DB_PASS. postgresConfig (Z.91/97) then created the postgres user
+  # with pass A, the .env write (Z.939) used pass B, and lnbits crashed at
+  # startup with InvalidPasswordError. All filesystem ops here now run via
+  # sudo, and `source` is replaced by `sudo grep | cut` because the password
+  # file is chmod 600 owned by lnbits (admin cannot read it directly).
+  if ! sudo test -f "${LNBITS_DB_PASS_RESET_MARKER}"; then
+    if sudo test -f "${LNBITS_DB_PASS_FILE}"; then
+      echo "# Bug Q reset: invalidating pre-v0166 LNbits DB password (URL-unsafe charset)"
+      sudo rm -f "${LNBITS_DB_PASS_FILE}"
+      if sudo -u postgres psql -tAc "SELECT 1" >/dev/null 2>&1; then
+        sudo -u postgres psql -c "drop database if exists lnbits_db;" >/dev/null 2>&1 || true
+        sudo -u postgres psql -c "drop user if exists lnbits_user;" >/dev/null 2>&1 || true
+      fi
+    fi
+    sudo mkdir -p "$(dirname "${LNBITS_DB_PASS_RESET_MARKER}")"
+    sudo touch "${LNBITS_DB_PASS_RESET_MARKER}"
+  fi
+
+  if sudo test -f "${LNBITS_DB_PASS_FILE}"; then
+    LNBITS_DB_PASS=$(sudo grep -E '^LNBITS_DB_PASS=' "${LNBITS_DB_PASS_FILE}" | cut -d= -f2-)
   else
-    mkdir -p "$(dirname ${LNBITS_DB_PASS_FILE})"
-    LNBITS_DB_PASS=$(openssl rand -base64 32 | tr -dc 'A-Za-z0-9!@#%^&*_+=<>?.-' | head -c 32)
-    echo "LNBITS_DB_PASS=${LNBITS_DB_PASS}" > "${LNBITS_DB_PASS_FILE}"
-    chmod 600 "${LNBITS_DB_PASS_FILE}"
-    chown lnbits:lnbits "${LNBITS_DB_PASS_FILE}" 2>/dev/null || true
+    sudo mkdir -p "$(dirname ${LNBITS_DB_PASS_FILE})"
+    # Bug Q (v0.15.16): URL-safe alphanumeric-only charset. 32 chars
+    # × log2(62) ≈ 190 bits entropy. Previous charset included +=<>?.-
+    # which broke postgres:// URL parsing in asyncpg.
+    LNBITS_DB_PASS=$(openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 32)
+    echo "LNBITS_DB_PASS=${LNBITS_DB_PASS}" | sudo tee "${LNBITS_DB_PASS_FILE}" >/dev/null
+    sudo chmod 600 "${LNBITS_DB_PASS_FILE}"
+    sudo chown lnbits:lnbits "${LNBITS_DB_PASS_FILE}" 2>/dev/null || true
   fi
 }
 
@@ -65,7 +107,30 @@ function postgresConfig() {
   # create database for new installations and keep old
   sudo -u postgres psql -c "create database lnbits_db;" 2>/dev/null
   sudo -u postgres psql -c "create user lnbits_user with encrypted password '${LNBITS_DB_PASS}';" 2>/dev/null
+  # Bug Q (v0.15.16) hardening: if lnbits_user already existed (rerun after partial
+  # install or manually-deleted db_password.conf), CREATE USER silently no-ops and
+  # the db user keeps its stale password — but db_password.conf now has a fresh
+  # one, so LNBITS_DATABASE_URL fails to connect. ALTER USER realigns both sides
+  # to the password currently in db_password.conf on every postgresConfig call.
+  sudo -u postgres psql -c "alter user lnbits_user with encrypted password '${LNBITS_DB_PASS}';" 2>/dev/null
   sudo -u postgres psql -c "grant all privileges on database lnbits_db to lnbits_user;" 2>/dev/null
+
+  # v0.15.20 (Bug Y2): PostgreSQL 15+ revoked the historical PUBLIC.CREATE
+  # privilege on the `public` schema — only the schema owner (default:
+  # `postgres`) can `CREATE TABLE` in it. lnbits_user holds DATABASE-level
+  # ALL PRIVILEGES (line above), but database-level grants are independent
+  # of schema-level grants in PG 15+. LNbits' first migration tries
+  # `CREATE TABLE IF NOT EXISTS dbversions(...)` in `public` and asyncpg
+  # raises `InsufficientPrivilegeError: permission denied for schema public`,
+  # aborting `Application startup`, so the LNbits worker never binds :5000
+  # and nginx returns 502 Bad Gateway on the LNbits frontend. Two-pronged
+  # fix: transfer schema ownership AND explicitly grant ALL — either alone
+  # would suffice but together they survive a PostgreSQL-side reset of
+  # default ACLs across major-version upgrades. Run as the postgres
+  # superuser, scoped to the lnbits_db (so `public` resolves to the right
+  # per-database schema).
+  sudo -u postgres psql -d lnbits_db -c "alter schema public owner to lnbits_user;" 2>/dev/null
+  sudo -u postgres psql -d lnbits_db -c "grant all on schema public to lnbits_user;" 2>/dev/null
 
   # check
   check=$(sudo -u postgres psql -c "SELECT datname FROM pg_database;" | grep lnbits_db)
@@ -427,7 +492,7 @@ if [ "$1" = "status" ]; then
     localIP=$(hostname -I | awk '{print $1}')
     echo "localIP='${localIP}'"
     echo "httpPort='5000'"
-    echo "httpsPort='5001'"
+    echo "httpsPort='5443'"
     echo "httpsForced='1'"
     echo "httpsSelfsigned='1'" # TODO: change later if IP2Tor+LetsEncrypt is active
     echo "publicIP='${publicIP}'"
@@ -778,6 +843,20 @@ if [ "$1" = "install" ]; then
     sleep 10
   fi
 
+  # v0.15.21 (Bug AA): LNbits pins passlib but never lists bcrypt as a dep,
+  # so passlib's CryptContext(schemes=["bcrypt"]) throws MissingBackendError
+  # on every password.hash() call -> /login + /create-user return 500
+  # "unexpected error". Add bcrypt explicitly via poetry so the lockfile and
+  # the venv stay in sync (a bare `pip install bcrypt` in the venv would
+  # drift on the next `poetry install` rerun).
+  echo "# add bcrypt (passlib backend missing in upstream pin)"
+  if sudo -u lnbits "${POETRY_BIN}" add bcrypt; then
+    echo "bcrypt added successfully."
+  else
+    echo "Error: poetry add bcrypt failed; LNbits login will return 500."
+    exitCode=1
+  fi
+
   # make sure default virtaulenv is used
   sudo apt-get remove -y python3-virtualenv 2>/dev/null || true
   sudo pip uninstall -y virtualenv 2>/dev/null || true
@@ -927,7 +1006,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   echo
   echo "*** Updating Firewall ***"
   sudo ufw allow 5000 comment 'lnbits HTTP'
-  sudo ufw allow 5001 comment 'lnbits HTTPS'
+  sudo ufw allow 5443 comment 'lnbits HTTPS'
   echo
 
   # make sure that systemd starts funding source first
@@ -1173,7 +1252,7 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
 
   echo "# Cleaning up LNbits install ..."
   sudo ufw delete allow 5000
-  sudo ufw delete allow 5001
+  sudo ufw delete allow 5443
 
   # remove nginx symlinks
   sudo rm -f /etc/nginx/sites-enabled/lnbits_ssl.conf

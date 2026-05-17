@@ -134,7 +134,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   # make sure needed debian packages are installed
   # 'fbi' is here just an example - change to what you need or delete
   echo "# install from tarball"
-  sudo apt install -y gpg wget
+  sudo apt-get install -y gpg wget
 
   # download source code and verify
   # BACKGROUND is that now you download the code from github, reset to a given version tag/commit,

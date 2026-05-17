@@ -386,7 +386,7 @@ function installFulcrumBinary() {
   else
     echo "# No pre-built tarball found at ${tarball}"
     echo "# Building Fulcrum from source (requires Qt6, librocksdb-dev, zlib1g-dev — slow on arm64)"
-    sudo apt install -y qt6-base-dev librocksdb-dev zlib1g-dev libzmq3-dev || exit 1
+    sudo apt-get install -y qt6-base-dev librocksdb-dev zlib1g-dev libzmq3-dev || exit 1
     local srcdir="/home/fulcrum/Fulcrum-src"
     sudo -u fulcrum git clone --depth=1 --branch "v${fulcrumVersion}" \
       https://github.com/cculianu/Fulcrum.git "$srcdir" || exit 1
@@ -471,7 +471,7 @@ if [ "$1" = on ]; then
   # create a dedicated user
   sudo adduser --system --group --home /home/fulcrum fulcrum
 
-  sudo apt install -y libssl-dev # was needed on Debian Bullseye
+  sudo apt-get install -y libssl-dev # was needed on Debian Bullseye
 
   installFulcrumBinary
 

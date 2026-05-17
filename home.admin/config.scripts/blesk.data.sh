@@ -3152,7 +3152,7 @@ if [ "$1" = "expand" ]; then
     fi
 
     # grow partition
-    apt install -y --no-install-recommends cloud-guest-utils
+    apt-get install -y --no-install-recommends cloud-guest-utils
     growpart /dev/${deviceName} ${partitionNumber}
     if [ $? -ne 0 ]; then
         echo "error='failed to grow partition'"

@@ -380,7 +380,7 @@ if [ "$1" = "install" ]; then
       echo "# Building patched electrs from source (this will take ~40 minutes)"
 
       sudo -u electrs curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sudo -u electrs sh -s -- --default-toolchain stable -y
-      sudo apt install -y clang cmake build-essential
+      sudo apt-get install -y clang cmake build-essential
 
       sudo -u electrs git clone https://github.com/romanz/electrs
       cd /home/electrs/electrs || exit 1
@@ -438,7 +438,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     if ! sudo ls /mnt/hdd/app-storage/electrs 2>/dev/null; then
       sudo mkdir /mnt/hdd/app-storage/electrs
       echo
-      echo "# The electrs database will be built in /mnt/hdd/app-storage/electrs/db. Takes ~18 hours and ~50Gb diskspace"
+      echo "# The electrs database will be built in /mnt/hdd/app-storage/electrs/db. Glcoin chain is young — initial sync takes seconds and the index grows ~80 MB/year at the current 5-min block target."
       echo
     fi
 
@@ -449,7 +449,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     # disconnected channel" on first start. /mnt/hdd/app-storage/ is
     # persistent across re-flashes (see project_raspiblesk_v0159), so the
     # install script must do this cleanup itself; we cannot rely on a fresh
-    # SD card alone. Cheap: ~50 GB delete on a re-install, +18h re-sync.
+    # SD card alone. Cheap: a few-MB delete on a re-install, seconds to re-sync.
     # Guarded by a marker so we only wipe ONCE per install run, not on every
     # "switch on" toggle.
     if [ ! -f /mnt/hdd/app-storage/electrs/.v0164-reset.done ]; then
@@ -457,6 +457,19 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
       sudo rm -rf /mnt/hdd/app-storage/electrs/db
       sudo rm -f /mnt/hdd/app-storage/electrs/initial-sync.done
       sudo touch /mnt/hdd/app-storage/electrs/.v0164-reset.done
+    fi
+    # Bug H2 (v0.15.16): v0164/v0165 seeded the chain with Bitcoin's hardcoded
+    # genesis (bitcoin::constants::genesis_block(Network::Bitcoin) =
+    # 000...ce26f). Glcoin's mainnet genesis is 6e605c9c...e9ed, so electrs
+    # rejected block 1 with "missing prev_blockhash: 6e605c9c..." in a
+    # restart loop. Fixed by --genesis-header-hex on the ExecStart line
+    # (see network_glcoin.patch + bonus.electrs.sh ExecStart). The old DB
+    # was built against the wrong seed and must be wiped exactly once.
+    if [ ! -f /mnt/hdd/app-storage/electrs/.v0166-genesis-reset.done ]; then
+      echo "# v0166 install: wiping electrs index built with wrong (Bitcoin) genesis seed"
+      sudo rm -rf /mnt/hdd/app-storage/electrs/db
+      sudo rm -f /mnt/hdd/app-storage/electrs/initial-sync.done
+      sudo touch /mnt/hdd/app-storage/electrs/.v0166-genesis-reset.done
     fi
 
     # always fix user id
@@ -587,7 +600,7 @@ WorkingDirectory=/home/electrs/electrs
 # hardcodes Network::Bitcoin::magic() to Bitcoin's 0xf9beb4d9. Without this
 # the P2P handshake to glcoind fails and the block-fetcher channel dies
 # with \"receiving on empty and disconnected channel\".
-ExecStart=/home/electrs/electrs/target/release/electrs --network=glcoin --signet-magic=f9b4b4d9 --electrum-rpc-addr=\"0.0.0.0:50001\"
+ExecStart=/home/electrs/electrs/target/release/electrs --network=glcoin --signet-magic=f9b4b4d9 --genesis-header-hex=010000000000000000000000000000000000000000000000000000000000000000000000820ebef339d91314b3a647b544ad77209dcca4aaf093333b6b970506e6d14d7f00f3fe67ffff7f2003000000 --electrum-rpc-addr=\"0.0.0.0:50001\"
 User=electrs
 Group=electrs
 Type=simple
@@ -767,7 +780,7 @@ if [ "$1" = "update" ]; then
 
     echo "# Installing build dependencies"
     sudo -u electrs curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sudo -u electrs sh -s -- --default-toolchain stable -y
-    sudo apt install -y clang cmake build-essential # for building 'rust-rocksdb'
+    sudo apt-get install -y clang cmake build-essential # for building 'rust-rocksdb'
     echo
 
     echo "# Build Electrs ..."

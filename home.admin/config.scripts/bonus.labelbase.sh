@@ -223,7 +223,23 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   echo "# compile/install the app"
   sudo pip install --upgrade pip
   sudo -u ${APPID} virtualenv -p python3 ${LABELBASE_ENV}
-  sudo -u ${APPID}  bash -c '. /home/labelbase/ENV/bin/activate && pip install --no-cache-dir -r /home/labelbase/labelbase/django/requirements.txt'
+  # v0.15.21 (Bug DD): the inline `bash -c` swallowed pip's exit code, so a
+  # failed `pip install -r requirements.txt` (network blip, py3.13/django
+  # version skew, missing build deps) left an empty venv and the service
+  # crash-looped with "ModuleNotFoundError: No module named 'django'" and
+  # "/home/labelbase/ENV/bin/gunicorn: No such file or directory". Run pip
+  # with -e (errexit) inside the subshell, capture the exit code, and
+  # backstop django+gunicorn explicitly so the service still has its two
+  # hard runtime deps even if the requirements.txt walk partial-failed.
+  sudo -u ${APPID} bash -ec '. /home/labelbase/ENV/bin/activate && pip install --no-cache-dir -r /home/labelbase/labelbase/django/requirements.txt' || {
+    echo "# WARNING: labelbase requirements.txt install failed; will retry with explicit django+gunicorn backstop"
+  }
+  # Backstop: explicit install of the two packages the service ExecStart
+  # literally cannot start without. Idempotent if requirements.txt already
+  # pulled them in.
+  sudo -u ${APPID} bash -ec '. /home/labelbase/ENV/bin/activate && pip install --no-cache-dir django gunicorn' || {
+    echo "# ERROR: even backstop django+gunicorn install failed; labelbase service will crash-loop"
+  }
 
   if [ -f "${LABELBASE_HOME}/exports.sh" ]; then
     echo "INFO: The file '${LABELBASE_HOME}/exports.sh' already exists (232)."

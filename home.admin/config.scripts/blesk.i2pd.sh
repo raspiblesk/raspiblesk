@@ -274,7 +274,7 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   sudo systemctl disable i2pd.service
 
   echo "# Uninstall with apt"
-  sudo apt remove -y i2pd
+  sudo apt-get remove -y i2pd
 
   echo "# Remove i2p settings from glcoind (leave tor/clearnet alone)"
   glcoinConf="/mnt/hdd/app-data/glcoin/glcoin.conf"

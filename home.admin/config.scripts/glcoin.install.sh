@@ -144,6 +144,13 @@ if [ "$1" = "install" ]; then
   mkdir -p "${BUILD_DIR}"
   cd "${BUILD_DIR}" || exit 1
 
+  # v0.15.20 (Bug C1): explicitly disable Doxygen + man-page generation
+  # so cmake stops probing for the (intentionally absent) doxygen +
+  # graphviz dot binaries and the "Could NOT find Doxygen" + "Could NOT
+  # find Valgrind" warnings drop out of the build log. Bitcoin Core's
+  # cmake honours WITH_MAN/WITH_DOC; unknown vars produce a benign
+  # "Manually-specified variables were not used" warning at the end of
+  # the cmake step, no behavioural change either way.
   cmake "${SRC_DIR}" \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_DAEMON=ON \
@@ -158,6 +165,8 @@ if [ "$1" = "install" ]; then
     -DBUILD_WALLET_TOOL=OFF \
     -DWITH_ZMQ=ON \
     -DENABLE_WALLET=ON \
+    -DWITH_DOC=OFF \
+    -DWITH_MAN=OFF \
     || exit 1
 
   cmake --build . --parallel "$(nproc)" || exit 1

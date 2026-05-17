@@ -224,7 +224,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     /home/admin/config.scripts/network.wallet.sh on
 
     echo "#    --> Installing prerequisites"
-    sudo apt update
+    sudo apt-get update
     sudo apt-get install -y virtualenv libffi-dev libusb-1.0.0-dev libudev-dev
 
     sudo adduser --system --group --home /home/specter specter

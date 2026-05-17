@@ -359,7 +359,7 @@ if [ "$1" = on ] || [ "$1" = update ] || [ "$1" = testPR ]; then
 
   if [ "$1" = "update" ] || [ "$1" = "testPR" ]; then
 
-    echo "# apt update"
+    echo "# apt-get update"
     echo
     sudo apt-get update
 

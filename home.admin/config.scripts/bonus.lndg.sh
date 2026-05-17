@@ -148,8 +148,15 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     sudo -u lndg git clone https://github.com/cryptosharks131/lndg.git /home/lndg/lndg/
     cd /home/lndg/lndg/ || exit 1
     sudo -u lndg git reset --hard v${VERSION}
-    sudo apt install -y virtualenv
+    sudo apt-get install -y virtualenv
     sudo -u lndg virtualenv -p python3 .venv
+    # v0.15.21 (Bug FF): Python 3.13 dropped `pkg_resources` from stdlib (it
+    # was historically shipped with setuptools, which is no longer installed
+    # by default into new venvs on py3.13). gunicorn 20.x imports
+    # `pkg_resources` at module load and dies with ModuleNotFoundError, so
+    # the LNDg gunicorn service crash-loops at every boot. Install
+    # setuptools explicitly before requirements.txt to restore the import.
+    sudo -u lndg .venv/bin/pip install setuptools
     sudo -u lndg .venv/bin/pip install -r requirements.txt
     PASSWORD_B=$(sudo cat /mnt/hdd/app-data/glcoin/glcoin.conf | grep rpcpassword | cut -c 13-)
     echo "# LNDg initialize.py ..."
@@ -399,6 +406,10 @@ if [ "$1" = "update" ]; then
   echo "# Updated to the release in https://github.com/cryptosharks131/lndg"
   cd /home/lndg/lndg || exit 1
   sudo -u lndg git pull
+  # v0.15.21 (Bug FF): see install branch — gunicorn 20.x needs setuptools
+  # on Python 3.13 to import pkg_resources. Re-install on update too in
+  # case a venv was created on an older Python and is now upgraded.
+  sudo -u lndg .venv/bin/pip install setuptools
   sudo -u lndg .venv/bin/pip install requests
   sudo -u lndg .venv/bin/pip install -r requirements.txt
   sudo -u lndg .venv/bin/python manage.py migrate

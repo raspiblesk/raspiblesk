@@ -1,8 +1,74 @@
+--- a/internal/config_specification.toml
++++ b/internal/config_specification.toml
+@@ -151,3 +151,9 @@
+ name = "signet_magic"
+ type = "String"
+ doc = "network magic for custom signet network in hex format, as found in Bitcoin Core logs (signet only)"
++
++[[param]]
++name = "genesis_header_hex"
++type = "String"
++doc = "Bitcoin-mainnet-compatible fork genesis header in 160-char hex (80 raw bytes: version|prev|merkle|time|bits|nonce). Required for forks like Glcoin whose genesis differs from bitcoin::constants::genesis_block(Network::Bitcoin)."
++
+--- a/src/chain.rs
++++ b/src/chain.rs
+@@ -36,12 +36,18 @@ pub struct Chain {
+ impl Chain {
+     // create an empty chain
+     pub fn new(network: Network) -> Self {
+-        let genesis = bitcoin::blockdata::constants::genesis_block(network);
+-        let genesis_hash = genesis.block_hash();
++        Self::with_genesis_header(bitcoin::blockdata::constants::genesis_block(network).header)
++    }
++
++    /// Create an empty chain seeded with an explicit genesis header. Used by
++    /// Bitcoin-protocol-compatible forks (e.g. Glcoin) whose genesis differs
++    /// from bitcoin::constants::genesis_block(Network::Bitcoin).
++    pub fn with_genesis_header(genesis_header: bitcoin::blockdata::block::Header) -> Self {
++        let genesis_hash = genesis_header.block_hash();
+         Self {
+-            headers: vec![(genesis_hash, genesis.header)],
++            headers: vec![(genesis_hash, genesis_header)],
+             heights: std::iter::once((genesis_hash, 0)).collect(), // genesis header @ zero height
+         }
+     }
+
+     pub(crate) fn drop_last_headers(&mut self, n: usize) {
+--- a/src/tracker.rs
++++ b/src/tracker.rs
+@@ -38,7 +38,26 @@ impl Tracker {
+             config.auto_reindex,
+             config.db_parallelism,
+         )?;
+-        let chain = Chain::new(config.network);
++        let chain = match &config.genesis_header_hex {
++            Some(hex) => {
++                // bitcoin 0.32 re-exports hex_conservative::FromHex on
++                // bitcoin::hashes::hex::FromHex. Reuse this trait pattern
++                // (already used in daemon.rs:3 / electrum.rs:4 for tx-hex
++                // decoding) instead of adding `hex` as a direct dependency.
++                use bitcoin::hashes::hex::FromHex;
++                let bytes = Vec::<u8>::from_hex(hex.trim()).unwrap_or_else(|e| {
++                    eprintln!("Error: --genesis-header-hex is not valid hex: {}", e);
++                    std::process::exit(1);
++                });
++                let header: bitcoin::blockdata::block::Header =
++                    bitcoin::consensus::deserialize(&bytes).unwrap_or_else(|e| {
++                        eprintln!("Error: --genesis-header-hex does not decode to an 80-byte block header: {}", e);
++                        std::process::exit(1);
++                    });
++                Chain::with_genesis_header(header)
++            }
++            None => Chain::new(config.network),
++        };
+         Ok(Self {
+             index: Index::load(
+                 store,
 --- a/src/config.rs
 +++ b/src/config.rs
 @@ -100,7 +100,12 @@ impl FromStr for BitcoinNetwork {
      type Err = <Network as FromStr>::Err;
- 
+
      fn from_str(string: &str) -> std::result::Result<Self, Self::Err> {
 -        Network::from_str(string).map(BitcoinNetwork)
 +        match string {
@@ -13,7 +79,7 @@
 +        }
      }
  }
- 
+
 @@ -109,7 +114,7 @@ impl ::configure_me::parse_arg::ParseArgFromStr for BitcoinNetwork {
      fn describe_type<W: fmt::Write>(mut writer: W) -> fmt::Result {
          write!(
@@ -23,10 +89,16 @@
          )
      }
  }
-@@ -251,17 +256,24 @@ impl Config {
+@@ -145,4 +150,5 @@ pub struct Config {
+     pub disable_electrum_rpc: bool,
+     pub server_banner: String,
+     pub signet_magic: Magic,
++    pub genesis_header_hex: Option<String>,
+ }
+@@ -251,17 +257,24 @@ impl Config {
              unsupported => unsupported_network(unsupported),
          };
- 
+
 +        // Glcoin mainnet uses pchMessageStart = 0xf9 0xb4 0xb4 0xd9 (one byte
 +        // off from Bitcoin's 0xf9 0xbe 0xb4 0xd9). The bitcoin crate's
 +        // Network::Bitcoin::magic() hardcodes the Bitcoin bytes, so without
@@ -55,4 +127,10 @@
 +                eprintln!("Error: magic override only supported on signet and bitcoin networks");
                  std::process::exit(1);
              }
+         };
+@@ -373,4 +386,5 @@ impl Config {
+             disable_electrum_rpc: config.disable_electrum_rpc,
+             server_banner: config.server_banner,
+             signet_magic: magic,
++            genesis_header_hex: config.genesis_header_hex,
          };

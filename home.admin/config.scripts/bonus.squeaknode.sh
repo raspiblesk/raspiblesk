@@ -178,7 +178,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     # to the install
     echo "# installing application dependencies"
 
-    sudo apt update
+    sudo apt-get update
     sudo apt-get install -y libffi-dev libudev-dev
 
     cd /home/squeaknode/squeaknode

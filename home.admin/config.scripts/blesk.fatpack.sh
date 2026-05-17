@@ -60,7 +60,7 @@ fi
 
 apt_install() {
   # shellcheck disable=SC2068
-  sudo DEBIAN_FRONTEND=noninteractive apt install -y ${@}
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ${@}
   if [ $? -eq 100 ]; then
     echo "FAIL! apt failed to install needed packages!"
     # shellcheck disable=SC2068
@@ -106,8 +106,8 @@ fi
 
 echo "* Optional Packages (may be needed for extended features)"
 # fbi/unclutter/xterm are GUI packages - non-fatal if missing on headless builds
-sudo DEBIAN_FRONTEND=noninteractive apt install -y qrencode secure-delete msmtp python3-jinja2 socat libopenblas-dev || true
-sudo DEBIAN_FRONTEND=noninteractive apt install -y fbi unclutter xterm python3-pyqt5 xfonts-terminus hexyl || true
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y qrencode secure-delete msmtp python3-jinja2 socat libopenblas-dev || true
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y fbi unclutter xterm python3-pyqt5 xfonts-terminus hexyl || true
 
 echo "#############################################################"
 echo "* Adding LND ..."
@@ -128,10 +128,15 @@ else
 fi
 
 # *** AUTO UPDATE FALLBACK NODE LIST FROM INTERNET (only in fatpack)
+# v0.15.20 (Bug F4): removed the bitnodes.io fetch — bitnodes.io
+# tracks the Bitcoin network exclusively and resolves to a Bitcoin
+# node-list, which has no value for a Glcoin node and produced a
+# "Could not resolve host: bitnodes.io" error in every build log
+# even though the file was downloaded into /home/admin/fallback.bitnodes.nodes
+# (never read by any Glcoin code path). Only the Glcoin nodes list
+# is fetched now; if the upstream repo is unreachable, the assets/
+# fallback.glcoin.nodes copy at end of build_sdcard.sh seeds the file.
 echo "*** FALLBACK NODE LIST ***"
-# see https://github.com/rootzoll/raspiblesk/issues/1888
-sudo -u admin curl -H "Accept: application/json; indent=4" https://bitnodes.io/api/v1/snapshots/latest/ -o /home/admin/fallback.bitnodes.nodes
-# Fallback Nodes List from Glcoin Core
 sudo -u admin curl https://raw.githubusercontent.com/glcoin/glcoin/master/contrib/seeds/nodes_main.txt -o /home/admin/fallback.glcoin.nodes
 
 echo "#############################################################"

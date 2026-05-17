@@ -30,9 +30,9 @@ if [ "$command" = "1" ] || [ "$command" = "on" ]; then
     if [ ! -f /etc/apt/trusted.gpg.d/postgresql.gpg ]; then
       curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg
       echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
-      sudo apt update
+      sudo apt-get update
     fi
-    sudo apt install -y postgresql-$PG_VERSION
+    sudo apt-get install -y postgresql-$PG_VERSION
   fi
 
   # make sure en_GB locale is available for now - see #4893
@@ -119,7 +119,7 @@ if [ "$command" = "1" ] || [ "$command" = "on" ]; then
 
   elif [ -d /mnt/hdd/app-data/postgresql/13/main ]; then
     echo "# There is old data for pg 13, start and upgrade cluster ..."
-    sudo apt install -y postgresql-13 || exit 1
+    sudo apt-get install -y postgresql-13 || exit 1
     sudo systemctl stop postgresql
     sudo systemctl stop postgresql@13-main
     if [ -d /mnt/hdd/app-data/postgresql-conf ]; then
@@ -172,7 +172,7 @@ if [ "$command" = "1" ] || [ "$command" = "on" ]; then
     fi
 
     echo "# Make sure postgresql-$PG_VERSION is installed"
-    sudo apt install -y postgresql-$PG_VERSION
+    sudo apt-get install -y postgresql-$PG_VERSION
     # /usr/bin/pg_upgradecluster [OPTIONS] <old version> <cluster name> [<new data directory>]
     sudo pg_upgradecluster 13 main $postgres_datadir/$PG_VERSION/main || exit 1
     sudo chown -R postgres:postgres /mnt/hdd/app-data/postgresql/$PG_VERSION
@@ -181,7 +181,7 @@ if [ "$command" = "1" ] || [ "$command" = "on" ]; then
     sudo mv /mnt/hdd/app-data/postgresql/13 /mnt/hdd/app-data/postgresql/13-backup-$now
     sudo pg_dropcluster 13 main
     sudo systemctl disable --now postgresql@13-main
-    sudo apt remove -y postgresql-13
+    sudo apt-get remove -y postgresql-13
 
     if sudo cat /etc/postgresql/$PG_VERSION/main/postgresql.conf | grep 5433; then
       echo "# Switch port back to 5432"
@@ -230,9 +230,9 @@ if [ "$command" = "0" ] || [ "$command" = "off" ]; then
   sudo systemctl disable --now postgresql
   sudo systemctl disable --now postgresql@$PG_VERSION-main
   sudo systemctl disable --now postgresql@13-main
-  sudo apt remove -y postgresql
+  sudo apt-get remove -y postgresql
   if dpkg -l | grep -q "postgresql-13"; then
-    sudo apt remove -y postgresql-13
+    sudo apt-get remove -y postgresql-13
   fi
   echo "# remove symlink /var/lib/postgresql"
   sudo rm /var/lib/postgresql

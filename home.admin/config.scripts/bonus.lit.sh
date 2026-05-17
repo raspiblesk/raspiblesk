@@ -263,11 +263,18 @@ $POOLPROXY
 # Faraday
 faraday.min_monitored=48h
 
-# Faraday - glcoin
-faraday.connect_glcoin=true
-faraday.glcoin.host=localhost
-faraday.glcoin.user=raspibolt
-faraday.glcoin.password=$PASSWORD_B
+# v0.15.21 (Bug GG): upstream litd/faraday only knows the historical
+# `faraday.bitcoin.*` keyspace — it treats Bitcoin Core as a generic
+# rpc-target regardless of the chain it indexes. A previous rename to
+# faraday.connect_glcoin / faraday.glcoin.* (invented namespace) made litd
+# refuse to load with "unknown option: faraday.connect_glcoin" at line 26,
+# crash-looping the whole Lightning Terminal stack on :8443. Use the
+# upstream keys and point host:port at Glcoin's 127.0.0.1:1617.
+# Faraday - Glcoin via upstream `bitcoin` keys
+faraday.connect_bitcoin=true
+faraday.bitcoin.host=localhost:1617
+faraday.bitcoin.user=raspibolt
+faraday.bitcoin.password=$PASSWORD_B
 " | sudo tee /mnt/hdd/app-data/.lit/lit.conf
 
     # secure

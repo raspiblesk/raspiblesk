@@ -128,7 +128,7 @@ if [ "${action}" = "install" ]; then
 
   ## https://github.com/radio24/TorBox/blob/master/install/run_install.sh
   ## Configuring Tor with the pluggable transports
-  sudo apt install -y obfs4proxy
+  sudo apt-get install -y obfs4proxy
   sudo setcap 'cap_net_bind_service=+ep' /usr/bin/obfs4proxy
 
   ## Install Snowflake
@@ -166,15 +166,15 @@ if [ "${action}" = "install" ]; then
   echo -e "\n*** Install Tor ***"
   sudo apt -o Dpkg::Options::="--force-confold" install -y tor
   # shellcheck disable=SC2086
-  sudo apt install -y ${tor_pkgs}
+  sudo apt-get install -y ${tor_pkgs}
 
   add_tor_sources
 
   echo -e "\n*** Reinstall ***"
-  sudo apt update -y
+  sudo apt-get update -y
   sudo apt -o Dpkg::Options::="--force-confold" install -y tor
   # shellcheck disable=SC2086
-  sudo apt install -y ${tor_pkgs}
+  sudo apt-get install -y ${tor_pkgs}
 
   # make sure tor is not running after is was installed
   # should be enabled after main menu when HDD is mounted
@@ -290,8 +290,8 @@ if [ "${action}" = "update" ]; then
       source)
         # as in https://2019.www.torproject.org/docs/debian#source
         echo "# Install the dependencies"
-        sudo apt update
-        sudo apt install -y build-essential fakeroot devscripts
+        sudo apt-get update
+        sudo apt-get install -y build-essential fakeroot devscripts
         sudo apt build-dep -y tor deb.torproject.org-keyring
         rm -rf /home/admin/download/debian-packages
         mkdir -p /home/admin/download/debian-packages
@@ -311,7 +311,7 @@ if [ "${action}" = "update" ]; then
       ;;
       *)
         add_tor_sources
-        sudo apt update && sudo apt install tor && sudo systemctl restart tor
+        sudo apt-get update && sudo apt-get install tor && sudo systemctl restart tor
       ;;
     esac
   echo

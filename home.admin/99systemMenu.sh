@@ -54,7 +54,7 @@ CHOICE=$(dialog --clear \
 case $CHOICE in
   BTOP)
     if ! btop -v; then
-      sudo apt install -y btop
+      sudo apt-get install -y btop
     fi
     # run as root to allow signal sending to any process
     sudo btop

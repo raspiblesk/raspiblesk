@@ -26,6 +26,14 @@ const baseCurrencyUnit = {
 
 const coinConfig = {
 	name: "Glcoin",
+	// v0.15.20 (Bug B2): `ticker` is used by app.js:loadMiningPoolConfigs to
+	// build `public/txt/mining-pools-configs/<ticker>` path. Without it,
+	// `path.join(__dirname, "public", "txt", "mining-pools-configs", undefined)`
+	// throws `ERR_INVALID_ARG_TYPE` at startup (caught as Unhandled Rejection,
+	// non-fatal but pollutes the journal). "GLC" matches the BTCEXP_COIN env
+	// var the .env template sets and the directory name we'd ship pool configs
+	// under if/when Glcoin has multiple mining pools to enumerate.
+	ticker: "GLC",
 	logoUrlsByNetwork: {
 		main: "/img/logo/glc.png",
 		test: "/img/logo/glc.png",

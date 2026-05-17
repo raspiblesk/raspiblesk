@@ -188,8 +188,8 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   echo "# Installing ${APPID} ..."
 
   # install java & build tool
-  sudo apt install -y default-jdk
-  sudo apt install -y maven
+  sudo apt-get install -y default-jdk
+  sudo apt-get install -y maven
 
   # make sure mysql/myria db is available & running
   sudo apt-get install -y mariadb-server mariadb-client

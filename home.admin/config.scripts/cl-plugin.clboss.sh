@@ -50,9 +50,9 @@ fi
 function buildFromSource() {
   version=$1
   # dependencies
-  sudo apt install -y build-essential pkg-config libev-dev \
+  sudo apt-get install -y build-essential pkg-config libev-dev \
     libcurl4-gnutls-dev libsqlite3-dev dnsutils
-  sudo apt install -y git automake autoconf-archive libtool
+  sudo apt-get install -y git automake autoconf-archive libtool
 
   # download
   cd /home/glcoin/cl-plugins-available/ || exit 1

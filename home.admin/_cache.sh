@@ -111,7 +111,7 @@ elif [ "$1" = "ramdisk" ] && [ "$2" = "off" ]; then
 elif [ "$1" = "keyvalue" ] && [ "$2" = "on" ]; then
 
   echo "# Turn ON: KEYVALUE-STORE (REDIS)"
-  sudo apt install -y redis-server
+  sudo apt-get install -y redis-server
 
   # edit config: dont save to disk
   # echo "# edit config"
@@ -130,7 +130,7 @@ elif [ "$1" = "keyvalue" ] && [ "$2" = "on" ]; then
 elif [ "$1" = "keyvalue" ] && [ "$2" = "off" ]; then
 
   echo "# Turn OFF: KEYVALUE-STORE (REDIS)"
-  sudo apt remove -y redis-server
+  sudo apt-get remove -y redis-server
 
 ###################
 # SET/GET/IMPORT

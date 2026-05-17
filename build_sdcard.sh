@@ -475,22 +475,49 @@ setup_credentials() {
 
   rm -rf "${TMPKEYDIR}"
 
-  # print summary — operator records this before flashing
+  # v0.15.20 SECURITY (Bug E1+E2): credentials are written to a
+  # root-only file instead of echoing to stdout. The build_sdcard.sh
+  # exec-tee redirection mirrors stdout into a world-readable log
+  # under /var/log/raspiblesk/, which would otherwise leak the SSH
+  # private key and admin sudo password to anyone with read access
+  # to /var/log on the running Pi (or to anyone who receives a
+  # released SD-card image with the build log still on it).
+  CREDS_FILE="/root/.raspiblesk-credentials"
+  umask 077
+  cat > "${CREDS_FILE}" <<EOF
+# RaspiBlesk credentials — generated at $(date -Iseconds) by build_sdcard.sh
+# DELETE THIS FILE AFTER COPYING THE CREDENTIALS TO A SAFE LOCATION.
+
+--- SSH PRIVATE KEY (copy to your laptop as raspiblesk_key) ---
+${SSH_PRIVKEY}
+--- END SSH PRIVATE KEY ---
+
+First login command:
+  chmod 600 raspiblesk_key
+  ssh -i raspiblesk_key admin@<pi-ip>
+
+Admin sudo password (for local console use only):
+  ${ADMIN_DEFAULT_PW}
+EOF
+  chmod 0600 "${CREDS_FILE}"
+  chown root:root "${CREDS_FILE}"
+  umask 022
+
   echo ""
   echo "############################################################"
-  echo "#         SAVE THE FOLLOWING BEFORE FLASHING               #"
+  echo "#         CREDENTIALS WRITTEN (root-only file)             #"
   echo "############################################################"
   echo ""
-  echo "--- SSH PRIVATE KEY (copy to your laptop as raspiblesk_key) ---"
-  echo "${SSH_PRIVKEY}"
-  echo "--- END SSH PRIVATE KEY ---"
+  echo "Credentials saved to: ${CREDS_FILE} (chmod 0600, root:root)"
   echo ""
-  echo "First login command:"
-  echo "  chmod 600 raspiblesk_key"
-  echo "  ssh -i raspiblesk_key admin@<pi-ip>"
+  echo "TO VIEW + COPY (do this BEFORE flashing):"
+  echo "  sudo cat ${CREDS_FILE}"
   echo ""
-  echo "Admin sudo password (for local console use only):"
-  echo "  ${ADMIN_DEFAULT_PW}"
+  echo "TO DELETE after copying (recommended):"
+  echo "  sudo shred -u ${CREDS_FILE}"
+  echo ""
+  echo "Credentials are NOT echoed to stdout/build-log to prevent"
+  echo "leakage via /var/log/raspiblesk/build_sdcard-*.log."
   echo ""
   echo "############################################################"
   echo "# v0149 SECURITY:                                          #"
@@ -546,9 +573,10 @@ isDebianInHosts=$(grep -c "debian" /etc/hosts)
 if [ ${isDebianInHosts} -eq 0 ]; then
   echo "# Adding debian to /etc/hosts"
   echo "127.0.1.1       debian" | tee -a /etc/hosts > /dev/null
-  if [ "${baseimage}" != "raspios_arm64" ]; then
-    systemctl restart networking
-  fi
+  # v0.15.20 (Bug F2): no networking.service restart — Debian trixie+
+  # uses NetworkManager / systemd-networkd, the legacy ifupdown
+  # 'networking' unit no longer exists. A hosts-file change does
+  # not require a network restart anyway (resolver re-reads on demand).
 fi
 
 # force locale - see #4861
@@ -583,13 +611,23 @@ apt-get autoremove -y
 
 echo -e "\n*** UPDATE Debian***"  # add sources if not present
 echo -e "checking/adding sources ..."
-for SOURCE in "${REQUIRED_SOURCES[@]}"; do
-  if ! grep -Fxq "$SOURCE" /etc/apt/sources.list && \
-     ! grep -Fxq "$SOURCE" /etc/apt/sources.list.d/debian.sources 2>/dev/null; then
-    echo "Adding  Source: $SOURCE"
-    echo "$SOURCE" | sudo tee -a /etc/apt/sources.list > /dev/null
-  fi
-done
+# v0.15.20 (Bug F3): Debian 12 (trixie) ships sources in DEB822 format
+# at /etc/apt/sources.list.d/debian.sources, which contains the same
+# trixie main+security+updates components as REQUIRED_SOURCES below in a
+# different on-disk format. grep -Fxq cannot match across formats, so
+# appending to /etc/apt/sources.list produced "Ziel … ist mehrfach
+# konfiguriert" warnings on every apt run. Skip the legacy append
+# entirely when debian.sources is present.
+if [ -f /etc/apt/sources.list.d/debian.sources ]; then
+  echo "# Debian 12+ debian.sources detected — skipping legacy sources.list append"
+else
+  for SOURCE in "${REQUIRED_SOURCES[@]}"; do
+    if ! grep -Fxq "$SOURCE" /etc/apt/sources.list; then
+      echo "Adding  Source: $SOURCE"
+      echo "$SOURCE" | sudo tee -a /etc/apt/sources.list > /dev/null
+    fi
+  done
+fi
 
 # If i2pd source is already present from a previous run, ensure key is imported
 # before apt-get update to avoid "not signed" errors
@@ -817,7 +855,7 @@ if [ $(uname -a | grep -c 'tegra') -gt 0 ] ; then
 fi
 
 # remove rpi-first-boot-wizard
-apt purge piwiz -y
+apt-get purge piwiz -y
 userdel -r rpi-first-boot-wizard
 
 echo -e "\n*** CONFIG ***"
@@ -1356,6 +1394,17 @@ if [ "${display}" != "headless" ] || [ "${baseimage}" = "raspios_arm64" ]; then
   echo "- calling: blesk.display.sh set-display ${display}"
   /home/admin/config.scripts/blesk.display.sh set-display ${display} || exit 1
   /home/admin/config.scripts/blesk.display.sh rotate 1 || exit 1
+fi
+
+# v0.15.20 (Bug E2): tighten log perms — build_sdcard log contains
+# package URLs, hashes, env vars and (pre-E1-patch) potentially leaked
+# credentials. Restrict to root only on the finished SD image so a
+# released card cannot be mined for build metadata by anyone with
+# the admin SSH key alone.
+if [ -d /var/log/raspiblesk ]; then
+  sudo chmod 0700 /var/log/raspiblesk
+  sudo find /var/log/raspiblesk -type f -name "*.log" -exec chmod 0600 {} \;
+  sudo chown -R root:root /var/log/raspiblesk
 fi
 
 echo "# BUILD DONE - see above"

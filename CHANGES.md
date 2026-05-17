@@ -1,3 +1,640 @@
+## What's new in Version 0.15.21 of RaspiBlesk?
+
+Seven-bug app-stack sweep after v0.15.20 Pi flash. The full Phase A-G
+test-matrix in `finalrun.md` came back green for the core stack (glcoind
++ kubo + electrs + LNbits-DB-auth + bleskapi-login), so v0.15.21 is a
+pure app-layer fix without touching consensus or the boot-time
+provisioning. All seven crashed silently in restart-loops or rendered
+garbage labels — none were caught by the existing Phase A-G matrix
+because the matrix only validated the core stack, not the bonus.* apps.
+
+Bug AA — LNbits 5443 login + create-account return 500 "unexpected
+error". Upstream LNbits pins `passlib==1.7.4` but never lists `bcrypt`
+as a runtime dep, so `CryptContext(schemes=["bcrypt"]).hash()` raises
+`MissingBackendError` on every password operation. Fix: `poetry add
+bcrypt` after `poetry install` in `bonus.lnbits.sh` so the lockfile and
+venv stay in sync (a bare pip-install in the venv would drift on the
+next install rerun).
+
+Bug CC + HH — Jam (joinmarket-api on :7501) and ob-watcher both
+crash-loop with `JsonRpcConnectionError: RPC connection to Bitcoin Core
+was not established`. Upstream `joinmarket.cfg` ships with `rpc_port`
+empty (so joinmarket defaults to Bitcoin Core's 8332), `rpc_user=bitcoin`,
+`rpc_password=password`. `bonus.jam.sh` previously only patched the
+`max_cj_fee_*` knobs and the `onion_serving_port` collision with LND
+REST — the BLOCKCHAIN section was left untouched. Fix: read live
+`rpcuser`/`rpcpassword` from `/mnt/hdd/app-data/glcoin/glcoin.conf` and
+pin `rpc_port=1617` in three new `sed` lines next to the existing
+`max_cj_fee` patches.
+
+Bug DD — Labelbase (:12349) crash-loop with "ModuleNotFoundError: No
+module named 'django'" and "/home/labelbase/ENV/bin/gunicorn: No such
+file or directory". `bonus.labelbase.sh`'s `pip install -r
+requirements.txt` ran inside an inline `bash -c` that swallowed pip's
+exit code, so a failed walk (network blip, py3.13/django version skew,
+missing build deps) left an empty venv and the service ExecStart
+literally could not find its two hard runtime deps. Fix: switch to `bash
+-ec` so pip failures propagate, then add an explicit `pip install django
+gunicorn` backstop so the service can at least start even if the full
+requirements walk partial-failed.
+
+Bug FF — LNDg gunicorn (:8889) crash-loop with
+`ModuleNotFoundError: No module named 'pkg_resources'` on Python 3.13.
+py3.13 dropped pkg_resources from stdlib (it was historically shipped
+with setuptools, which is no longer installed by default into new
+venvs). gunicorn 20.x imports pkg_resources at module load, so the LNDg
+service died at every boot. Fix: explicit `pip install setuptools`
+before the requirements.txt install, in both the install branch and the
+update branch of `bonus.lndg.sh`.
+
+Bug GG — Lightning Terminal (litd on :8443) crash-loop with
+`could not load config: /home/lit/.lit/lit.conf:26: unknown option:
+faraday.connect_glcoin`. Upstream litd/faraday only knows the historical
+`faraday.bitcoin.*` keyspace — it treats Bitcoin Core as a generic
+RPC-target regardless of which chain it indexes. A previous rename to
+`faraday.connect_glcoin` / `faraday.glcoin.*` (invented namespace) made
+litd refuse to load at all, taking down the whole Lightning Terminal
+stack. Fix in `bonus.lit.sh`: use the upstream `faraday.bitcoin.*` keys
+and point `faraday.bitcoin.host` at Glcoin's `localhost:1617`.
+
+Bug JJ — glc-rpc-explorer (:3020) displays block-rewards as
+`5,000,000,000 BTC` and the gear-menu "Display Currency" dropdown lists
+literal `BTC` / `sat` instead of `GLC` / `gsat`. The v0.15.16 rebrand
+block in `apply-glcoin-patches.sh` covered ` BTC `, `} BTC,`, and the
+"Bitcoin Explorer" meta-tags but missed three patterns: the array
+literal `["BTC", "sat"]` in `layout.pug`, the template-literal tail
+`} BTC\`` in seven tooltip strings in `shared-mixins.pug`, and the
+lowercase selector `displayCurrency == "btc"` in the same file. The
+fourth detail is load-bearing: after rebrand the dropdown writes
+cookies "glc"/"gsat" via `item.toLowerCase()` but the selector still
+matched only "btc"/"sat" → values would silently fall through to
+`span 0`. Fix: a new v2 patch block with its own
+`GLCOIN_REBRAND_PATCH_V2` idempotency marker so it kicks in even on
+installs already carrying the v1 marker, and four additional sed
+patterns covering all four cases.
+
+## What's new in Version 0.15.20 of RaspiBlesk?
+
+Single-bug sweep after v0169 Pi flash exposed a long-latent typo in the
+RASPIBLESK_LOGIN_PATCH itself. v0166 introduced the patch to replace
+blitz_api's upstream password check with a `sudo -n blesk.passwords.sh
+check a` shell-out — necessary because the upstream code's hash format
+diverged from the `mkpasswd -m sha-512 -S <salt>` format the set-side
+script writes into `/mnt/hdd/app-data/passwords/a.hash`. The patch body
+worked end-to-end for the underlying script (`correct=1` returned from
+sudo's PAM session, all six sub-sudo calls inside the script completed
+cleanly), but the final return statement crashed every login attempt
+with HTTP 500 before any JWT reached the cookie. The bug was invisible
+in v0166-v0169 because the test plan in `finalrun.md` §E4 referenced
+the wrong endpoint (`/api/auth/login`, which 404s) — the actual route
+is `/api/system/login`, mounted from `app/system/router.py:48` with the
+`/system` prefix from `app.include_router(system_router)` in `main.py`.
+No Pi test ever hit the real handler, so the crash never surfaced
+until this cycle when the WebUI itself called the right endpoint.
+
+### Source-tree edits
+
+- **Bug X — `RASPIBLESK_LOGIN_PATCH` returned `sign_jwt()["access_token"]`
+  but `sign_jwt()` in `app/auth/auth_handler.py:21` returns a `str`, not
+  a dict.** PyJWT >= 2.0 returns the encoded token as a plain string
+  (the upstream `-> Dict[str, str]` type hint is stale documentation).
+  Subscripting a `str` with `"access_token"` raises `TypeError: string
+  indices must be integers, not 'str'` — caught by FastAPI's ASGI
+  exception handler and surfaced as HTTP 500 `Internal Server Error`
+  with `Exception in ASGI application` logged in the bleskapi journal.
+  Additionally the raw return value (after the crash was hypothetically
+  fixed) would not have matched `service.py:150 login()`'s
+  `match result: case Ok(data)` block — Python's structural pattern
+  matching falls through silently for a non-`Ok`/`Err` value, the
+  function returns `None` implicitly, and the response cookie+body
+  would have been broken. Fix in `home.admin/config.scripts/blesk.web.api.sh:534`
+  replaces `return sign_jwt()["access_token"]` with `return Ok(sign_jwt())`
+  — matching the canonical pattern in `app/system/impl/native_python.py:99`.
+  `Ok` is already imported at module scope in `raspiblitz.py` (Z.21:
+  `from app.external.result_type.src.result.result import Err, Ok, Result`)
+  via the `_match_password` method's `return Ok(True)`, so no additional
+  import injection is needed in the patch body.
+
+- **Bug Z — `home.admin/assets/glcoin.conf` did not pin
+  `seed.glcoin.ch` as a mainnet authority node.** The chainparams.cpp
+  `vSeeds` list in `glcoin-0.2.2/src/kernel/chainparams.cpp:137-139`
+  hardcodes `seed.glcoin.org` and `dnsseed.glcoin.org` for mainnet
+  DNS-seeded peer discovery, but the operator's own seed authority at
+  `seed.glcoin.ch` (`185.66.109.246` + `2a0e:f0c1:0:1870::100`) was
+  never reachable without manual operator intervention after every
+  reflash. Added `main.addnode=seed.glcoin.ch:1618` next to the
+  existing `signet.addnode=seed.glcoin.org:31618` line. `addnode`
+  semantics give permanent connection priority — unlike DNS-seeded
+  peers which age out of `peers.dat` — so the authority node sticks
+  across `peers.dat` rotations. Companion finding (deferred): when
+  `tor.network.sh on` rewrites the conf to `onlynet=onion` +
+  `dnsseed=0`, this `addnode` line still does not connect because
+  no `.onion` Glcoin authority is currently hardcoded for the
+  Tor-only path — operator currently flips `tor.network.sh off` for
+  initial sync, then back on for privacy post-sync.
+
+### LNbits app-activation triage (Bug Y2 surfaced after v0169 Bug-Y fix)
+
+Activating LNbits through the post-flash wizard on v0.15.19 Pi
+demonstrated that the v0169 Bug-Y fix (sudo-wrapped
+`loadOrGenerateLNBitsDBPassword`) is fully green: the password file
++ reset-marker now persist as `lnbits:lnbits` `0600`, postgres user
+authentication succeeds (no `InvalidPasswordError` in the journal),
+and asyncpg connects to `lnbits_db` cleanly. But LNbits' first
+migration immediately crashes the worker with a NEW schema-level
+permission error, which surfaces as nginx **HTTP 502 Bad Gateway**
+on the LNbits WebUI frontend.
+
+- **Bug Y2 — PostgreSQL 15+ revoked `PUBLIC.CREATE` on schema
+  `public`, breaking LNbits' first table create.** Until PG 14 the
+  `public` schema allowed any role with database connect to
+  `CREATE TABLE` in it. PG 15 changed the default so only the
+  schema owner (`postgres` by default) may create objects; database-level
+  `GRANT ALL ON DATABASE` does NOT cascade to schema-level privileges
+  in modern PostgreSQL. `bonus.lnbits.sh:postgresConfig` previously
+  granted only `ALL PRIVILEGES ON DATABASE lnbits_db TO lnbits_user`,
+  which let LNbits connect but not create tables. The first migration
+  `CREATE TABLE IF NOT EXISTS dbversions (db TEXT PRIMARY KEY, version
+  INT NOT NULL)` raises `asyncpg.exceptions.InsufficientPrivilegeError:
+  permission denied for schema public`, sqlalchemy translates this to a
+  `ProgrammingError`, and loguru logs `Application startup failed.
+  Exiting.` The worker never reaches `--port 5000 --host 0.0.0.0` so
+  the listening socket never opens; nginx (reverse-proxying the LNbits
+  HTTPS-frontend at :5443 to upstream :5000) sees connection-refused
+  and returns 502 to the browser. Two-pronged fix added after the
+  existing `grant all privileges on database` line:
+  `alter schema public owner to lnbits_user;` transfers schema
+  ownership so the user has implicit `CREATE`, plus
+  `grant all on schema public to lnbits_user;` provides explicit
+  belt-and-suspenders coverage against future PostgreSQL ACL-default
+  resets. Both statements are scoped with `-d lnbits_db` so `public`
+  resolves to the per-database schema, not the postgres-system-wide
+  template.
+
+### glc-rpc-explorer app-activation triage (3 bugs surfaced when operator activated the app on v0.15.19 Pi)
+
+Activating glc-rpc-explorer through the post-flash wizard produced
+HTTP 500 "Internal Server Error" on every WebUI page request. Three
+independent bugs in the Glcoin patch-set, surfaced together by a single
+journal capture during the v0169 Pi-test cycle:
+
+- **Bug B1 — `BTCEXP_ADDRESS_API=none` is rejected by btc-rpc-explorer's
+  enum parser.** `bonus.glc-rpc-explorer.sh:191` previously wrote
+  `BTCEXP_ADDRESS_API=none` to the env file when no local Electrum
+  server was ready, intending 'none' as a kill-switch. The upstream
+  parser only accepts `blockchain.com`, `blockchair.com`,
+  `blockcypher.com`, `electrum`, `electrumx`, or an absent variable
+  — it surfaces `Error 32907ghsd0ge: Unrecognized value for
+  BTCEXP_ADDRESS_API: 'none'. Valid options are: …` on startup before
+  RPC verification, polluting the journal. Fix replaces the setter with
+  `sed -i '/^BTCEXP_ADDRESS_API=/d'` so the line is deleted entirely
+  when no Electrum server is up; the initial template
+  (`bonus.glc-rpc-explorer.sh:372`) now has `BTCEXP_ADDRESS_API=`
+  (empty, not `none`) so the prestart electrumx-substitute path still
+  matches when electrs/fulcrum becomes ready.
+- **Bug B2 — `loadMiningPoolConfigs` crashes with
+  `ERR_INVALID_ARG_TYPE` because `global.coinConfig.ticker` is
+  undefined.** `app.js:365` builds the mining-pool-configs directory
+  path as `path.join(__dirname, "public", "txt",
+  "mining-pools-configs", global.coinConfig.ticker)`. The Glcoin coin
+  module in `home.admin/assets/glc-rpc-explorer/glc.js` had `name:
+  "Glcoin"` but no `ticker` field — `path.join(..., undefined)` throws
+  `TypeError [ERR_INVALID_ARG_TYPE]: The "path" argument must be of
+  type string. Received undefined`, caught by Node's unhandled-rejection
+  handler. Added `ticker: "GLC"` to `coinConfig` matching the
+  `BTCEXP_COIN=GLC` env-var convention.
+- **Bug B3 — `views/layout.pug:64` self-closing `img` with nested
+  content surfaces as HTTP 500 `Internal Server Error`.**
+  `apply-glcoin-patches.sh:167` ran a sed substitution that appended
+  `/* GLCOIN_LOGO_FALLBACK_PATCH */` as a trailing in-line comment on
+  the `img.header-image(src=..., alt="logo")` tag, both as patch
+  marker for the idempotency check and as a self-documentation hint.
+  Pug 3.x interprets any text on the same line after a tag's closing
+  `)` as the tag's nested content; `img` is a self-closing element
+  (`<img/>` in HTML5) and rejects content with the error message
+  `img is a self closing element: <img/> but contains nested content`.
+  The pug error surfaces as a 500 on every page render — the WebUI
+  shows nothing but `<pre>Internal Server Error</pre>`. Fix removes
+  the trailing `/* ... */` marker from the sed; the idempotency
+  check at the top of the patch block now matches the patched src
+  path itself (`grep -qF '"/img/logo/glc.png"'`) which is equally
+  unique to the post-patch state and does not require an in-line
+  marker.
+
+### Build-pipeline edits (Schweizer Gründlichkeit audit of build_sdcard log)
+
+Full-log audit of the v0169 `/var/log/raspiblesk/build_sdcard-20260517-005715.log`
+(987 KB, 17206 lines, 82-minute build of 19 apps) classified every
+warning/error/skip/retry pattern. The eight items below were fixed in
+the same v0.15.20 source-tree cycle as Bug X + Bug Z; three more (F7 LND
+commit-hash, N1 pip global retries, N3 blitz_api full offline-bundle)
+deferred to v0.15.21+ for complexity reasons noted at the end.
+
+- **Bug E1+E2 — SSH private key + admin sudo password leaked into the
+  world-readable build log.** `build_sdcard.sh:484-493` echoed
+  `${SSH_PRIVKEY}` and `${ADMIN_DEFAULT_PW}` to stdout, the exec-tee
+  redirection at script-start (Z.117) mirrored them into
+  `/var/log/raspiblesk/build_sdcard-${RUN}.log` which the build set to
+  `0644 root:root`. Any account on the running Pi (including the same
+  `admin` user whose SSH key was leaked) could `cat` the log and recover
+  the build-time credentials, defeating the v0149 first-login-rotate
+  defence. Fix in `build_sdcard.sh`: credentials are now written to
+  `/root/.raspiblesk-credentials` (chmod `0600`, `root:root`) via a
+  `umask 077` block; only the file path + retrieve/delete instructions
+  are echoed; operator runs `sudo cat` (which does not enter the
+  build-log) to capture them and `sudo shred -u` to delete after copying.
+  Plus at end-of-script: `/var/log/raspiblesk/` is `chmod 0700` and
+  every `*.log` inside is `chmod 0600 root:root` so even a released
+  SD-card image cannot be mined for build metadata by an attacker
+  holding only the admin SSH key.
+- **Bug F1 — `bonus.lnbits.sh:30` `source /mnt/hdd/app-data/raspiblesk.conf`
+  unconditional during build phase.** The conf file is only created by
+  `_provision_.sh` post-flash, but `bonus.lnbits.sh install` runs
+  during `build_sdcard.sh` (via `blesk.fatpack.sh:184`), producing
+  `Zeile 30: /mnt/hdd/app-data/raspiblesk.conf: Datei oder Verzeichnis
+  nicht gefunden` in the build log. Script continued only because
+  `bash` was not run with `set -e`. The install action does not read
+  any conf var (verified by inspection); guarded with
+  `[ -f /mnt/hdd/app-data/raspiblesk.conf ] && source ...` so activation
+  paths (`on`/`switch`/`off`) which run post-conf still source it.
+- **Bug F2 — `systemctl restart networking` after `/etc/hosts` write.**
+  `build_sdcard.sh:550` tried to restart the legacy ifupdown
+  `networking.service`, which no longer exists on Debian 12 (trixie)
+  — the system uses NetworkManager or `systemd-networkd`. The build
+  log surfaced `Failed to restart networking.service: Unit networking.service
+  not found.` on every run. A `/etc/hosts` edit does not require a
+  network-stack restart anyway (the resolver re-reads the file on
+  demand); the call is removed entirely.
+- **Bug F3 — APT source duplicate write on Debian 12.** `build_sdcard.sh`
+  Z.586-591 appended every entry of `REQUIRED_SOURCES` to
+  `/etc/apt/sources.list` if `grep -Fxq` did not find it in either
+  `/etc/apt/sources.list` or `/etc/apt/sources.list.d/debian.sources`.
+  Debian 12 ships sources in DEB822 format (multi-line stanzas) in
+  `debian.sources` which `grep -Fxq` (literal exact-line match) cannot
+  reconcile against the single-line `deb http://...` format the script
+  appends. Result: four "Ziel … ist mehrfach konfiguriert" warnings on
+  every subsequent `apt-get update`. Fix wraps the append loop with
+  `if [ -f /etc/apt/sources.list.d/debian.sources ]; then skip; fi`
+  — Debian 12+ skips the legacy append entirely; older Debian without
+  `debian.sources` retains the original per-entry append logic.
+- **Bug F4 — `bitnodes.io` Bitcoin-only fallback node list step.**
+  `blesk.fatpack.sh:133` invoked
+  `curl https://bitnodes.io/api/v1/snapshots/latest/`. `bitnodes.io`
+  exclusively tracks the Bitcoin network — its snapshot contains zero
+  Glcoin peer addresses and is never read by any Glcoin code path
+  (`fallback.bitnodes.nodes` is written then ignored). The fetch
+  produced `curl: (6) Could not resolve host: bitnodes.io` in every
+  Pi-based rebuild where DNS to that host was blocked or slow. Removed;
+  only the Glcoin nodes-list fetch from
+  `raw.githubusercontent.com/glcoin/glcoin/master/contrib/seeds/nodes_main.txt`
+  remains, with the `assets/fallback.glcoin.nodes` seed-file copy at
+  end of `build_sdcard.sh` as offline fallback.
+- **Bug F5 — `blitz_api` pulled from `dev` branch HEAD on every build.**
+  `blesk.web.api.sh:215-228` resolved the upstream branch to `dev` for
+  any non-versioned `activeBranch`, with `GITHUB_COMMITORTAG=""`. Every
+  `build_sdcard.sh` therefore landed on whatever the `fusion44/blitz_api`
+  `dev` HEAD happened to be at clone-time, drifting the RASPIBLESK_FORK_PATCH
+  + RASPIBLESK_LOGIN_PATCH apply surface silently between runs. Pinned
+  `GITHUB_COMMITORTAG="62b6438970580d3c5269da8e1caf683607db491e"` —
+  the commit the v0169 Pi-flash actually used (verified post-flash via
+  `git -C /home/bleskapi/blitz_api log -1`). Both patches apply cleanly
+  on this commit. Bump this string only after a newer upstream commit
+  has been exercised end-to-end through a Pi reflash + WebUI login +
+  setup-flow.
+- **Bug C1 — `Could NOT find Doxygen` / `Could NOT find Valgrind` cmake
+  probes.** `glcoin.install.sh:147` invoked cmake on `glcoin-0.2.2/src`
+  without `-DWITH_DOC=OFF -DWITH_MAN=OFF`, so the build probed for
+  `doxygen` + `dot` + `valgrind` (intentionally absent on the build
+  image) and surfaced two "Could NOT find" warnings. Both cmake flags
+  added; unknown vars produce a benign "Manually-specified variables
+  were not used" line which is preferable to the noise from probing
+  for absent tools.
+- **Bug C4 — `WARNING: apt does not have a stable CLI interface. Use
+  with caution in scripts.`** Multiple `bonus.*.sh`, `blesk.*.sh` and
+  `cl-plugin.*.sh` scripts invoked `apt install`/`apt remove`/`apt update`/
+  `apt purge`/`apt upgrade`/`apt autoremove` directly, producing the
+  upstream Debian apt-wrapper warning seven-plus times per build.
+  `sed -E 's/\bapt[[:space:]]+(install|remove|update|purge|upgrade|autoremove)\b/apt-get \1/g'`
+  applied to 24 files across `home.admin/` and `build_sdcard.sh`. The
+  pattern is whitespace-anchored (`apt[[:space:]]+`) so it does not
+  match `apt-get install` already present. `apt-list`/`apt-show` and
+  similar commands without a stable `apt-get` equivalent are left
+  alone.
+
+### Open findings deferred to v0.15.21+
+
+These were observed during the v0169 Pi diagnostic + the build-log
+audit but not fixed in v0.15.20 (complexity or risk profile):
+
+- **Bug F7 — LND `lnd version 0.20.1-beta commit=` has empty commit
+  hash.** The vendored LND build runs without a `.git` directory, so
+  LND's own Makefile's `git describe --tags --always` produces empty
+  output and the `-X github.com/lightningnetwork/lnd/build.Commit=`
+  ldflag receives no value. Requires either passing
+  `COMMIT=<sha>` to the Makefile via `make install COMMIT=<sha>` or
+  patching the Makefile to honour a fallback env var. Cosmetic only;
+  `lnd version` still prints `0.20.1-beta` correctly.
+- **Bug N1 — pip retry storm on initial install** (7× SSL/Protocol
+  retries against pypi during the Z.2819-2900 burst). All recovered
+  via PyPI's own retry, but added ~20 seconds. Safer fix is
+  `/etc/pip.conf` with `retries = 10` + `timeout = 60` early in
+  `build_sdcard.sh`, but this could conflict with venv-local pip
+  configs that downstream apps (poetry, uv) install.
+- **Bug N3 — `blitz_api` is still pulled live from GitHub** (now at the
+  Bug F5 pinned commit) instead of bundled as an offline tarball next
+  to LND + CLN + Kubo. Full bundling requires fetching
+  `https://github.com/fusion44/blitz_api/archive/62b6438970580d3c5269da8e1caf683607db491e.tar.gz`,
+  SHA256-pinning it in `home.admin/assets/`, and rewriting
+  `blesk.web.api.sh` to extract from tarball. Source-tree grows ~3 MB.
+  Commit-pin (Bug F5) already buys most of the reproducibility benefit;
+  full offline-tauglichkeit can wait.
+- **`btc_default_sync_initial_done` Redis key hardcoded** somewhere in
+  blitz_api — emits `Key 'btc_default_sync_initial_done' not found in
+  Redis DB.` warning every 4 seconds in the bleskapi journal during
+  setup-sync-info polling. Symptom of incomplete BTC->GLC fork
+  localisation. Same class as the v0.15.16 Bug C5 (Bitcoin-specific
+  echo message).
+- **`lnd_macaroon cannot be null or empty` ValueError at bleskapi boot**
+  — `app/lightning/impl/lnd_grpc.py:226` calls `config_get_hex_str`
+  for the macaroon path before the LND wallet is unlocked (macaroon
+  file only materialises post-unlock). The exception is caught by the
+  loguru `runners.py` handler, app continues to "Application startup
+  complete", but `/lightning/*` routes may fail until the bleskapi
+  service is restarted after wallet unlock. Robust fix would be a
+  retry loop in `LnNodeLNDgRPC.initialize` or a systemd `After=lnd.service`
+  ordering with a unit-restart hook on macaroon-file existence.
+- **`tor.network.sh on` rewrites `glcoin.conf` to `onlynet=onion` +
+  `dnsseed=0` without hardcoding any `.onion` Glcoin authority** — leaves
+  the node with 0 peers in Tor-only mode. Operator currently flips
+  `tor.network.sh off` for initial sync, then back on for privacy
+  post-sync. Fix requires either a known-good Glcoin `.onion` seed
+  to add as `seednode=` in the Tor-on path, or keeping
+  `dnsseed=1` and accepting that the DNS-seeded clearnet IPv4 peers
+  cannot connect under `onlynet=onion`.
+
+## What's new in Version 0.15.19 of RaspiBlesk?
+
+Single-bug sweep after v0168 Pi flash exposed a long-latent privilege bug
+in the LNbits postgres-password bootstrap. v0168 itself shipped Bug T
+(electrs E0609) and Bug W (5001/5443) — both verified green on Pi during
+this cycle. The LNbits service appeared `active` to systemd but its
+worker stopped at startup with `asyncpg.exceptions.InvalidPasswordError`
+for `lnbits_user`, port 5000 never bound, and the `db_password.conf` +
+`.v0166-pw-reset.done` marker files were never persisted.
+
+### Source-tree edits
+
+- **Bug Y — `loadOrGenerateLNBitsDBPassword` performed unprivileged
+  filesystem operations on a directory it didn't own.** `_provision_.sh:554`
+  invokes `bonus.lnbits.sh on ${LNBitsFunding}` via `sudo -u admin`, but
+  `/mnt/hdd/app-data/LNBits/` is created as `lnbits:lnbits 0755` by the
+  on-flow itself (Z.910-912). The admin account is not in the lnbits
+  group, so on the "others" tier it gets `r-x` — no write. Six file
+  operations in `loadOrGenerateLNBitsDBPassword` (`bonus.lnbits.sh:38-71`)
+  ran without `sudo`: `rm -f $LNBITS_DB_PASS_FILE` (Z.49), `mkdir -p`
+  + `touch $LNBITS_DB_PASS_RESET_MARKER` (Z.55-56), `mkdir -p` (Z.62),
+  `echo > $LNBITS_DB_PASS_FILE` (Z.67), `chmod 600` (Z.68),
+  `chown lnbits:lnbits` (Z.69). Every one silent-failed as admin. The
+  function is called twice per `on`-flow — once inside `postgresConfig`
+  (Z.77) for `CREATE USER` + `ALTER USER` with `${LNBITS_DB_PASS}`, and
+  once at Z.938 to write the `.env` `LNBITS_DATABASE_URL`. Because the
+  password file never landed, `source $LNBITS_DB_PASS_FILE` (Z.60) was
+  unreachable and both calls fell through to the `openssl rand` branch
+  (Z.66) — generating two distinct passwords. The postgres user
+  carried the first password, the `.env` URL carried the second, and
+  every LNbits start-up authenticated with the wrong half. All seven
+  filesystem ops in `loadOrGenerateLNBitsDBPassword` now run through
+  `sudo` (or `sudo tee` for the redirect), and `source` is replaced
+  by `LNBITS_DB_PASS=$(sudo grep ... | cut ...)` because the password
+  file is still chmod 600 owned by lnbits — admin can't `source` it
+  even after the write succeeds. `sudo test -f` replaces `[ -f ]` for
+  the existence checks so the function reads its own state consistently
+  regardless of who owns the parent directory.
+
+## What's new in Version 0.15.18 of RaspiBlesk?
+
+Post-v0.15.17 Pi-Test follow-up — closes two source-level bugs that the
+v0167 FATPACK fix exposed once installation actually completed: an
+incomplete electrs patch that broke the Rust build, and a long-latent
+`127.0.0.1:5001` port collision between the Kubo HTTP API and the nginx
+LNbits-HTTPS frontend.
+
+### Source-tree edits
+
+- **Bug T — `network_glcoin.patch` declared `genesis_header_hex` only on
+  the configure_me-generated config, not on the hand-built `Config`
+  struct that the rest of electrs actually consumes.** The v0166 patch
+  added the field to `internal/config_specification.toml` and read it
+  in `src/tracker.rs:41` (`&config.genesis_header_hex`), but tracker.rs
+  receives `&config::Config` — the hand-built struct at
+  `src/config.rs:125-148` — not the configure_me one. Compilation
+  failed with `E0609: no field genesis_header_hex on type
+  &config::Config`. Two new hunks added to `patches/electrs/network_glcoin.patch`:
+  one extending the `pub struct Config` declaration with
+  `pub genesis_header_hex: Option<String>,` after `signet_magic: Magic,`,
+  the other extending the `Config { ... }` constructor literal at the
+  end of `impl Config` with `genesis_header_hex: config.genesis_header_hex,`
+  after `signet_magic: magic,`. End-to-end field flow now closed:
+  configure_me TOML → internal::prelude::Config → hand-built Config →
+  tracker.rs.
+
+- **Bug W — `127.0.0.1:5001` port collision between Kubo HTTP API and
+  nginx LNbits-HTTPS frontend.** Latent since v0155 when Kubo was made
+  mandatory for Glcoin (its API is hardcoded at `127.0.0.1:5001` in
+  four places: `kubo.install.sh`, `glcoin.conf`, the explorer
+  `/ipfs-pins` view, and the miner module). nginx's
+  `lnbits_ssl.conf` was still using the inherited-from-RaspiBlitz
+  `listen 5001 ssl http2;` (plus `[::]:5001`), which binds
+  `0.0.0.0:5001` *including* `127.0.0.1:5001`. Whichever service
+  systemd brought up first won the bind, the other failed silently —
+  if nginx won, glcoind's IPFS RPCs (auto-pin of glc1/glc2/glc3, OTP
+  pads, ipfslinks DB) all broke; if Kubo won, the LNbits LAN-HTTPS
+  frontend was unreachable. Migrated the nginx LNbits-HTTPS listener
+  from 5001 to **5443** (HTTPS-convention, unused in the source tree).
+  Six edits across four files (seven lines modified, since lnbits_ssl
+  patches both IPv4 and `[::]` listen lines):
+  - `assets/nginx/sites-available/lnbits_ssl.conf:4-5` `listen 5001` →
+    `listen 5443` (both IPv4 and `[::]`)
+  - `assets/nginx/sites-available/lnbits_tor.conf:17` `proxy_pass
+    https://127.0.0.1:5001` → `5443`
+  - `assets/nginx/sites-available/lnbits_tor_ssl.conf:20` same
+  - `bonus.lnbits.sh:460` `echo "httpsPort='5001'"` → `5443`
+  - `bonus.lnbits.sh:960` `ufw allow 5001` → `5443`
+  - `bonus.lnbits.sh:1206` `ufw delete allow 5001` → `5443` (uninstall path)
+  Kubo retains 5001 (four hardcoded mounts). Source-tree audit:
+  `grep -rn ':5001' raspiblesk-src/` now matches **only** Kubo /
+  glcoind / explorer references; no nginx hits.
+
+### Spot-check (end-to-end, not literal-grep)
+
+- electrs: `genesis_header_hex` must appear on **five** distinct
+  source locations after patch application: TOML param block, struct
+  field declaration, struct constructor literal, tracker.rs match arm,
+  chain.rs Chain::with_genesis_header (via Chain::new path).
+- 5443 migration: 6 hits in the source tree after edit, 0 remaining
+  `5001` hits in nginx assets or bonus.lnbits.sh.
+- No new ports, no new services, no consensus changes. Pi marker
+  `.v0168-lnbits-port.done` documents the new port for users with an
+  existing install (cosmetic — fresh installs see the new port
+  directly).
+
+## What's new in Version 0.15.17 of RaspiBlesk?
+
+Post-v0.15.16 Pi-Test follow-up — one fatal build-time bug (the v0166
+LOGIN-Patch regex did not recognise the upstream `blitz_api/dev`
+method signature and aborted FATPACK before LNbits/electrs/RTL/explorer
+were installed), plus one audit-grade cosmetic fix for three stderr
+warnings the same installer emitted when the CLN data-directory did
+not yet exist during fresh provisioning.
+
+### Source-tree edits
+
+- **Bug R — RASPIBLESK_LOGIN_PATCH param-regex did not handle class
+  methods.** `blitz_api/dev` migrated `login()` from a free function
+  into the `RaspiBlitzSystem` class, so the upstream signature is now
+  `async def login(self, i: LoginInput):`. The v0166 patcher's
+  `re.match(r"\s*(\w+)\s*:\s*(\w+)", params)` tried to parse
+  `self, i: LoginInput` directly, found `self` not followed by `:`, and
+  exited 1 with `unrecognised signature`. FATPACK aborted before any
+  of LNbits, electrs, RTL, BTC-RPC-Explorer, Mempool, BlitzWebUI were
+  installed. Fixed in `blesk.web.api.sh` by stripping a leading
+  `self,` from the param string with a word-boundary anchored regex
+  (`r"^\s*self\b\s*,?\s*"`) before the type-extraction match. The
+  word boundary prevents false-stripping of `self_data: SelfData`.
+  Free-function signatures (`password: str`, `i: LoginInput`,
+  `login_data: LoginInput`) remain matched unchanged.
+
+  Hardened end-of-function detection at the same site as
+  defense-in-depth: the previous code stopped at the next sibling at
+  the same indent (`async def|def|class|@`), which would silently
+  overwrite to EOF if `login()` happened to be the last method in
+  its class. Now also stops at the first non-blank line at strictly
+  LESS indent (end of enclosing class) and takes the earlier of the
+  two. Verified end-to-end against synthetic class files for both
+  middle-method and last-method-in-class layouts, plus eight param
+  signatures (incl. the `self_data` word-boundary trap and the
+  degenerate bare-`self` case).
+
+- **Bug S — CLN data-directory pre-create for silent provisioning.**
+  Same blesk.web.api.sh install path emitted three stderr lines on
+  fresh installs (`chmod: ... .lightning/glcoin: not found`,
+  `chmod: ... lightning-rpc: not found`, `cat: .lightning/config:
+  not found`) because the CLN binary is installed but has never run
+  during provisioning, so the directory + socket are created on the
+  first lightningd service start. Made the block idempotent: pre-create
+  `/home/glcoin/.lightning/glcoin` as the glcoin service-user with
+  `sudo -u glcoin mkdir -p`, touch the `config` file with the same
+  ownership, silence the now-redundant `lightning-rpc` chmod with
+  `2>/dev/null || true` (lightningd will respect the
+  `rpc-file-mode=0660` we append to the config on first start). Switched
+  the existence-check from `cat | grep -c` to `grep -c "..." file
+  2>/dev/null` to drop the noisy useless-cat. No behaviour change on
+  re-runs after CLN has started — chmod simply reasserts the already
+  correct mode.
+
+- **Block F — version-bump.** `_version.info` codeVersion="0.15.17",
+  this CHANGES.md entry added at the top.
+
+### Tarball + verification
+
+- Build artifact: `raspiblesk-20260516-v0167.tar.gz`,
+  single-nested under `raspiblesk-20260516-v0167/` (strip-components=1).
+- Glcoin Core 0.2.3 unchanged (`glcoin-0.2.3-src.tar.gz` retained
+  from v0166 build).
+- All 17 v0165-baseline Pi-checks plus the 3 v0166-specific checks
+  (electrs genesis header, LNbits URL-safe password, bleskapi
+  RASPIBLESK_LOGIN_PATCH marker + sudoers + 200 on `/api/system/login`)
+  remain the verification matrix — v0167 unblocks them by letting
+  FATPACK finish.
+
+## What's new in Version 0.15.16 of RaspiBlesk?
+
+Post-v0.15.15 Pi-Test follow-up — three runtime-red bugs (electrs genesis
+seed, LNbits asyncpg password parser, bleskapi /api/system/login 401),
+two audit-grade hardenings discovered during the v0166 Block-D
+edge-case sweep, plus a Bitcoin-specific user-facing echo retexted for
+the young Glcoin chain.
+
+### Source-tree edits
+
+- **Bug H2 — electrs reseeded with Glcoin genesis.** v0164/v0165
+  produced an electrs binary that called
+  `bitcoin::constants::genesis_block(Network::Bitcoin)` on startup,
+  seeding the in-memory chain with Bitcoin's genesis (000...ce26f).
+  Glcoin's mainnet genesis is `6e605c9c…e9ed`, so on first block-1
+  ingest electrs rejected the parent-link with `missing prev_blockhash:
+  6e605c9c…` and entered a restart loop (957 restarts observed on the
+  v0165 Pi). Fixed by passing the full 80-byte glcoin genesis header
+  via a new `--genesis-header-hex` flag (added by `network_glcoin.patch`
+  hunks against `internal/config_specification.toml`, `src/chain.rs`,
+  `src/tracker.rs`, `src/config.rs`) and wired into the
+  `bonus.electrs.sh` ExecStart. A `.v0166-genesis-reset.done` marker
+  in `/mnt/hdd/app-storage/electrs/` wipes the wrong-seed DB exactly
+  once per install run. SHA256d of the header verifies to
+  `6e605c9c…e9ed`, exact match to the error-log block.
+
+- **Bug Q — LNbits asyncpg InvalidPasswordError on URL-unsafe charset.**
+  Pre-v0166 `bonus.lnbits.sh` generated DB passwords with characters
+  from `+=<>?.-`, but asyncpg's `postgres://user:pw@host/db` URL parser
+  rejects those without percent-encoding. lnbits crashed on startup
+  with `asyncpg.InvalidPasswordError for "lnbits_user"` even though
+  the user existed. Narrowed the charset to URL-safe alphanumerics
+  (`A-Za-z0-9`, 32 chars × log2(62) ≈ 190 bits entropy). A
+  `.v0166-pw-reset.done` marker in `/mnt/hdd/app-data/LNBits/`
+  invalidates any pre-v0166 password file once, dropping the stale
+  postgres user+db so the next `postgresConfig` recreates them with
+  the URL-safe password.
+
+- **Bug P-Followup — bleskapi /api/system/login 401 (PAM/sudo).**
+  v0164 widened the password_valid charset regex (Bug P), but the
+  v0165 Pi-Test still returned 401 on correct password because
+  upstream blitz_api's `login()` verifies passwords with an algorithm
+  that does not match the `mkpasswd -m sha-512 -S <salt>` hash format
+  written by `blesk.passwords.sh` into `/mnt/hdd/app-data/passwords/a.hash`.
+  Symptom in journal: three `pam_unix(sudo:auth) conversation failed
+  for [bleskapi]` lines per failed login. Fixed by rewriting the body
+  of the first `async def login()` found in
+  `app/system/impl/{raspiblitz,native_python}.py` or
+  `app/system/service.py` to shell out to
+  `sudo -n blesk.passwords.sh check a <pw>` — same script the set-side
+  used to write the hash, so a guaranteed match. Idempotent via a
+  `RASPIBLESK_LOGIN_PATCH` marker grep'd recursively across `app/system/`.
+  Paired with a new `/etc/sudoers.d/30_bleskapi_pwcheck` granting
+  bleskapi a narrow `NOPASSWD: blesk.passwords.sh check a *` right
+  (validated with `visudo -c` during provisioning, install aborts on
+  parse error).
+
+- **H-D2 hardening — postgres-side password drift in lnbits_user.**
+  Block-D edge-case audit surfaced a degenerate rerun path (Marker
+  present, `db_password.conf` manually deleted): `loadOrGenerate`
+  generates a fresh URL-safe password, but `create user lnbits_user`
+  silently no-ops because the user already exists, so the postgres-side
+  password keeps its stale value while `db_password.conf` has the new
+  one — lnbits then fails to connect even after the v0166 reset.
+  Added an `ALTER USER lnbits_user WITH ENCRYPTED PASSWORD` step
+  between `CREATE USER` and `GRANT` in `postgresConfig` so the two
+  sides realign on every `postgresConfig` call regardless of how they
+  got out of sync.
+
+- **H-D3 hardening — tightened sudoers wildcard for bleskapi.**
+  Original v0166 rule was `blesk.passwords.sh check *`; sudoers'
+  `*` crosses argument boundaries (per sudoers(5) "Wildcards in
+  command arguments"), so this happens to match the 3-arg
+  `check a <pw>` cmd. Hardened to `check a *` — fnmatch-verified
+  to reject misuse like `check b <pw>`, `check c <old> <new>`,
+  `check /etc/shadow`, and 2-arg `check <onlypw>`. blesk.passwords.sh's
+  internal `tr -dc` charset filter remains the second line of defence
+  (returns `correct=0` on dirty input, login then 401s on
+  `b"correct=1" not in stdout`).
+
+- **Bug C5 — Bitcoin-specific echo in `bonus.electrs.sh`.** User-facing
+  setup echo claimed "~18 hours and ~50Gb diskspace" for the electrs
+  DB build — true for Bitcoin, wrong for Glcoin. The young Glcoin chain
+  (~2k blocks at release time, 5-min target) syncs in seconds and grows
+  the index ~80 MB/year. Echo retexted + the adjacent code comment
+  ("Cheap: ~50 GB delete, +18h re-sync") adjusted to match real
+  electrs-on-glcoin economics.
+
 ## What's new in Version 0.15.15 of RaspiBlesk?
 
 Post-v0.15.14 install-time follow-up — a single source-tree edit to fix

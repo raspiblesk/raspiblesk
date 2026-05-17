@@ -302,6 +302,26 @@ if [ "$1" = "precheck" ]; then
   sed -i "s/#max_cj_fee_rel = x/max_cj_fee_rel = 0.000$((RANDOM%3+1))/g" /home/joinmarket/.joinmarket/joinmarket.cfg
   # change the onion_serving_port toavoid collusion with LND REST port
   sed -i "s#^onion_serving_port = 8080#onion_serving_port = 8090#g" /home/joinmarket/.joinmarket/joinmarket.cfg
+
+  # v0.15.21 (Bug CC + HH): upstream joinmarket.cfg [BLOCKCHAIN] section
+  # ships with rpc_port empty (defaults to Bitcoin Core 8332) and
+  # rpc_user=bitcoin / rpc_password=password. Both `jmwalletd` (joinmarket-
+  # api.service on :7501) and the orderbook-watcher (ob-watcher.service)
+  # then JsonRpcConnectionError out at startup against the missing 8332
+  # listener, so the whole Jam stack crash-loops invisibly. Read the live
+  # rpc_user/rpc_password from glcoin.conf (they are written by the
+  # raspiblesk provisioning) and pin rpc_port to Glcoin's 1617.
+  echo "# Configure joinmarket.cfg [BLOCKCHAIN] for Glcoin"
+  glcoinConfPath="/mnt/hdd/app-data/glcoin/glcoin.conf"
+  glcoinRpcUser=$(sudo grep -oP '^rpcuser=\K\S+' "${glcoinConfPath}" 2>/dev/null | head -1)
+  glcoinRpcPass=$(sudo grep -oP '^rpcpassword=\K\S+' "${glcoinConfPath}" 2>/dev/null | head -1)
+  if [ -z "${glcoinRpcUser}" ] || [ -z "${glcoinRpcPass}" ]; then
+    echo "# WARNING: could not read rpcuser/rpcpassword from ${glcoinConfPath}; Jam will not connect"
+  else
+    sudo -u joinmarket sed -i "s|^rpc_port = .*|rpc_port = 1617|" /home/joinmarket/.joinmarket/joinmarket.cfg
+    sudo -u joinmarket sed -i "s|^rpc_user = .*|rpc_user = ${glcoinRpcUser}|" /home/joinmarket/.joinmarket/joinmarket.cfg
+    sudo -u joinmarket sed -i "s|^rpc_password = .*|rpc_password = ${glcoinRpcPass}|" /home/joinmarket/.joinmarket/joinmarket.cfg
+  fi
   exit 0
 fi
 

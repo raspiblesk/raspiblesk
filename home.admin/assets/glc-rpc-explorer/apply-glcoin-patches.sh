@@ -137,12 +137,55 @@ print("# layout.pug: nav links injected")
 PY
 fi
 
+# --- Glcoin favicons (Bug U): replace upstream Bitcoin favicons ---
+# layout.pug + layout-iframe.pug reference ./img/network-mainnet/favicon.ico,
+# favicon-16x16.png, favicon-32x32.png, apple-touch-icon.png. Overwrite those
+# files in-place so browser tabs + Apple home-screen show the Glcoin G instead
+# of Bitcoin's orange ₿. Source asset SHA a181cb30… (matches glcoin.org live).
+NM_DIR="${REPO_DIR}/public/img/network-mainnet"
+FAVICONS_DIR="${ASSETS_DIR}/favicons"
+if [ -d "${FAVICONS_DIR}" ] && [ -d "${NM_DIR}" ]; then
+  for f in favicon.ico favicon-16x16.png favicon-32x32.png apple-touch-icon.png; do
+    if [ -f "${FAVICONS_DIR}/${f}" ]; then
+      echo "# Glcoin favicon: ${f}"
+      install -m 644 "${FAVICONS_DIR}/${f}" "${NM_DIR}/${f}"
+    fi
+  done
+fi
+
+# --- Bug R defensive + Safari mask-icon color (v0.15.16) ---
+# layout.pug fallback else-branch points to ./img/network-mainnet/logo.svg
+# (Bitcoin orange). Repoint to /img/logo/glc.png so any activeBlockchain value
+# outside {main,test,signet,regtest} still renders the Glcoin logo. Plus the
+# safari-pinned-tab mask-icon color from Bitcoin orange #f7931a to Glcoin
+# silver #C0C0C0 (per glc.js coinConfig.coinColorsByNetwork.main). Idempotent
+# via GLCOIN_LOGO_FALLBACK_PATCH marker inside layout.pug.
+LAYOUT_PUG="${REPO_DIR}/views/layout.pug"
+# v0.15.20 (Bug B3): the previous marker `/* GLCOIN_LOGO_FALLBACK_PATCH */`
+# was appended on the same line as the patched `img.header-image(...)` tag.
+# Pug treats any text after a tag's closing `)` as nested content; for
+# self-closing elements (img) Pug 3.x rejects this with "img is a self
+# closing element: <img/> but contains nested content" — surfaced as
+# HTTP 500 "Internal Server Error" on every page render. Marker removed
+# from the in-line edit; idempotency check now matches the patched src
+# path itself (`/img/logo/glc.png`), which is equally unique to the
+# patched state.
+if [ -f "${LAYOUT_PUG}" ] && ! grep -qF '"/img/logo/glc.png"' "${LAYOUT_PUG}"; then
+  echo "# Glcoin patch: layout.pug logo fallback + mask-icon color"
+  sed -i \
+    -e 's|src=assetUrl("./img/network-mainnet/logo.svg"), alt="logo")|src=assetUrl("/img/logo/glc.png"), alt="logo")|' \
+    -e 's|color="#f7931a"|color="#C0C0C0"|g' \
+    "${LAYOUT_PUG}"
+fi
+
 # --- string rebrand in views (display layer only) ---
 # Replace hardcoded "Bitcoin"/"BTC" display strings and "sat" -> "gsat" unit
 # labels in pug views and select user-visible JS strings. The Coin module
 # (app/coins/glc.js) already provides the currency name, but several upstream
 # templates hardcode "BTC"/"Bitcoin" outside the coinConfig path. Idempotent
-# via the GLCOIN_REBRAND_PATCH marker in app.js.
+# via the GLCOIN_REBRAND_PATCH marker in app.js. v0.15.16 widens patterns to
+# cover meta-tags (canonical/og:*/twitter:*), template-string suffixes in
+# shared-mixins.pug (} BTC, → } GLC,), and tooltips.
 APP_JS="${REPO_DIR}/app.js"
 if [ -f "${APP_JS}" ] && ! grep -q "GLCOIN_REBRAND_PATCH" "${APP_JS}"; then
   echo "# Glcoin rebrand: views + JS display strings"
@@ -154,9 +197,25 @@ if [ -f "${APP_JS}" ] && ! grep -q "GLCOIN_REBRAND_PATCH" "${APP_JS}"; then
           -e 's| BTC | GLC |g' \
           -e 's| BTC$| GLC|g' \
           -e 's|^BTC | GLC |g' \
+          -e 's|} BTC,|} GLC,|g' \
+          -e 's|} BTC :|} GLC :|g' \
+          -e 's|"BTC Explorer"|"Glcoin Explorer"|g' \
+          -e 's|content="BTC Explorer"|content="Glcoin Explorer"|g' \
+          -e 's|"@BitcoinExplorer"|"@GlcoinNetwork"|g' \
+          -e 's|@BitcoinExplorer|@GlcoinNetwork|g' \
+          -e 's|https://bitcoinexplorer.org|https://glcoin.org|g' \
+          -e 's|donate\.bitcoinexplorer\.org|donate.glcoin.org|g' \
+          -e 's|bitcoinexplorer\.org|glcoin.org|g' \
+          -e 's|BitcoinExplorer\.org|Glcoin Explorer|g' \
           -e 's|Bitcoin Explorer|Glcoin Explorer|g' \
           -e "s|Bitcoin's mainnet|Glcoin's mainnet|g" \
           -e 's|Bitcoiners|Glcoiners|g' \
+          -e 's|Bitcoin explorer|Glcoin explorer|g' \
+          -e 's|Bitcoin Core node|Glcoin Core node|g' \
+          -e 's|Open-Source Bitcoin Explorer|Open-Source Glcoin Explorer|g' \
+          -e 's|Bitcoin Quote|Glcoin Quote|g' \
+          -e 's|Bitcoin Holidays|Glcoin Holidays|g' \
+          -e 's|Bitcoin holidays|Glcoin holidays|g' \
           -e 's|sat/vB|gsat/vB|g' \
           -e 's|sat/WU|gsat/WU|g' \
           -e 's|satoshi|gsatoshi|g' \
@@ -176,6 +235,39 @@ if [ -f "${APP_JS}" ] && ! grep -q "GLCOIN_REBRAND_PATCH" "${APP_JS}"; then
   # leave a marker so this block is idempotent
   printf '\n// GLCOIN_REBRAND_PATCH (idempotency marker)\n' >> "${APP_JS}"
   echo "# Glcoin rebrand done"
+fi
+
+# v0.15.21 (Bug JJ): the v0.15.16 rebrand block above missed three patterns
+# that show up on the home page and in the gear-menu "Display Currency"
+# dropdown — user sees "5,000,000,000 BTC" on the block-reward column
+# (a template-literal ending `} BTC\``) and a dropdown with the literal
+# entries "BTC" / "sat" instead of GLC / gsat. Run a small additional pass
+# with its own marker so it kicks in even on installs that already carry
+# the GLCOIN_REBRAND_PATCH marker from a prior version.
+if [ -f "${APP_JS}" ] && ! grep -q "GLCOIN_REBRAND_PATCH_V2" "${APP_JS}"; then
+  echo "# Glcoin rebrand v2: array literals + template-literal tails + display selector"
+  if [ -d "${REPO_DIR}/views" ]; then
+    find "${REPO_DIR}/views" -name '*.pug' -print0 \
+      | xargs -0 -r sed -i \
+          -e 's|} BTC`|} GLC`|g' \
+          -e 's|"BTC"|"GLC"|g' \
+          -e 's|"sat"|"gsat"|g' \
+          -e 's|displayCurrency == "btc"|displayCurrency == "glc"|g'
+  fi
+  # Bug JJ root: layout.pug's display-currency dropdown stored cookies as
+  # lowercase item ("btc"/"sat") via item.toLowerCase(). The selector mixin
+  # in shared-mixins.pug then routed:
+  #   "btc" -> _valueDisplayBtc (formats as 50.00 BTC, unit hardcoded "BTC")
+  #   "sat" -> _valueDisplaySat (formats as 5,000,000,000 gsat, but
+  #             upstream btc.js is still co-registered so "sat" alias
+  #             resolved to BTC's SAT unit with name "BTC")
+  # After "BTC"->"GLC" and "sat"->"gsat" above, the new items array
+  # ["GLC","gsat"] stores cookies "glc"/"gsat". The selector check
+  # `displayCurrency == "btc"` -> `displayCurrency == "glc"` keeps the
+  # branch live for the new cookie. The `"sat"` -> `"gsat"` sed already
+  # rewrote the second selector branch in the same pass.
+  printf '\n// GLCOIN_REBRAND_PATCH_V2 (idempotency marker)\n' >> "${APP_JS}"
+  echo "# Glcoin rebrand v2 done"
 fi
 
 echo "# Glcoin patches applied to ${REPO_DIR}"

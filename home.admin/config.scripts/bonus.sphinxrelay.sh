@@ -402,7 +402,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     sudo /usr/sbin/usermod --append --groups lndrouter sphinxrelay
 
     # install needed install packages
-    sudo apt install -y sqlite3
+    sudo apt-get install -y sqlite3
 
     # get optional github parameter
     githubUser="stakwork"

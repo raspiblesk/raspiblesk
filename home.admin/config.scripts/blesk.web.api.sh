@@ -227,7 +227,16 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
       GITHUB_BRANCH="blitz-${activeBranch}"
     fi
 
-    GITHUB_COMMITORTAG=""
+    # v0.15.20 (Bug F5): pin to a known-good commit instead of branch HEAD.
+    # The dev branch is a moving target — every build_sdcard.sh used to
+    # pull whatever HEAD happened to be at clone time, which silently
+    # drifted the RASPIBLESK_FORK_PATCH and RASPIBLESK_LOGIN_PATCH apply
+    # surface between runs. Commit 62b6438970580d3c5269da8e1caf683607db491e
+    # (2026-05-12, "chore(deps): bump urllib3 from 2.6.3 to 2.7.0") is the
+    # commit the v0.15.19 Pi-flash actually used, with both patches verified
+    # to apply cleanly. Bump this when a newer upstream commit has been
+    # exercised end-to-end through a Pi reflash + WebUI login + setup-flow.
+    GITHUB_COMMITORTAG="62b6438970580d3c5269da8e1caf683607db491e"
   else
     # get parameters
     GITHUB_USER=$2
@@ -301,11 +310,19 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   # access cln creds
   /usr/sbin/usermod --append --groups glcoin bleskapi
   echo "# allowing user as part of the glcoin group to RW RPC hook"
+  # During fresh provisioning the CLN binary is installed but has never run,
+  # so /home/glcoin/.lightning/glcoin and the lightning-rpc socket do not
+  # exist yet — pre-create the tree as the glcoin service-user to keep the
+  # chmod + config-edit below idempotent and silent on first install. The
+  # socket itself is created by lightningd on first start and inherits the
+  # rpc-file-mode=0660 we append to the config a few lines below.
+  sudo -u glcoin mkdir -p /home/glcoin/.lightning/glcoin
   chmod 770 /home/glcoin/.lightning/glcoin
-  chmod 660 /home/glcoin/.lightning/glcoin/lightning-rpc
+  chmod 660 /home/glcoin/.lightning/glcoin/lightning-rpc 2>/dev/null || true
   CLCONF="/home/glcoin/.lightning/config"
-  if [ "$(cat ${CLCONF} | grep -c "^rpc-file-mode=0660")" -eq 0 ]; then
-    echo "rpc-file-mode=0660" | tee -a ${CLCONF}
+  sudo -u glcoin touch "${CLCONF}"
+  if [ "$(grep -c '^rpc-file-mode=0660' "${CLCONF}" 2>/dev/null)" -eq 0 ]; then
+    echo "rpc-file-mode=0660" | sudo -u glcoin tee -a "${CLCONF}" >/dev/null
   fi
   /usr/sbin/usermod --append --groups glcoin bleskapi
   # symlink the CLN data dir for bleskapi
@@ -419,6 +436,156 @@ PY
   else
     echo "# RASPIBLESK_FORK_PATCH already applied (skipping)"
   fi
+
+  # ----- RASPIBLESK_LOGIN_PATCH (v0.15.16, Bug P-Followup) -----
+  # Upstream blitz_api's login() implementation in impl/raspiblitz.py (or
+  # impl/native_python.py / service.py) verifies the password with an
+  # algorithm that does NOT match the `mkpasswd -m sha-512 -S <salt>` output
+  # written by blesk.passwords.sh into /mnt/hdd/app-data/passwords/a.hash.
+  # Result: every login returns 401 "Password is incorrect" even with the
+  # correct password and the post-v0164 charset-widened password_valid() regex.
+  # Fix: replace the body of the first async def login() found with a
+  # subprocess shell-out to the same set-side script — same call pattern as
+  # main-branch system.py uses for `password_change` (subprocess against
+  # blitz.passwords.sh check). Guaranteed match because both sides run the
+  # exact same mkpasswd command on the exact same a.hash + salt.txt.
+  # Idempotent: marked with RASPIBLESK_LOGIN_PATCH inside the patched file.
+  if ! grep -rq 'RASPIBLESK_LOGIN_PATCH' /home/bleskapi/blitz_api/app/system/ 2>/dev/null; then
+    echo "# applying RASPIBLESK_LOGIN_PATCH to blitz_api source"
+    sudo -u bleskapi python3 - <<'PY'
+import io, re, sys
+
+CANDIDATES = [
+    "/home/bleskapi/blitz_api/app/system/impl/raspiblitz.py",
+    "/home/bleskapi/blitz_api/app/system/impl/native_python.py",
+    "/home/bleskapi/blitz_api/app/system/service.py",
+]
+
+# Match `async def login(` exactly (NOT login_path, login_user, etc.).
+SIG_RE = re.compile(r"^(\s*)async def login\s*\(([^)]*)\)\s*(->\s*[^:]+)?:\s*\n", re.M)
+
+for path in CANDIDATES:
+    try:
+        with io.open(path, "r", encoding="utf-8") as f:
+            src = f.read()
+    except FileNotFoundError:
+        continue
+    if "RASPIBLESK_LOGIN_PATCH" in src:
+        print(f"# RASPIBLESK_LOGIN_PATCH: {path} already patched")
+        sys.exit(0)
+    m = SIG_RE.search(src)
+    if not m:
+        continue
+
+    indent = m.group(1)
+    params = m.group(2)
+    body_indent = indent + "    "
+
+    # Derive the password expression from the param signature.
+    #   `password: str`                  -> "password"
+    #   `i: LoginInput`                  -> "i.password"
+    #   `login_data: LoginInput`         -> "login_data.password"
+    #   `self, i: LoginInput` (method)   -> "i.password"  (self is stripped)
+    # blitz_api/dev moved login() onto a `RaspiBlitzSystem` class — strip the
+    # leading `self` with a word-boundary so `self_data: X` is left alone.
+    params_clean = re.sub(r"^\s*self\b\s*,?\s*", "", params)
+    pm = re.match(r"\s*(\w+)\s*:\s*(\w+)", params_clean)
+    if not pm:
+        sys.stderr.write(f"# RASPIBLESK_LOGIN_PATCH: unrecognised signature in {path}: {params!r}\n")
+        sys.exit(1)
+    pname, ptype = pm.group(1), pm.group(2)
+    pw_expr = pname if ptype == "str" else f"{pname}.password"
+
+    # Find end of function. Stop at the FIRST of:
+    #   (a) next sibling at same indent: another `async def|def|class|@deco`
+    #   (b) end of enclosing class: any non-blank line at strictly LESS indent
+    # Without (b), if login() is the last method in its class we would
+    # overwrite everything past it to EOF — audit-grade defense.
+    start = m.end()
+    end_candidates = []
+    end_re_same = re.compile(rf"^{indent}(async def|def |class |@)", re.M)
+    m_same = end_re_same.search(src, start)
+    if m_same:
+        end_candidates.append(m_same.start())
+    if len(indent) > 0:
+        end_re_less = re.compile(rf"^[ \t]{{0,{len(indent) - 1}}}\S", re.M)
+        m_less = end_re_less.search(src, start)
+        if m_less:
+            end_candidates.append(m_less.start())
+    end = min(end_candidates) if end_candidates else len(src)
+
+    new_body = (
+        f"{body_indent}# RASPIBLESK_LOGIN_PATCH (v0.15.16, Bug P-Followup)\n"
+        f"{body_indent}# Authenticate by shelling out to blesk.passwords.sh check —\n"
+        f"{body_indent}# guaranteed match with the mkpasswd-sha-512 hash format the\n"
+        f"{body_indent}# set-side wrote into /mnt/hdd/app-data/passwords/a.hash.\n"
+        f"{body_indent}import asyncio, shlex\n"
+        f"{body_indent}from fastapi import HTTPException, status\n"
+        f"{body_indent}from app.auth.auth_handler import sign_jwt\n"
+        f"{body_indent}# blesk.passwords.sh check exits 0 for BOTH correct and wrong\n"
+        f"{body_indent}# password (only invalid input / no hash exits 1). Authoritative\n"
+        f"{body_indent}# signal is stdout containing 'correct=1'. The script runs `sudo\n"
+        f"{body_indent}# cat .hash` internally, so prefix the call with sudo — provisioning\n"
+        f"{body_indent}# installs /etc/sudoers.d/30_bleskapi_pwcheck granting bleskapi the\n"
+        f"{body_indent}# narrow NOPASSWD right for `blesk.passwords.sh check a *`.\n"
+        f"{body_indent}cmd = \"sudo -n /home/admin/config.scripts/blesk.passwords.sh check a \" + shlex.quote({pw_expr})\n"
+        f"{body_indent}proc = await asyncio.create_subprocess_shell(\n"
+        f"{body_indent}    cmd,\n"
+        f"{body_indent}    stdout=asyncio.subprocess.PIPE,\n"
+        f"{body_indent}    stderr=asyncio.subprocess.PIPE,\n"
+        f"{body_indent})\n"
+        f"{body_indent}stdout, _ = await proc.communicate()\n"
+        f"{body_indent}if b\"correct=1\" not in stdout:\n"
+        f"{body_indent}    raise HTTPException(\n"
+        f"{body_indent}        status_code=status.HTTP_401_UNAUTHORIZED,\n"
+        f"{body_indent}        detail=\"Password is incorrect\",\n"
+        f"{body_indent}    )\n"
+        f"{body_indent}return Ok(sign_jwt())\n"
+        f"\n"
+    )
+    src = src[:m.start()] + m.group(0) + new_body + src[end:]
+    with io.open(path, "w", encoding="utf-8") as f:
+        f.write(src)
+    print(f"# RASPIBLESK_LOGIN_PATCH: rewrote async def login() in {path}")
+    sys.exit(0)
+
+sys.stderr.write("# RASPIBLESK_LOGIN_PATCH: no `async def login(` found in any system/impl/* or service.py\n")
+sys.exit(1)
+PY
+    if ! grep -rq 'RASPIBLESK_LOGIN_PATCH' /home/bleskapi/blitz_api/app/system/ 2>/dev/null; then
+      echo "error='RASPIBLESK_LOGIN_PATCH failed — no marker in app/system/'"
+      exit 1
+    fi
+    echo "# RASPIBLESK_LOGIN_PATCH applied + verified"
+  else
+    echo "# RASPIBLESK_LOGIN_PATCH already applied (skipping)"
+  fi
+
+  # ----- RASPIBLESK_LOGIN_PATCH sudoers (v0.15.16) -----
+  # The patched login() shells out to `sudo -n blesk.passwords.sh check a <pw>`
+  # because the script reads /mnt/hdd/app-data/passwords/a.hash (admin:admin 660)
+  # via `sudo cat`. bleskapi is NOT in the admin group and has no global
+  # NOPASSWD (build_sdcard.sh:923 grants NOPASSWD only to admin). Without this
+  # rule the subprocess would either hang on a password prompt or fail with
+  # `sudo -n` "a password is required".
+  # Pattern `check a *`: sudoers matches command line args as one concatenated
+  # string with `*` crossing word boundaries (see sudoers(5) "Wildcards in
+  # command arguments"). Hardcoding `check a` pins this rule to password-type-A
+  # checks — misuse like `check b <pw>`, `check c <pw>`, `check /etc/shadow`,
+  # or a 2-arg `check <onlypw>` no longer matches and is rejected by sudo.
+  SUDOERS_PW=/etc/sudoers.d/30_bleskapi_pwcheck
+  cat > "${SUDOERS_PW}" <<'SUDO'
+# RASPIBLESK_LOGIN_PATCH — allow bleskapi to verify password-A via blesk.passwords.sh
+bleskapi ALL=(ALL) NOPASSWD: /home/admin/config.scripts/blesk.passwords.sh check a *, /home/admin/config.scripts/blitz.passwords.sh check a *
+SUDO
+  chown root:root "${SUDOERS_PW}"
+  chmod 440 "${SUDOERS_PW}"
+  if ! visudo -c -f "${SUDOERS_PW}" >/dev/null; then
+    echo "error='visudo -c rejected ${SUDOERS_PW}'"
+    rm -f "${SUDOERS_PW}"
+    exit 1
+  fi
+  echo "# RASPIBLESK_LOGIN_PATCH sudoers installed: ${SUDOERS_PW}"
 
 
   # install python dependencies

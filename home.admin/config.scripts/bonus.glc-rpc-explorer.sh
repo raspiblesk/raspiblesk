@@ -186,9 +186,16 @@ if [ "$1" = "prestart" ]; then
     # Use different delimiter to avoid collision with "tcp://"
     sed -i "s|^BTCEXP_ELECTRUMX_SERVERS=.*|BTCEXP_ELECTRUMX_SERVERS=tcp://127.0.0.1:${electrumTCPport}|g" /home/glcrpcexplorer/.config/glc-rpc-explorer.env
   else
-    # ELECTRS=OFF --> MAKE SURE IT IS NOT CONNECTED
-    echo "# updating BTCEXP_ADDRESS_API=none"
-    sed -i 's/^BTCEXP_ADDRESS_API=.*/BTCEXP_ADDRESS_API=none/g' /home/glcrpcexplorer/.config/glc-rpc-explorer.env
+    # v0.15.20 (Bug B1): btc-rpc-explorer's address-API enum rejects 'none'
+    # (`Error 32907ghsd0ge: Unrecognized value for BTCEXP_ADDRESS_API: 'none'.
+    # Valid options are: blockchain.com,blockchair.com,blockcypher.com,electrum,
+    # electrumx`) which surfaces at startup before RPC verification. The
+    # previous setter wrote 'none' as a kill-switch to disable the API
+    # connection when no local Electrum server was ready, but the upstream
+    # parser only honours an absent variable as "address-API disabled".
+    # Delete the line entirely so the default (no address-API) applies cleanly.
+    echo "# unsetting BTCEXP_ADDRESS_API (no Electrum server ready)"
+    sed -i '/^BTCEXP_ADDRESS_API=/d' /home/glcrpcexplorer/.config/glc-rpc-explorer.env
   fi
 
   #  UPDATE RPC PASSWORD
@@ -361,8 +368,13 @@ BTCEXP_PRIVACY_MODE=true
 # Options: electrumx, blockchain.com, blockchair.com, blockcypher.com
 # If electrumx set, the BTCEXP_ELECTRUMX_SERVERS variable must also be
 # set.
-# Default: none
-BTCEXP_ADDRESS_API=none
+# v0.15.20 (Bug B1): empty value (not 'none') at init.
+# The prestart hook substitutes this with `electrumx` once a local electrs/
+# fulcrum becomes ready (sed -i 's/^BTCEXP_ADDRESS_API=.*/...=electrumx/'),
+# or deletes the line entirely if no Electrum server is up (sed -i '/^BTC.../d').
+# An empty value is silently accepted by btc-rpc-explorer's enum parser as
+# "no address-API" — unlike 'none' which is rejected as Unrecognized.
+BTCEXP_ADDRESS_API=
 BTCEXP_ELECTRUMX_SERVERS=tcp://127.0.0.1:50001
 # Expose every RPC method through /rpc-browser. Glcoin 0.2.x adds custom RPCs
 # (listminers, getminerinfo, getminerregistrystats, getipfslink, listipfslinks,
