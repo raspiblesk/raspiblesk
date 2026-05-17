@@ -1,93 +1,64 @@
-name: arm64-rpi-base-image-build
+name: arm64-rpi-base-image
 
 concurrency:
-  group: arm64-rpi-base-image-build-${{ github.head_ref }}
+  group: arm64-rpi-base-image-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:        # Manuell starten
   push:
-    branches: ['dev', 'v1.10', 'v1.11']
+    branches: ['dev']
     paths:
       - 'build_sdcard.sh'
-      - 'home.admin/config.scripts/glcoin.install.sh'
-      - 'home.admin/config.scripts/tor.install.sh'
-      - 'home.admin/config.scripts/blesk.i2pd.sh'
-      - 'home.admin/config.scripts/blesk.web.sh'
-      - 'home.admin/config.scripts/blesk.display.sh'
+      - 'home.admin/config.scripts/**'
       - 'ci/arm64-rpi/**'
-      - 'home.admin/config.scripts/bonus.glc-rpc-explorer.sh'
-      - 'home.admin/config.scripts/bonus.btcpayserver.sh'
-      - 'home.admin/config.scripts/bonus.jam.sh'
-      - 'home.admin/config.scripts/bonus.joinmarket.sh'
-      - 'home.admin/config.scripts/bonus.lnbits.sh'
-      - 'home.admin/config.scripts/bonus.mempool.sh'
-      - 'home.admin/config.scripts/bonus.nodejs.sh'
-      - 'home.admin/config.scripts/bonus.rtl.sh'
-      - 'home.admin/config.scripts/bonus.thunderhub.sh'
-      - 'home.admin/config.scripts/blesk.web.api.sh'
-      - 'home.admin/config.scripts/blesk.web.ui'
   pull_request:
-    branches: ['dev', 'v1.10', 'v1.11']
+    branches: ['dev']
     paths:
       - 'build_sdcard.sh'
-      - 'home.admin/config.scripts/glcoin.install.sh'
-      - 'home.admin/config.scripts/tor.install.sh'
-      - 'home.admin/config.scripts/blesk.i2pd.sh'
-      - 'home.admin/config.scripts/blesk.web.sh'
-      - 'home.admin/config.scripts/blesk.display.sh'
+      - 'home.admin/config.scripts/**'
       - 'ci/arm64-rpi/**'
-      - 'home.admin/config.scripts/bonus.glc-rpc-explorer.sh'
-      - 'home.admin/config.scripts/bonus.btcpayserver.sh'
-      - 'home.admin/config.scripts/bonus.jam.sh'
-      - 'home.admin/config.scripts/bonus.joinmarket.sh'
-      - 'home.admin/config.scripts/bonus.lnbits.sh'
-      - 'home.admin/config.scripts/bonus.mempool.sh'
-      - 'home.admin/config.scripts/bonus.nodejs.sh'
-      - 'home.admin/config.scripts/bonus.rtl.sh'
-      - 'home.admin/config.scripts/bonus.thunderhub.sh'
-      - 'home.admin/config.scripts/blesk.web.api.sh'
-      - 'home.admin/config.scripts/blesk.web.ui'
 
 jobs:
-  arm64-rpi-base-image-build:
+  build:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Wichtig für git describe --tags
 
-      - name: Set values
+      - name: Set build values
         id: set_values
         run: |
           echo "BUILD_VERSION=$(git describe --always --tags)" >> $GITHUB_ENV
-          if [ -z "$GITHUB_HEAD_REF" ]; then
-            echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_ENV
-          else
-            echo "BRANCH_NAME=${GITHUB_HEAD_REF}" >> $GITHUB_ENV
-          fi
-          if [[ "${{github.event_name}}" == "pull_request" ]]; then
-            echo "GITHUB_USER=${{github.event.pull_request.head.repo.owner.login}}" >> $GITHUB_OUTPUT
-          else
-            echo "GITHUB_USER=$(echo ${{github.repository}} | cut -d'/' -f1)" >> $GITHUB_OUTPUT
-          fi
+          echo "BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_ENV
+          echo "GITHUB_USER=${{ github.event.pull_request.head.repo.owner.login || github.repository_owner }}" >> $GITHUB_ENV
 
-      - name: Display the build name
-        run: echo "Building the raspiblesk-arm64-rpi-base-image"
-
-      - name: Run the build script
+      - name: Show build info
         run: |
-          echo "Using the variables: --pack base --github_user ${{steps.set_values.outputs.GITHUB_USER}} --branch ${{env.BRANCH_NAME}} --image_size 18G"
-          cd ci/arm64-rpi
-          bash packer.build.arm64-rpi.sh --pack base --github_user ${{steps.set_values.outputs.GITHUB_USER}} --branch ${{env.BRANCH_NAME}} --image_size 18G
+          echo "Building Raspiblésk Base Image"
+          echo "Version: ${{ env.BUILD_VERSION }}"
+          echo "Branch:  ${{ env.BRANCH_NAME }}"
 
-      - name: Calculate the checksum of the raw image
+      - name: Run build script
+        run: |
+          cd ci/arm64-rpi
+          bash packer.build.arm64-rpi.sh \
+            --pack base \
+            --github_user ${{ env.GITHUB_USER }} \
+            --branch ${{ env.BRANCH_NAME }} \
+            --image_size 18G
+
+      - name: Calculate SHA256 checksum
         run: |
           cd ci/arm64-rpi
           sha256sum raspiblesk-arm64-rpi-base.img > raspiblesk-arm64-rpi-base.img.sha256
 
-      - name: Upload the base image and checksum
+      - name: Upload base image + checksum
         uses: actions/upload-artifact@v4
         with:
           name: raspiblesk-arm64-rpi-base-image-${{ env.BUILD_VERSION }}
           path: |
-            ${{ github.workspace }}/ci/arm64-rpi/raspiblesk-arm64-rpi-base.img.sha256
-            ${{ github.workspace }}/ci/arm64-rpi/raspiblesk-arm64-rpi-base.img
+            ci/arm64-rpi/raspiblesk-arm64-rpi-base.img
+            ci/arm64-rpi/raspiblesk-arm64-rpi-base.img.sha256
+          retention-days: 30
